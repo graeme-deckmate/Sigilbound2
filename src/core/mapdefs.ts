@@ -107,11 +107,23 @@ export interface CompiledMap {
   bosses: readonly BossMarkerDef[];
   gates: readonly GateDef[];
   triggers: readonly TriggerDef[];
+  /** Trial stones (03 section 23): ref is the demanded reaction. */
+  trials: readonly { key: 'shatter' | 'blight' | 'kindle'; x: number; y: number }[];
 }
 
 /** Solid interactable entity positions (block walking, face to use). */
 export interface EntityAt {
-  kind: 'npc' | 'sign' | 'lore' | 'spring' | 'shrine' | 'boss' | 'gate' | 'teleporter' | 'egate';
+  kind:
+    | 'npc'
+    | 'sign'
+    | 'lore'
+    | 'spring'
+    | 'shrine'
+    | 'boss'
+    | 'gate'
+    | 'teleporter'
+    | 'egate'
+    | 'trial';
   x: number;
   y: number;
   /** dialogue id, npc id, shrine rune, or boss id depending on kind. */
@@ -134,6 +146,7 @@ export function entities(map: CompiledMap): EntityAt[] {
     ...map.bosses.map<EntityAt>((b) => ({ kind: 'boss', x: b.x, y: b.y, ref: b.id })),
     ...map.gates.map<EntityAt>((g) => ({ kind: 'gate', x: g.x, y: g.y, ref: g.id })),
     ...map.egates.map<EntityAt>((g) => ({ kind: 'egate', x: g.x, y: g.y, ref: g.id })),
+    ...map.trials.map<EntityAt>((t) => ({ kind: 'trial', x: t.x, y: t.y, ref: t.key })),
   ];
 }
 

@@ -38,13 +38,14 @@ function dialogueIds(): Set<string> {
 }
 
 describe('map sources', () => {
-  it('all maps through Act 3 are authored', () => {
+  it('all maps through Act 4 are authored', () => {
     const maps = compileAll();
     expect(maps.map((m) => m.id).sort()).toEqual([
       'ashenreach',
       'hearth',
       'hearthvale',
       'northhollow',
+      'sanctum',
       'westwood',
     ]);
   });

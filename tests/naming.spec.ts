@@ -23,13 +23,13 @@ describe('spellName', () => {
     expect(spellName(makeSpell('thorn', 'bolt', 'echo'))).toBe('Thornbolt of Echoes');
   });
 
-  it('all 300 combinations are well formed', () => {
+  it('all 360 combinations are well formed', () => {
     for (const e of ELEMENT_IDS)
       for (const f of FORM_IDS)
         for (const r of RUNE_IDS) {
           const name = spellName(makeSpell(e, f, r));
           expect(name).toMatch(
-            /^(Ember|Rime|Volt|Thorn|Gloom)(wisp|bolt|lance|nova|veil)( of (the )?[A-Z][a-z]+)?$/,
+            /^(Ember|Rime|Volt|Thorn|Gloom)(wisp|bolt|lance|nova|veil|call)( of (the )?[A-Z][a-z]+)?$/,
           );
         }
   });

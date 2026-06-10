@@ -77,6 +77,7 @@ export function parseMapSource(text: string, sourceName: string): ParseResult {
   const springs: CompiledMap['springs'][number][] = [];
   const shrines: CompiledMap['shrines'][number][] = [];
   const egates: { id: string; x: number; y: number }[] = [];
+  const trials: CompiledMap['trials'][number][] = [];
   const bosses: CompiledMap['bosses'][number][] = [];
   const gates: CompiledMap['gates'][number][] = [];
   const triggers: CompiledMap['triggers'][number][] = [];
@@ -184,6 +185,14 @@ export function parseMapSource(text: string, sourceName: string): ParseResult {
         else egates.push({ id: egateId, ...exy });
         break;
       }
+      case '@trial': {
+        const key = args[0] ?? '';
+        const xy = parseXY(args[1] ?? '');
+        if (!['shatter', 'blight', 'kindle'].includes(key) || !xy)
+          err(`@trial needs: <shatter|blight|kindle> x,y`);
+        else trials.push({ key: key as CompiledMap['trials'][number]['key'], ...xy });
+        break;
+      }
       case '@gate': {
         const gateId = args[0] ?? '';
         const xy = parseXY(args[1] ?? '');
@@ -245,6 +254,7 @@ export function parseMapSource(text: string, sourceName: string): ParseResult {
       bosses,
       gates,
       triggers,
+      trials,
     },
     errors,
   };

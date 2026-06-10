@@ -5,6 +5,7 @@ import { ashenreach } from './ashenreach.ts';
 import { hearth } from './hearth.ts';
 import { hearthvale } from './hearthvale.ts';
 import { northhollow } from './northhollow.ts';
+import { sanctum } from './sanctum.ts';
 import { westwood } from './westwood.ts';
 
 export const MAPS: Partial<Record<MapId, CompiledMap>> = {
@@ -12,5 +13,6 @@ export const MAPS: Partial<Record<MapId, CompiledMap>> = {
   hearth,
   hearthvale,
   northhollow,
+  sanctum,
   westwood,
 };

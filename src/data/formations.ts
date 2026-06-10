@@ -12,7 +12,8 @@ export type ZoneId =
   | 'ashenreach.outer'
   | 'ashenreach.inner'
   | 'northhollow.cliffs'
-  | 'northhollow.hollow';
+  | 'northhollow.hollow'
+  | 'sanctum.halls';
 
 export interface Formation {
   members: readonly EnemySpeciesId[];
@@ -24,6 +25,8 @@ export interface ZoneTable {
   levelMin: number;
   levelMax: number;
   formations: readonly Formation[];
+  /** Per-zone elite promotion chance override (03 s23: sanctum 15%). */
+  eliteChance?: number;
 }
 
 export const ZONE_IDS: readonly ZoneId[] = [
@@ -35,6 +38,7 @@ export const ZONE_IDS: readonly ZoneId[] = [
   'ashenreach.inner',
   'northhollow.cliffs',
   'northhollow.hollow',
+  'sanctum.halls',
 ];
 
 export const ZONES: Record<ZoneId, ZoneTable> = {
@@ -122,6 +126,19 @@ export const ZONES: Record<ZoneId, ZoneTable> = {
       { members: ['hollowshade', 'galeharrow'], weight: 2 },
       { members: ['quartzling', 'hollowshade'], weight: 2 },
       { members: ['hollowshade', 'hollowshade', 'galeharrow'], weight: 1 },
+    ],
+  },
+  /* Act 4 (03 section 23): Lv 11-12 remixes, elites at 15%. */
+  'sanctum.halls': {
+    zone: 'sanctum.halls',
+    levelMin: 11,
+    levelMax: 12,
+    eliteChance: 0.15,
+    formations: [
+      { members: ['hollowshade', 'quartzling'], weight: 2 },
+      { members: ['galeharrow', 'hollowshade'], weight: 2 },
+      { members: ['quartzling', 'quartzling', 'hollowshade'], weight: 1 },
+      { members: ['hollowshade', 'hollowshade'], weight: 1 },
     ],
   },
 };

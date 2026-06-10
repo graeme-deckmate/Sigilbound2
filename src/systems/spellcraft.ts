@@ -5,7 +5,7 @@
  */
 import type { ElementId, Spell } from '../core/state.ts';
 import { COMBAT } from '../data/constants.ts';
-import { ASPECT, MASTERY, masteryTier, SURGE } from '../data/wheel.ts';
+import { ASPECT, MASTERY, masteryTier, SURGE, TWIN, twinPair } from '../data/wheel.ts';
 import { ELEMENTS } from '../data/elements.ts';
 import { FORMS, type Targeting } from '../data/forms.ts';
 import { RUNES } from '../data/runes.ts';
@@ -52,14 +52,23 @@ export function potCost(p: number): number {
   return last[1];
 }
 
-/** ElementPrefix + FormRoot + RuneSuffix, e.g. "Gloomnova of Hexes". */
+/** ElementPrefix + FormRoot + RuneSuffix, e.g. "Gloomnova of Hexes".
+ *  Twin spells use the pair prefix ("Stormlance of Fury"). */
 export function spellName(spell: Spell): string {
-  return ELEMENTS[spell.element].label + spell.form + RUNES[spell.rune].suffix;
+  const prefix = spell.e2
+    ? (twinPair(spell.element, spell.e2)?.prefix ?? ELEMENTS[spell.element].label)
+    : ELEMENTS[spell.element].label;
+  return prefix + spell.form + RUNES[spell.rune].suffix;
 }
 
 /** What logs and slots show: the given name, else the generated one. */
 export function displayName(spell: Spell): string {
   return spell.given && spell.given.length > 0 ? spell.given : spellName(spell);
+}
+
+/** Slider ceiling for a rune: wraithmark extends to 1.80 (03 s4). */
+export function potencyCapFor(rune: Spell['rune']): number {
+  return RUNES[rune].potencyMax ?? COMBAT.potencyMax;
 }
 
 /** Trim and bound a player-entered name; null when unusable (1-18 chars). */
@@ -68,14 +77,30 @@ export function sanitizeGivenName(raw: string): string | null {
   return t.length >= 1 ? t : null;
 }
 
-/** MP cost: max(2, round(6 * form.mp * rune.mp * potCost(p))).
+/** MP cost: max(2, round(6 * form.mp * rune.mp * potCost(p) * twinMp)).
  *  Mastery tier 3 takes 1 MP off the spell's element (min 2 holds). */
 export function spellCost(spell: Spell, mods: CastMods = {}): number {
   const form = FORMS[spell.form];
   const rune = RUNES[spell.rune];
-  let cost = Math.round(COMBAT.costBase * form.mp * rune.mp * potCost(spell.p));
+  const twinMp = spell.e2 ? TWIN.mpMult : 1;
+  let cost = Math.round(COMBAT.costBase * form.mp * rune.mp * potCost(spell.p) * twinMp);
   if (masteryTier(mods.mastery ?? 0) >= 3) cost += MASTERY.tier3CostDelta;
   return Math.max(COMBAT.costMin, cost);
+}
+
+/**
+ * Twin matchup (03 section 15): the better element's multiplier,
+ * capped at 1.3. Single-element spells fall through to elementMult.
+ */
+export function twinElementMult(
+  spell: Spell,
+  weak: readonly ElementId[],
+  resist: readonly ElementId[],
+): number {
+  if (!spell.e2) return elementMult(spell.element, weak, resist);
+  const a = elementMult(spell.element, weak, resist);
+  const b = elementMult(spell.e2, weak, resist);
+  return Math.min(TWIN.matchupCap, Math.max(a, b));
 }
 
 /** 1 + (lv - 1) * 0.22 */
@@ -113,14 +138,16 @@ export function spellProc(spell: Spell, mods: CastMods = {}): number {
 
 /**
  * Does this cast roll the surge table (03 section 18)? Wyrd always;
- * Greedy potency (>= 1.30) while the element sits below mastery tier 2;
+ * Greedy potency (>= 1.30) while the GATING element sits below mastery
+ * tier 2 (twins gate on the lower of the pair, 03 section 15);
  * always-stable runes (wraithmark) never do unless they are Wyrd.
  */
-export function castSurges(spell: Spell, masteryPoints: number): boolean {
+export function castSurges(spell: Spell, masteryPoints: number, mastery2?: number): boolean {
   const rune = RUNES[spell.rune];
   if (rune.surges) return true;
   if (rune.alwaysStable) return false;
-  return spell.p >= SURGE.greedyAt && masteryTier(masteryPoints) < 2;
+  const gating = spell.e2 ? Math.min(masteryPoints, mastery2 ?? 0) : masteryPoints;
+  return spell.p >= SURGE.greedyAt && masteryTier(gating) < 2;
 }
 
 /** Crit profile; keen overrides the base. Ignored for Veil casts. */

@@ -105,12 +105,27 @@ export const ZONE_BACKDROPS: Record<string, ZoneBackdrop> = {
   'ashenreach.inner': { sky: ['#241936', '#3a2747'], hill: '#1d1530', ground: '#332646' },
   'northhollow.cliffs': { sky: ['#181436', '#2a2358'], hill: '#13102b', ground: '#34306b' },
   'northhollow.hollow': { sky: ['#0c0918', '#241d42'], hill: '#0a0714', ground: '#1d1838' },
+  /** Drowned violet (03 section 23). */
+  'sanctum.halls': { sky: ['#120e2e', '#2c2363'], hill: '#0e0b24', ground: '#3b3375' },
   /** Fallback for scripted or boss battles without a zone. */
   default: { sky: ['#181436', '#2a2358'], hill: '#13102b', ground: '#34306b' },
 };
 
 /** Runtime id lists mirroring the unions in core/state.ts. */
-export const MAP_IDS = ['hearth', 'hearthvale', 'westwood', 'ashenreach', 'northhollow'] as const;
+export const MAP_IDS = [
+  'hearth',
+  'hearthvale',
+  'westwood',
+  'ashenreach',
+  'northhollow',
+  'sanctum',
+] as const;
 export const SHRINE_IDS = ['fury', 'thirst', 'echo', 'keen'] as const;
-export const WORLD_BOSS_IDS = ['bogmaw', 'thornveil', 'ashenwarden', 'valewraith'] as const;
+export const WORLD_BOSS_IDS = [
+  'bogmaw',
+  'thornveil',
+  'ashenwarden',
+  'valewraith',
+  'hollowwarden',
+] as const;
 export const DIRS = ['up', 'down', 'left', 'right'] as const;

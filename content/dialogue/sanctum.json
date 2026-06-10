@@ -1,0 +1,36 @@
+{
+  "lore_sanctum_1": {
+    "speaker": "LORE STONE",
+    "pages": ["The Vale did not build this place. It remembered it, and the memory sank."]
+  },
+  "lore_sanctum_2": {
+    "speaker": "LORE STONE",
+    "pages": ["Three trials, three answers. The Wheel turns even under water."]
+  },
+  "lore_sanctum_3": {
+    "speaker": "LORE STONE",
+    "pages": [
+      "Past this hall sits the one who writes the Vale's forgetting.",
+      "Bring your own pen."
+    ]
+  },
+  "sanctum_stair_sealed": {
+    "speaker": "",
+    "pages": [
+      "A stair winds down into drowned dark, but the way is sealed stone.",
+      "Something below is still holding its breath."
+    ]
+  },
+  "sanctum_stair_open": {
+    "speaker": "",
+    "pages": ["The Hollow has drained. The stair waits, patient as ink."]
+  },
+  "trial_done": {
+    "speaker": "TRIAL STONE",
+    "pages": ["The stone is satisfied. It hums an old, settled note."]
+  },
+  "warden_gone": {
+    "speaker": "",
+    "pages": ["The chamber is quiet. The script on the walls has nothing left to say."]
+  }
+}

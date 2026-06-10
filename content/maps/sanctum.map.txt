@@ -1,0 +1,43 @@
+@id sanctum
+@size 40x28
+@music sanctum
+@spawn 20,25 up
+@zone halls 1,5 38,22 sanctum.halls
+@exit 20,26 -> northhollow 28,3
+@spring 4,21
+@lore 3,24 dialogue:lore_sanctum_1
+@lore 35,21 dialogue:lore_sanctum_2
+@lore 19,6 dialogue:lore_sanctum_3
+@trial shatter 4,10
+@trial blight 35,10
+@trial kindle 20,14
+@boss hollowwarden 20,2
+---
+oooooooooooooooooooooooooooooooooooooooo
+ooooooooooooooooo......ooooooooooooooooo
+ooooooooooooooooo......ooooooooooooooooo
+ooooooooooooooooo......ooooooooooooooooo
+ooooooooooooooooooo..ooooooooooooooooooo
+ooooooooooooooooooo..ooooooooooooooooooo
+ooooooooooooooooooo..ooooooooooooooooooo
+oo........,,,,,,........,,,,,,........oo
+oo........,,,,,,........,,,,,,........oo
+oo........ooooooooo..ooooooooo........oo
+oo........ooooooooo..ooooooooo........oo
+oo........ooooooooo..ooooooooo........oo
+oo,,,,....ooooooooo..ooooooooo....,,,,oo
+oo,,,,....ooooo..........ooooo....,,,,oo
+oo........ooooo..........ooooo........oo
+oooooo..ooooooo..........ooooooo..oooooo
+oo......,,,,,,............,,,,,,......oo
+oo......,,,,,,............,,,,,,......oo
+oooo..ooooooooooooo..ooooooooooooo..oooo
+oooo..ooooooooooooo..ooooooooooooo..oooo
+oooo..ooooooooooooo..ooooooooooooo..oooo
+oooo..ooooooooooooo..ooooooooooooo..oooo
+oooo..ooooooooooooo..ooooooooooooo..oooo
+oooo..ooooooooooooo..ooooooooooooo..oooo
+oo....................................oo
+oo....................................oo
+ooooooooooooooooooo..ooooooooooooooooooo
+oooooooooooooooooooooooooooooooooooooooo

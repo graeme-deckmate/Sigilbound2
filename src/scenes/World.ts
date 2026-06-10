@@ -16,7 +16,7 @@ import { TILE } from '../data/constants.ts';
 import { DIALOGUE } from '../data/dialogue.ts';
 import { ELEMENTS } from '../data/elements.ts';
 import { RUNES } from '../data/runes.ts';
-import { BOSSES } from '../data/enemies.ts';
+import { BOSSES, TRIAL_GUARDIAN_LV } from '../data/enemies.ts';
 import { SCRIPTED_BATTLES } from '../data/triggers.ts';
 import { maxHpAt, maxMpAt, unlockToastText, unlocksAtLevel, xpNext } from '../systems/leveling.ts';
 import type { BattleResult } from './Battle.ts';
@@ -26,11 +26,15 @@ import {
   applyShrineGrant,
   applySlotPurchase,
   applySpringRestore,
+  exitLocked,
   facingPos,
   interactionFor,
   npcDialogueId,
   rotateAspect,
   sigilCount,
+  TRIAL_KEYS,
+  TRIALS,
+  type TrialKey,
 } from '../systems/worldstate.ts';
 import { starterSpells } from '../data/progression.ts';
 import { ESSENCE } from '../data/essence.ts';
@@ -100,6 +104,7 @@ export class WorldScene extends Phaser.Scene {
   private markerSprite: Phaser.GameObjects.Image | null = null;
   private murkSpot: { x: number; y: number } | null = null;
   private rematchBoss: BossId | null = null;
+  private pendingTrial: TrialKey | null = null;
 
   constructor() {
     super({ key: 'World' });
@@ -672,6 +677,11 @@ export class WorldScene extends Phaser.Scene {
       const { px, py } = at(l.x, l.y);
       this.add.image(px, py, 'ent_lore').setOrigin(0, 0).setDepth(5);
     }
+    for (const t of this.map.trials) {
+      const { px, py } = at(t.x, t.y);
+      const img = this.add.image(px, py, 'ent_trial').setOrigin(0, 0).setDepth(5);
+      if (this.state.world.flags[TRIALS[t.key].flag]) img.setAlpha(0.55);
+    }
     for (const s of this.map.springs) {
       const { px, py } = at(s.x, s.y);
       this.add.image(px, py, 'ent_spring').setOrigin(0, 0).setDepth(5);
@@ -786,6 +796,12 @@ export class WorldScene extends Phaser.Scene {
 
     const exit = exitAt(this.map, this.targetX, this.targetY);
     if (exit) {
+      const sealed = exitLocked(this.state, exit.to);
+      if (sealed) {
+        const entry = DIALOGUE[sealed];
+        if (entry) dom.openDialog(entry);
+        return;
+      }
       this.busy = true;
       this.state = applyExit(this.state, exit);
       this.autoSave();
@@ -898,6 +914,9 @@ export class WorldScene extends Phaser.Scene {
     this.state = result.state;
     this.refreshHud();
     this.autoSave();
+    const trial = this.pendingTrial;
+    this.pendingTrial = null;
+    if (trial && result.outcome === 'victory') this.completeTrial(trial);
     if (result.outcome === 'defeat') {
       this.scene.restart({ state: this.state });
       const entry = DIALOGUE['defeat_wake'];
@@ -925,6 +944,21 @@ export class WorldScene extends Phaser.Scene {
       // The finale: the Ending cover takes over, then restarts the world
       // for post-game free roam.
       this.scene.start('Ending', { state: this.state });
+      return;
+    }
+    if (result.bossId === 'hollowwarden' && result.outcome === 'victory') {
+      // The fourth Warden falls: WRAITHMARK and the feat (03 section 23).
+      if (!this.state.world.flags['rune_wraithmark']) {
+        this.state.world.flags['rune_wraithmark'] = true;
+        playSfx('unlock');
+        dom.toast('✦ The WRAITHMARK rune is yours', true);
+      }
+      this.grantFeat('fourth_warden', 'Fourth Warden');
+      this.checkRelicRoad();
+      this.autoSave();
+      const entry = DIALOGUE['warden_gone'];
+      if (entry) dom.openDialog(entry);
+      this.scene.restart({ state: this.state });
       return;
     }
     if (result.bossId && result.outcome === 'victory') {
@@ -1038,6 +1072,46 @@ export class WorldScene extends Phaser.Scene {
     });
   }
 
+  /** Trial stones (03 section 23): state the demand, offer the fight. */
+  private openTrial(key: TrialKey): void {
+    const t = TRIALS[key];
+    if (this.state.world.flags[t.flag]) {
+      const entry = DIALOGUE['trial_done'];
+      if (entry) dom.openDialog(entry);
+      return;
+    }
+    dom.openChoice(t.title.toUpperCase(), t.demand, ['Face the trial', 'Leave'], (i) => {
+      if (i !== 0) return;
+      this.pendingTrial = key;
+      this.startEncounter({
+        zone: 'sanctum.halls',
+        formation: { members: ['trialguardian'], weight: 1 },
+        enemyLv: TRIAL_GUARDIAN_LV,
+        trialKey: key,
+      });
+    });
+  }
+
+  private completeTrial(key: TrialKey): void {
+    const t = TRIALS[key];
+    if (this.state.world.flags[t.flag]) return;
+    this.state.world.flags[t.flag] = true;
+    if (!this.state.world.flags['form_call']) {
+      this.state.world.flags['form_call'] = true;
+      playSfx('unlock');
+      dom.toast('✦ The CALL form is yours. Something will answer.', true);
+    }
+    if (
+      TRIAL_KEYS.every((k) => this.state.world.flags[TRIALS[k].flag]) &&
+      !this.state.world.flags['trials_complete']
+    ) {
+      this.state.world.flags['trials_complete'] = true;
+      playSfx('unlock');
+      dom.toast('✦ Twin inscription unlocked. Two natures, one page.', true);
+    }
+    this.autoSave();
+  }
+
   private interact(): void {
     const { x, y } = facingPos(this.state.world.x, this.state.world.y, this.state.world.facing);
     const entity = this.index.get(`${String(x)},${String(y)}`) ?? null;
@@ -1057,6 +1131,9 @@ export class WorldScene extends Phaser.Scene {
         break;
       case 'murk':
         this.talkToMurk();
+        break;
+      case 'trial':
+        this.openTrial(action.key);
         break;
       case 'spring': {
         playSfx('heal');

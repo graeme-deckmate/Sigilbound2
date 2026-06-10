@@ -160,5 +160,6 @@ export const hearthvale = {
       "x": 30,
       "y": 3
     }
-  ]
+  ],
+  "trials": []
 } as const satisfies CompiledMap;

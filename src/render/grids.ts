@@ -481,6 +481,52 @@ const GLIMMERKIN_SPRITE: BattleSprite = {
   pal: { g: '#9d7bff', y: '#ffd84a', w: '#ffffff' },
 };
 
+/** Trial Guardian: graven sanctum stone, one demand burning in it. */
+const TRIALGUARDIAN: BattleSprite = {
+  grid: [
+    '....ssssssss....',
+    '..ssssssssssss..',
+    '.ssssrrssrrssss.',
+    '.ssssrrssrrssss.',
+    'ssssssssssssssss',
+    'ssssddddddddssss',
+    'ssssdrrrrrrdssss',
+    'ssssddddddddssss',
+    'ssssssssssssssss',
+    '.ssss.ssss.ssss.',
+    '.sss..ssss..sss.',
+    '.ss...ssss...ss.',
+    '..s..ssssss..s..',
+    '....ssssssss....',
+  ],
+  pal: { s: '#6b6480', r: '#ffd84a', d: '#3c3650' },
+};
+
+/** Hollow Warden: the Vale's drowned author, pen raised (03 s23). */
+const HOLLOWWARDEN: BattleSprite = {
+  grid: [
+    '.......pppp.......',
+    '......pp..pp......',
+    '.......p..p.......',
+    '....hhhhhhhhhh....',
+    '..hhhhhhhhhhhhhh..',
+    '.hhhwwhhhhhhwwhhh.',
+    '.hhhwwhhhhhhwwhhh.',
+    '.hhhhhhhhhhhhhhhh.',
+    '..hhhhmmmmmmhhhh..',
+    '.hhhhhhhhhhhhhhhh.',
+    'hhhh.hhhhhhhh.hhhh',
+    'hhh..hhhhhhhh..hhh',
+    'hh...hhhhhhhh...hh',
+    '.....hhhhhhhh.....',
+    '......hhhhhh......',
+    '.......hhhh.......',
+    '......hh..hh......',
+    '.....h......h.....',
+  ],
+  pal: { h: '#4a3f8a', w: '#e8e0ff', m: '#241d42', p: '#ffd84a' },
+};
+
 export const BATTLE_SPRITES: Readonly<Record<string, BattleSprite>> = {
   gloop: GLOOP,
   pondscale: PONDSCALE,
@@ -499,6 +545,8 @@ export const BATTLE_SPRITES: Readonly<Record<string, BattleSprite>> = {
   hollowshade: HOLLOWSHADE,
   valewraith: VALEWRAITH,
   glimmerkin: GLIMMERKIN_SPRITE,
+  trialguardian: TRIALGUARDIAN,
+  hollowwarden: HOLLOWWARDEN,
 };
 
 /** Every grid registered here gets row-uniformity asserted in tests. */
@@ -522,4 +570,6 @@ export const ALL_GRIDS: Readonly<Record<string, PixelGrid>> = {
   hollowshade: HOLLOWSHADE.grid,
   valewraith: VALEWRAITH.grid,
   glimmerkin: GLIMMERKIN_SPRITE.grid,
+  trialguardian: TRIALGUARDIAN.grid,
+  hollowwarden: HOLLOWWARDEN.grid,
 };

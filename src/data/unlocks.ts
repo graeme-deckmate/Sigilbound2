@@ -58,6 +58,11 @@ export const UNLOCKS: readonly UnlockDef[] = [
   { kind: 'rune', id: 'echo', trigger: { type: 'shrine', shrine: 'echo', region: 'Ashen Reach' } },
   { kind: 'rune', id: 'keen', trigger: { type: 'shrine', shrine: 'keen', region: 'North Hollow' } },
   {
+    kind: 'form',
+    id: 'call',
+    trigger: { type: 'flag', flag: 'form_call', hint: 'The trial stones are waiting.' },
+  },
+  {
     kind: 'rune',
     id: 'wyrd',
     trigger: { type: 'flag', flag: 'rune_wyrd', hint: 'Murk trades in such things.' },

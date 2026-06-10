@@ -115,9 +115,28 @@ export function battleLine(
       return def ? def.line : null;
     }
     case 'sealedHit':
+      if (event.demand) {
+        return `The seal holds. Only ${event.demand.toUpperCase()} may break it.`;
+      }
       return event.key
         ? `The seal holds. ${elementLabel(event.key)} would crack it.`
         : 'The seal holds fast.';
+    case 'familiarSummon':
+      return `A ${elementLabel(event.element)} familiar answers the Call!`;
+    case 'familiarAct':
+      return null;
+    case 'familiarHit':
+      return `Your familiar takes ${String(event.amount)}.`;
+    case 'familiarFade':
+      return event.reason === 'replaced' ? 'The old one fades.' : 'Your familiar fades away.';
+    case 'bossUnwrite': {
+      if (event.phase === 'arm') return 'The Warden lifts its pen. UNWRITING gathers.';
+      if (event.reason === 'veil') return 'Your veil holds. The word dies unwritten.';
+      if (event.reason === 'chill') return 'Too cold to write. The word dies.';
+      return 'The broken bar spoils the page. The word dies.';
+    }
+    case 'barBreak':
+      return 'Its script shifts.';
     case 'sealBreak':
       return 'The seal shatters!';
     case 'frenzy':

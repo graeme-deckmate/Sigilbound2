@@ -21,6 +21,8 @@ export interface StepArgs {
   playerLv: number;
   /** Elites can roll once Bogmaw has fallen (world.bosses.bogmaw). */
   eliteEligible: boolean;
+  /** Zone override of ELITE.chance (sanctum runs hotter). */
+  eliteChance?: number;
   /** Regen cadence in steps (6 base; 4 with Springstep). */
   regenEvery?: number;
 }
@@ -35,6 +37,8 @@ export interface EncounterRoll {
   glimmer?: boolean;
   /** Per-member affix; null = not promoted. Absent = no promotions. */
   elites?: (AffixId | null)[];
+  /** Trial stone battles: the demanded reaction (03 section 23). */
+  trialKey?: 'shatter' | 'blight' | 'kindle';
 }
 
 export interface StepResult {
@@ -131,7 +135,7 @@ export function resolveStep(args: StepArgs, rng: Rng): StepResult {
 
   if (rare === 'elitePack' && args.eliteEligible) {
     roll.elites = promote(formation.members.length, true, rng);
-  } else if (args.eliteEligible && rng() < ELITE.chance) {
+  } else if (args.eliteEligible && rng() < (args.eliteChance ?? ELITE.chance)) {
     roll.elites = promote(formation.members.length, false, rng);
   }
   return { graceSteps: 0, regen, encounter: roll };

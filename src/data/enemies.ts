@@ -19,7 +19,8 @@ export type EnemySpeciesId =
   | 'quartzling'
   | 'galeharrow'
   | 'hollowshade'
-  | 'glimmerkin';
+  | 'glimmerkin'
+  | 'trialguardian';
 
 export type MoveRider =
   | { type: 'playerStatus'; status: PlayerStatusId; chance: number }
@@ -50,6 +51,9 @@ export interface EnemyDef {
   moves: readonly EnemyMove[];
 }
 
+/** Trial Guardians fight at a fixed level (03 section 23). */
+export const TRIAL_GUARDIAN_LV = 11;
+
 export const ENEMY_IDS: readonly EnemySpeciesId[] = [
   'gloop',
   'pondscale',
@@ -64,6 +68,7 @@ export const ENEMY_IDS: readonly EnemySpeciesId[] = [
   'galeharrow',
   'hollowshade',
   'glimmerkin',
+  'trialguardian',
 ];
 
 export const ENEMIES: Record<EnemySpeciesId, EnemyDef> = {
@@ -266,6 +271,26 @@ export const ENEMIES: Record<EnemySpeciesId, EnemyDef> = {
     moves: [{ name: 'glimmers softly', mult: 0 }],
   },
 
+  /* Act 4 trial stones (03 section 23): flat-statted, fixed level,
+     permanently Sealed until the named reaction lands. */
+  trialguardian: {
+    id: 'trialguardian',
+    name: 'Trial Guardian',
+    h0: 120,
+    hpl: 0,
+    a0: 8,
+    al: 1.3,
+    xpBase: 80,
+    xpPerLv: 0,
+    weak: [],
+    resist: [],
+    moves: [
+      { name: 'stone fist', mult: 1.0 },
+      { name: 'graven stare', mult: 0.85 },
+      { name: 'judgment knell', mult: 1.2 },
+    ],
+  },
+
   /* Act 3: North Hollow (enemy Lv 8-12) */
   quartzling: {
     id: 'quartzling',
@@ -330,7 +355,21 @@ export const ENEMIES: Record<EnemySpeciesId, EnemyDef> = {
 
 /* ---------- Bosses ---------- */
 
+export type BarKey = 'choir' | 'wheel' | 'author';
+
 export type BossSpecial =
+  | {
+      /** Hollow Warden (03 section 23): three shape-keyed HP bars. */
+      kind: 'bars';
+      barHp: number;
+      barKeys: readonly BarKey[];
+      offKeyMult: number;
+      summonSpecies: EnemySpeciesId;
+      summonLv: number;
+      unwriteEvery: number;
+      unwriteMult: number;
+      unwriteName: string;
+    }
   | {
       /** Bogmaw: every Nth turn submerge (telegraphed). While submerged
        *  only volt hits, at voltMult, and a volt hit cancels the breach
@@ -396,7 +435,13 @@ export interface BossDef {
   special: BossSpecial;
 }
 
-export const BOSS_IDS: readonly BossId[] = ['bogmaw', 'thornveil', 'ashenwarden', 'valewraith'];
+export const BOSS_IDS: readonly BossId[] = [
+  'bogmaw',
+  'thornveil',
+  'ashenwarden',
+  'valewraith',
+  'hollowwarden',
+];
 
 export const BOSSES: Record<BossId, BossDef> = {
   bogmaw: {
@@ -514,6 +559,39 @@ export const BOSSES: Record<BossId, BossDef> = {
       summonLv: 8,
       doomName: 'Doom of the Vale',
       doomMult: 2.6,
+    },
+  },
+  hollowwarden: {
+    id: 'hollowwarden',
+    name: 'Hollow Warden',
+    lv: 13,
+    hp: 420, // three bars of 140 (03 section 23)
+    a0: 12,
+    al: 1.4,
+    xp: 0,
+    weak: [],
+    resist: [],
+    moves: [
+      { name: 'hollow rend', mult: 1.1 },
+      { name: 'unmaking sigh', mult: 0.8, rider: { type: 'mpDrain', amount: 6 } },
+      {
+        name: 'the vale forgets',
+        mult: 1.3,
+        rider: { type: 'playerStatus', status: 'withered', chance: 0.35 },
+      },
+    ],
+    intro: 'The Hollow Warden unfolds. Its script is older than the Vale.',
+    sigilToast: '',
+    special: {
+      kind: 'bars',
+      barHp: 140,
+      barKeys: ['choir', 'wheel', 'author'],
+      offKeyMult: 0.25,
+      summonSpecies: 'hollowshade',
+      summonLv: 11,
+      unwriteEvery: 4,
+      unwriteMult: 2.2,
+      unwriteName: 'Unwriting',
     },
   },
 };

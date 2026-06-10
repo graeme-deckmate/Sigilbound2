@@ -721,3 +721,85 @@ describe('v1.1: reactions pay (02 new assertions)', () => {
     ).toBeLessThan(weaknessTotal);
   });
 });
+
+/* ---------- Hollow Warden (v1.1 Phase 14, 03 section 23) ---------- */
+
+/** One key per bar, thirst sustain, the veil answer, and the Call. */
+function wardenKit(): Spell[] {
+  return [
+    makeSpell('volt', 'nova', 'thirst'), // 0: choir (an all-cast sings)
+    makeSpell('rime', 'bolt', 'none'), // 1: chill setup
+    makeSpell('volt', 'bolt', 'thirst', 1.25), // 2: shatter / add control
+    makeSpell('volt', 'lance', 'thirst', 1.5), // 3: the author's pen
+    makeSpell('rime', 'veil', 'none'), // 4: the certain Unwrite answer
+    makeSpell('ember', 'call', 'none'), // 5: the familiar draws 40%
+  ];
+}
+
+/**
+ * Reaction-aware optimal play for the bars fight: read the current
+ * bar's key and feed it, raise the veil when Unwriting gathers, focus
+ * when low on blood or ink.
+ */
+const wardenAware: Policy = (state) => {
+  const slots = castable(state);
+  const has = (i: number): boolean => slots.includes(i);
+  const boss = state.enemies.find((e) => e.kind === 'boss' && e.hp > 0);
+  const bs = state.bossState;
+  if (!boss || bs?.kind !== 'bars') return weaknessAware(state);
+  const special = BOSSES[boss.species as BossId].special;
+  if (special.kind !== 'bars') return weaknessAware(state);
+
+  // The telegraph: a raised veil spoils the word for certain.
+  if (bs.unwriteArmed && !state.player.veil && (boss.statuses.chilled ?? 0) <= 0 && has(4)) {
+    return { type: 'cast', slot: 4 };
+  }
+  if (!state.familiar && has(5)) return { type: 'cast', slot: 5 };
+  if (state.player.hp < state.player.maxhp * 0.3) return { type: 'focus' };
+  // A veil is the cheapest hp in the fight: weave one whenever it is
+  // down and the blood is no longer full.
+  if (!state.player.veil && state.player.hp < state.player.maxhp * 0.7 && has(4)) {
+    return { type: 'cast', slot: 4 };
+  }
+
+  const barIndex = Math.min(2, Math.floor((boss.maxhp - boss.hp) / special.barHp));
+  const add = state.enemies.find((e) => e.kind !== 'boss' && e.hp > 0);
+  if (add && barIndex !== 0 && has(2)) return { type: 'cast', slot: 2, target: add.index };
+  if (barIndex === 0 && has(0)) return { type: 'cast', slot: 0 };
+  if (barIndex === 1) {
+    if ((boss.statuses.chilled ?? 0) > 0 && has(2)) {
+      return { type: 'cast', slot: 2, target: boss.index };
+    }
+    // Only open the chill once the shatter is affordable behind it.
+    if (state.player.mp >= 18 && has(1)) return { type: 'cast', slot: 1, target: boss.index };
+  }
+  if (barIndex === 2 && has(3)) return { type: 'cast', slot: 3, target: boss.index };
+  // Out of the right ink: breathe and refill.
+  return { type: 'focus' };
+};
+
+describe('Hollow Warden balance (03 section 23)', () => {
+  it('reaction-aware optimal play at Lv 12 wins 40-60% (asserted; no floor)', () => {
+    let wins = 0;
+    const turnCounts: number[] = [];
+    for (let run = 0; run < RUNS; run++) {
+      const rng = mulberry32(91_400 + run);
+      const gs = playerAt(12, wardenKit());
+      // A Lv 12 author has worked their main elements (03 section 17).
+      gs.player.mastery.volt = 25;
+      gs.player.mastery.rime = 10;
+      const result = fight(initBossBattle(gs, 'hollowwarden', null).state, wardenAware, rng);
+      if (result.won) {
+        wins += 1;
+        turnCounts.push(result.turns);
+      }
+    }
+    const rate = wins / RUNS;
+    turnCounts.sort((a, b) => a - b);
+    console.log(
+      `[sim] hollow warden lv12 reaction-aware: ${(rate * 100).toFixed(1)}% over ${String(RUNS)} runs, median ${String(turnCounts[Math.floor(turnCounts.length / 2)] ?? MAX_ROUNDS)} turns`,
+    );
+    expect(rate).toBeGreaterThanOrEqual(0.4);
+    expect(rate).toBeLessThanOrEqual(0.6);
+  });
+});

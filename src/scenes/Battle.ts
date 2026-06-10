@@ -64,6 +64,7 @@ export class BattleScene extends Phaser.Scene {
   private baseY = new Map<number, number>();
   private floaters!: FloaterPool;
   private attuneAura: Phaser.GameObjects.Ellipse | null = null;
+  private familiarOrb: Phaser.GameObjects.Arc | null = null;
   private finishing = false;
   /** prefers-reduced-motion gates shakes and full-screen camera flashes. */
   private motionOk = true;
@@ -100,7 +101,7 @@ export class BattleScene extends Phaser.Scene {
         enc.formation.members,
         enc.enemyLv,
         enc.zone,
-        { ambush: enc.ambush, elites: enc.elites, glimmer: enc.glimmer },
+        { ambush: enc.ambush, elites: enc.elites, glimmer: enc.glimmer, trialKey: enc.trialKey },
         this.rng,
       );
     }
@@ -627,6 +628,83 @@ export class BattleScene extends Phaser.Scene {
         playSfx('boss_telegraph');
         this.flashSprite(event.index);
         break;
+      case 'familiarSummon': {
+        playSfx('cast');
+        const { width: w, height: h } = this.scale;
+        this.familiarOrb?.destroy();
+        const color = Phaser.Display.Color.HexStringToColor(ELEMENTS[event.element].color).color;
+        const orb = this.add.circle(w * 0.12, h * 0.74, 7, color).setDepth(3);
+        this.add.existing(orb);
+        burst(this, orb.x, orb.y, ELEMENTS[event.element].color);
+        this.tweens.add({
+          targets: orb,
+          y: orb.y - 5,
+          duration: 800,
+          yoyo: true,
+          repeat: -1,
+          ease: 'Sine.easeInOut',
+        });
+        this.familiarOrb = orb;
+        break;
+      }
+      case 'familiarAct': {
+        playSfx('cast');
+        if (this.familiarOrb) {
+          burst(this, this.familiarOrb.x, this.familiarOrb.y, ELEMENTS[event.element].color);
+          this.tweens.add({
+            targets: this.familiarOrb,
+            x: this.familiarOrb.x + 16,
+            duration: 130,
+            yoyo: true,
+            ease: 'Quad.easeOut',
+          });
+        }
+        break;
+      }
+      case 'familiarHit':
+        playSfx('hurt');
+        if (this.familiarOrb) {
+          this.tweens.add({ targets: this.familiarOrb, alpha: 0.4, duration: 90, yoyo: true });
+        }
+        break;
+      case 'familiarFade': {
+        playSfx(event.reason === 'fallen' ? 'shield_break' : 'select');
+        const orb = this.familiarOrb;
+        if (orb) {
+          this.tweens.killTweensOf(orb);
+          this.tweens.add({ targets: orb, alpha: 0, duration: 380 });
+          this.familiarOrb = null;
+        }
+        break;
+      }
+      case 'barBreak': {
+        playSfx('shield_break');
+        this.flashSprite(event.index);
+        if (this.motionOk) this.cameras.main.shake(200, 0.008);
+        bdom.updateEnemyRows(event.ui.enemies);
+        break;
+      }
+      case 'bossUnwrite': {
+        if (event.phase === 'arm') {
+          playSfx('boss_telegraph');
+          const sprite = this.sprites.get(event.index);
+          if (sprite) {
+            this.flashSprite(event.index);
+            this.tweens.add({
+              targets: sprite,
+              scaleX: sprite.scaleX * 1.08,
+              scaleY: sprite.scaleY * 1.08,
+              duration: 260,
+              yoyo: true,
+              ease: 'Quad.easeOut',
+            });
+          }
+          if (this.motionOk) this.cameras.main.flash(280, 26, 20, 51);
+        } else {
+          playSfx('confirm');
+        }
+        break;
+      }
       case 'glimmerFlee': {
         playSfx('select');
         const sprite = this.sprites.get(event.index);

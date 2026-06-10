@@ -126,5 +126,6 @@ export const hearth = {
       "y": 0
     }
   ],
-  "triggers": []
+  "triggers": [],
+  "trials": []
 } as const satisfies CompiledMap;

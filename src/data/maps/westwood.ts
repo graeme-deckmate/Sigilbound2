@@ -132,5 +132,6 @@ export const westwood = {
     }
   ],
   "gates": [],
-  "triggers": []
+  "triggers": [],
+  "trials": []
 } as const satisfies CompiledMap;

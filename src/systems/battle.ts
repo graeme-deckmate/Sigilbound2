@@ -16,6 +16,7 @@ import type {
   Spell,
 } from '../core/state.ts';
 import { COMBAT } from '../data/constants.ts';
+import { FAMILIAR } from '../data/forms.ts';
 import { ELEMENTS } from '../data/elements.ts';
 import { RUNES } from '../data/runes.ts';
 import { BOSSES, ENEMIES, type EnemyMove, type EnemySpeciesId } from '../data/enemies.ts';
@@ -25,14 +26,23 @@ import { ESSENCE, defeatDrop } from '../data/essence.ts';
 import { CHARM, SCROLL } from '../data/discovery.ts';
 import {
   ASPECT,
+  DEPTH_NO_SHIELD_TURNS,
   MASTERY,
   masteryTier,
+  NIGHT_WITHER_TAKEN,
   REACTION,
   REACTIONS,
+  STATIC_SHATTER_BONUS,
+  STEAM_NEXT_MOVE_MULT,
+  STORM_ARC_FRAC,
   SURGE,
+  SURGE_PAIR_MP,
   SURGE_TABLE,
+  TWIN,
+  twinPair,
   type ReactionId,
   type SurgeDef,
+  type TwinRider,
 } from '../data/wheel.ts';
 import type { ZoneId } from '../data/formations.ts';
 import {
@@ -52,6 +62,7 @@ import {
   spellPower,
   spellProc,
   spellTargeting,
+  twinElementMult,
   veilRiderProc,
   veilShield,
   type CastMods,
@@ -113,6 +124,14 @@ export interface BattleEnemy {
   glimmer?: boolean;
   /** Fled the battle (no XP, no essence). hp is 0 but it did not fall. */
   escaped?: boolean;
+  /** Trial guardian: only this reaction breaks the seal (03 s23). */
+  trialKey?: ReactionId;
+  /** Twin riders (03 section 15). */
+  steamed?: boolean;
+  mired?: boolean;
+  noShieldTurns?: number;
+  witherAmp?: boolean;
+  rotDots?: boolean;
 }
 
 /** Unified combat numbers for minions and bosses. */
@@ -171,6 +190,13 @@ export type BossBattleState =
       enraged: boolean;
     }
   | {
+      /** Hollow Warden: three shape-keyed bars (03 section 23). */
+      kind: 'bars';
+      turns: number;
+      unwriteArmed: boolean;
+      barBrokeSinceArmed: boolean;
+    }
+  | {
       /** Vale Wraith: shifting attunement, adds, and the Doom cycle. */
       kind: 'attune';
       element: ElementId | null;
@@ -198,6 +224,8 @@ export interface BattleState {
   severeSurges: number;
   /** Per-species discovery captured this battle. */
   seen: Record<string, { weak: ElementId[]; statuses: string[]; reactions: string[] }>;
+  /** Summoned familiar (Call form, 03 section 22). Battle-scoped. */
+  familiar: { spell: Spell; hp: number; maxhp: number } | null;
   player: BattlePlayer;
   enemies: BattleEnemy[];
 }
@@ -282,7 +310,12 @@ export type BattleEventBody =
   | { kind: 'ambush' }
   | { kind: 'reaction'; reaction: ReactionId; index: number; amount?: number; hpAfter: number }
   | { kind: 'surge'; roll: number; id: SurgeDef['id']; severity: SurgeDef['severity'] }
-  | { kind: 'sealedHit'; index: number; key: ElementId | null }
+  | { kind: 'sealedHit'; index: number; key: ElementId | null; demand?: ReactionId }
+  | { kind: 'familiarSummon'; element: ElementId; hp: number }
+  | { kind: 'familiarAct'; element: ElementId }
+  | { kind: 'familiarHit'; amount: number; hpAfter: number }
+  | { kind: 'familiarFade'; reason: 'replaced' | 'fallen' }
+  | { kind: 'barBreak'; index: number; nextKey: 'choir' | 'wheel' | 'author' }
   | { kind: 'sealBreak'; index: number }
   | { kind: 'frenzy'; index: number }
   | { kind: 'glimmerFlee'; index: number }
@@ -295,6 +328,12 @@ export type BattleEventBody =
   | { kind: 'bossEnrage'; index: number }
   | { kind: 'bossAttune'; index: number; element: ElementId; first: boolean }
   | { kind: 'bossDoom'; index: number; name: string }
+  | {
+      kind: 'bossUnwrite';
+      index: number;
+      phase: 'arm' | 'cancel';
+      reason?: 'veil' | 'chill' | 'bar';
+    }
   | { kind: 'miss'; index: number };
 
 /** Every emitted event carries the post-event snapshot for the UI. */
@@ -316,6 +355,8 @@ export interface BattleVariance {
   elites?: (AffixId | null)[];
   /** Glimmerkin bonus encounter. */
   glimmer?: boolean;
+  /** Trial stone: the guardian is Sealed until this reaction (03 s23). */
+  trialKey?: ReactionId;
 }
 
 export function initBattle(
@@ -358,6 +399,10 @@ export function initBattle(
       if (affix === 'sealed') enemy.sealed = true;
     }
     if (isGlimmer) enemy.glimmer = true;
+    if (variance?.trialKey && species === 'trialguardian') {
+      enemy.sealed = true;
+      enemy.trialKey = variance.trialKey;
+    }
     return enemy;
   });
   const state: BattleState = {
@@ -372,6 +417,7 @@ export function initBattle(
     playerTookHit: false,
     severeSurges: 0,
     seen: {},
+    familiar: null,
     player: {
       lv: gs.player.lv,
       hp: gs.player.hp,
@@ -407,6 +453,7 @@ const REMATCH_ADDS: Record<BossId, { species: EnemySpeciesId; count: number }> =
   thornveil: { species: 'thornling', count: 1 },
   ashenwarden: { species: 'ashling', count: 1 },
   valewraith: { species: 'hollowshade', count: 2 },
+  hollowwarden: { species: 'hollowshade', count: 2 },
 };
 
 /** Boss battles: flat hp, fixed level, special state machine (docs/03). */
@@ -441,6 +488,9 @@ export function initBossBattle(
     case 'enrage':
       bossState = { kind: 'enrage', enraged: false };
       break;
+    case 'bars':
+      bossState = { kind: 'bars', turns: 0, unwriteArmed: false, barBrokeSinceArmed: false };
+      break;
     case 'attune':
       bossState = {
         kind: 'attune',
@@ -466,6 +516,7 @@ export function initBossBattle(
     playerTookHit: false,
     severeSurges: 0,
     seen: {},
+    familiar: null,
     player: {
       lv: gs.player.lv,
       hp: gs.player.hp,
@@ -567,6 +618,7 @@ function applyPlayerStatus(player: BattlePlayer, status: PlayerStatusId): boolea
 }
 
 function enemyWitheredMult(enemy: BattleEnemy): number {
+  if ((enemy.statuses.withered ?? 0) > 0 && enemy.witherAmp) return NIGHT_WITHER_TAKEN;
   return (enemy.statuses.withered ?? 0) > 0 ? (ENEMY_STATUSES.withered.takenMult ?? 1) : 1;
 }
 
@@ -585,6 +637,9 @@ export function reduce(prev: BattleState, action: BattleAction, rng: Rng): Reduc
   const endsRound = applyPlayerAction(state, action, emit, rng);
   if (state.phase !== 'player') return { state, events };
   if (!endsRound) return { state, events };
+
+  familiarPhase(state, emit, rng);
+  if (state.phase !== 'player') return { state, events };
 
   enemyPhase(state, emit, rng);
   if (state.phase !== 'player') return { state, events };
@@ -668,6 +723,24 @@ function performCast(
   if (!state.formsCast.includes(spell.form)) state.formsCast.push(spell.form);
 
   const targeting = spellTargeting(spell);
+  if (spell.form === 'call') {
+    // Call (03 section 22): summon a familiar; recast replaces it.
+    if (state.familiar) emit({ kind: 'familiarFade', reason: 'replaced' });
+    const fHp = Math.round((FAMILIAR.hpBase + FAMILIAR.hpPerLv * player.lv) * spell.p);
+    state.familiar = { spell: { ...spell }, hp: fHp, maxhp: fHp };
+    emit({
+      kind: 'playerCast',
+      spell,
+      name: displayName(spell),
+      element: spell.element,
+      targets: [],
+    });
+    emit({ kind: 'familiarSummon', element: spell.element, hp: fHp });
+    if (state.phase === 'player' && castSurges(spell, mods.mastery ?? 0)) {
+      rollSurge(state, spell, [], emit, rng);
+    }
+    return true;
+  }
   if (targeting === 'self') {
     const shield = veilShield(spell, player.lv);
     player.veil = { spell: { ...spell }, shield, absorbed: 0, reapplied: false };
@@ -728,20 +801,41 @@ function performCast(
       }
 
       // The Wheel (03 section 14): a hit of element E on a foe bearing
-      // the status before E reacts. Checked up front because Shatter
-      // and Kindle change this very hit.
-      const reactionDef = REACTIONS[spell.element];
-      const setupTurns = target.statuses[reactionDef.setup] ?? 0;
+      // the status before E reacts. Twins check left element first,
+      // max one reaction per hit (03 section 15).
+      let reactionDef = REACTIONS[spell.element];
+      let setupTurns = target.statuses[reactionDef.setup] ?? 0;
+      if (setupTurns <= 0 && spell.e2) {
+        const second = REACTIONS[spell.e2];
+        const t2 = target.statuses[second.setup] ?? 0;
+        if (t2 > 0) {
+          reactionDef = second;
+          setupTurns = t2;
+        }
+      }
       const reacts = setupTurns > 0;
+      const rider = spell.e2 ? twinPair(spell.element, spell.e2)?.rider : undefined;
 
       // Sealed elites: 0 damage until the seal breaks. Any weakness
       // element cracks it, and so does any Wheel reaction.
       if (target.sealed) {
-        if (def.weak.includes(spell.element) || reacts) {
+        const trialBreak = target.trialKey
+          ? reacts && reactionDef.id === target.trialKey
+          : def.weak.includes(spell.element) || reacts;
+        if (trialBreak) {
           target.sealed = false;
+          if (state.bossState?.kind === 'bars') state.bossState.barBrokeSinceArmed = true;
           emit({ kind: 'sealBreak', index: target.index });
         } else {
-          emit({ kind: 'sealedHit', index: target.index, key: def.weak[0] ?? null });
+          emit({
+            kind: 'sealedHit',
+            index: target.index,
+            key: def.weak[0] ?? null,
+            demand: target.trialKey,
+          });
+          // Trial stones (03 s23): the seal nulls the blow, but marks
+          // still take, or the demanded reaction could never be set up.
+          if (target.trialKey) rollProcs(state, target, spell, mods, rider, emit, rng);
           continue;
         }
       }
@@ -766,7 +860,9 @@ function performCast(
         }
       }
 
-      let baseMult = elementMult(spell.element, def.weak, def.resist);
+      let baseMult = spell.e2
+        ? twinElementMult(spell, def.weak, def.resist)
+        : elementMult(spell.element, def.weak, def.resist);
       // Emberglass relic: enemy resists count as neutral for this spell.
       if (RUNES[spell.rune].resistAsNeutral && baseMult === COMBAT.resistMult) baseMult = 1;
       const mult = submergedOverride ?? attuneOverride ?? baseMult;
@@ -776,21 +872,31 @@ function performCast(
       // Shatter and Kindle amplify the triggering hit itself.
       const wheelwrightHit = hasCharm(player, 'wheelwright') ? CHARM.wheelwrightMult : 1;
       if (reacts && reactionDef.id === 'shatter') {
-        dmg *= 1 + REACTION.shatterBonus * wheelwrightHit;
+        const bonus = rider === 'static' ? STATIC_SHATTER_BONUS : REACTION.shatterBonus;
+        dmg *= 1 + bonus * wheelwrightHit;
       }
       if (reacts && reactionDef.id === 'kindle') dmg *= 1 + REACTION.kindleBonus * wheelwrightHit;
       dmg *= witheredMult;
       dmg = Math.max(COMBAT.minDamage, Math.round(dmg));
 
       let remaining = dmg;
-      if (target.shield > 0) {
+      if (target.shield > 0 && rider !== 'hollowflame') {
         const absorbed = Math.min(target.shield, remaining);
         target.shield -= absorbed;
         remaining -= absorbed;
       }
+      // Hollow Warden bars: off-key hits glance, damage clamps at the
+      // bar boundary so each bar must be broken on its own key. The
+      // adjusted number is the one shown, or the glance is unreadable.
+      let barsShown: number | null = null;
+      if (target.kind === 'boss' && state.bossState?.kind === 'bars') {
+        remaining = barsAdjust(state, target, spell, reacts, targets.length, remaining, emit);
+        barsShown = remaining;
+      }
       target.hp = Math.max(0, target.hp - remaining);
-      totalDealt += dmg;
+      totalDealt += barsShown ?? dmg;
       state.elementsHit[spell.element] = true;
+      if (spell.e2) state.elementsHit[spell.e2] = true;
       // Bestiary: a hit above neutral reveals the weakness (03 s24).
       if (mult > 1 && target.kind === 'minion') {
         const row = seenRow(state, target.species);
@@ -799,20 +905,73 @@ function performCast(
       emit({
         kind: 'enemyHit',
         index: target.index,
-        amount: dmg,
+        amount: barsShown ?? dmg,
         crit: isCrit,
         mult,
         hpAfter: target.hp,
         shieldAfter: target.shield,
       });
 
+      // Twin pair riders that key off a landed hit (03 section 15).
+      if (rider === 'steam') target.steamed = true;
+      if (rider === 'mire') target.mired = true;
+      if (rider === 'depth') target.noShieldTurns = DEPTH_NO_SHIELD_TURNS;
+      if (rider === 'surge') {
+        player.mp = Math.min(player.maxmp, player.mp + SURGE_PAIR_MP);
+      }
       if (reacts) {
         state.reactionsFired.push(reactionDef.id);
         if (target.kind === 'minion') {
           const row = seenRow(state, target.species);
           if (!row.reactions.includes(reactionDef.id)) row.reactions.push(reactionDef.id);
         }
-        resolveReaction(state, target, reactionDef.id, setupTurns, emit);
+        resolveReaction(state, target, reactionDef.id, setupTurns, emit, {
+          spell,
+          targetCount: targets.length,
+        });
+      }
+
+      // Storm: single-target casts arc to one other enemy for 50%.
+      if (rider === 'storm' && targeting === 'single' && target.hp >= 0) {
+        const others = aliveEnemies(state).filter((e) => e.index !== target.index);
+        if (others.length > 0) {
+          const arcTo = others[randInt(rng, 0, others.length - 1)];
+          if (arcTo) {
+            const arcDmg = Math.max(1, Math.round(dmg * STORM_ARC_FRAC));
+            let arcRemaining = arcDmg;
+            if (arcTo.shield > 0) {
+              const absorbed = Math.min(arcTo.shield, arcRemaining);
+              arcTo.shield -= absorbed;
+              arcRemaining -= absorbed;
+            }
+            let arcShown: number | null = null;
+            if (arcTo.kind === 'boss' && state.bossState?.kind === 'bars') {
+              // The arc made this a two-target cast (choir-keyed).
+              arcRemaining = barsAdjust(state, arcTo, spell, false, 2, arcRemaining, emit);
+              arcShown = arcRemaining;
+            }
+            arcTo.hp = Math.max(0, arcTo.hp - arcRemaining);
+            emit({
+              kind: 'enemyHit',
+              index: arcTo.index,
+              amount: arcShown ?? arcDmg,
+              crit: false,
+              mult: 1,
+              hpAfter: arcTo.hp,
+              shieldAfter: arcTo.shield,
+            });
+            if (arcTo.hp <= 0) emit({ kind: 'enemyDown', index: arcTo.index });
+          }
+        }
+      }
+
+      // Wildfire: a kill ignites everything still standing.
+      if (rider === 'wildfire' && target.hp <= 0) {
+        for (const other of aliveEnemies(state)) {
+          if (applyEnemyStatus(other, 'burning')) {
+            emit({ kind: 'enemyStatus', index: other.index, status: 'burning' });
+          }
+        }
       }
 
       // The volt hit interrupts the dive: the breach is canceled, the
@@ -837,20 +996,7 @@ function performCast(
         }
         continue;
       }
-      if (rng() < spellProc(spell, mods)) {
-        const status = ELEMENTS[spell.element].status;
-        if (applyEnemyStatus(target, status)) {
-          // Longbrand charm: marks you leave last one turn longer.
-          if (hasCharm(player, 'longbrand') && status !== 'stunned') {
-            target.statuses[status] = (target.statuses[status] ?? 0) + CHARM.longbrandBonusTurns;
-          }
-          if (target.kind === 'minion') {
-            const row = seenRow(state, target.species);
-            if (!row.statuses.includes(status)) row.statuses.push(status);
-          }
-          emit({ kind: 'enemyStatus', index: target.index, status });
-        }
-      }
+      rollProcs(state, target, spell, mods, rider, emit, rng);
       // Mirrorhide: the struck hide answers with the element's own
       // affliction (volt has no player stun: it drains MP instead).
       if (target.affix === 'mirrorhide' && rng() < ELITE.mirrorChance) {
@@ -888,6 +1034,118 @@ function performCast(
   return true;
 }
 
+/**
+ * Hollow Warden bars (03 section 23): the current bar takes full
+ * damage only from its keyed shape; off-key hits deal x0.25; damage
+ * clamps at the bar boundary; transitions announce and summon.
+ */
+/**
+ * Status proc rolls for one resolved hit. Twins roll both natures at
+ * TWIN.procFrac each (03 section 15); night and rot pair riders key
+ * off the mark they just left.
+ */
+function rollProcs(
+  state: BattleState,
+  target: BattleEnemy,
+  spell: Spell,
+  mods: CastMods,
+  rider: TwinRider | undefined,
+  emit: Emit,
+  rng: Rng,
+): void {
+  const player = state.player;
+  const procElements: { element: ElementId; frac: number }[] = spell.e2
+    ? [
+        { element: spell.element, frac: TWIN.procFrac },
+        { element: spell.e2, frac: TWIN.procFrac },
+      ]
+    : [{ element: spell.element, frac: 1 }];
+  for (const pe of procElements) {
+    if (target.hp <= 0) break;
+    const procSpell: Spell = { ...spell, element: pe.element, e2: undefined };
+    if (rng() < spellProc(procSpell, mods) * pe.frac) {
+      const status = ELEMENTS[pe.element].status;
+      if (applyEnemyStatus(target, status)) {
+        // Longbrand charm: marks you leave last one turn longer.
+        if (hasCharm(player, 'longbrand') && status !== 'stunned') {
+          target.statuses[status] = (target.statuses[status] ?? 0) + CHARM.longbrandBonusTurns;
+        }
+        // Night: Withered from this spell bites harder; Rot: DoTs
+        // from this spell tick start AND end of turn (03 s15).
+        if (rider === 'night' && status === 'withered') target.witherAmp = true;
+        if (rider === 'rot' && (status === 'burning' || status === 'envenomed')) {
+          target.rotDots = true;
+        }
+        if (target.kind === 'minion') {
+          const row = seenRow(state, target.species);
+          if (!row.statuses.includes(status)) row.statuses.push(status);
+        }
+        emit({ kind: 'enemyStatus', index: target.index, status });
+      }
+    }
+  }
+}
+
+function barsAdjust(
+  state: BattleState,
+  boss: BattleEnemy,
+  spell: Spell,
+  reacted: boolean,
+  targetCount: number,
+  dmg: number,
+  emit: Emit,
+): number {
+  const def = BOSSES[boss.species as BossId].special;
+  if (def.kind !== 'bars') return dmg;
+  const barIndex = Math.min(def.barKeys.length - 1, Math.floor((boss.maxhp - boss.hp) / def.barHp));
+  const key = def.barKeys[barIndex];
+  // Choir: 03 s23 names nova as a qualifying shape, so an all-cast
+  // counts even when the Warden stands alone.
+  const onKey =
+    key === 'choir'
+      ? spellTargeting(spell) === 'all' || targetCount >= 2
+      : key === 'wheel'
+        ? reacted
+        : spell.p >= SURGE.greedyAt;
+  let adjusted = onKey ? dmg : Math.max(1, Math.round(dmg * def.offKeyMult));
+  // clamp at the bar boundary
+  const barFloor = boss.maxhp - def.barHp * (barIndex + 1);
+  const room = boss.hp - Math.max(0, barFloor);
+  if (adjusted >= room && boss.hp - adjusted > 0) {
+    adjusted = room;
+  }
+  const willCross = boss.hp - adjusted <= Math.max(0, barFloor) && boss.hp - adjusted > 0;
+  if (willCross && state.bossState?.kind === 'bars') {
+    state.bossState.barBrokeSinceArmed = true;
+    const nextKey = def.barKeys[barIndex + 1];
+    if (nextKey) {
+      emit({ kind: 'barBreak', index: boss.index, nextKey });
+      // the transition summons one shade (03 section 23)
+      const addDef = ENEMIES[def.summonSpecies];
+      const index = state.enemies.length;
+      const maxhp = addDef.h0 + addDef.hpl * def.summonLv;
+      state.enemies.push({
+        index,
+        kind: 'minion',
+        species: def.summonSpecies,
+        displayName: `${addDef.name} ${String.fromCharCode(65 + index)}`,
+        lv: def.summonLv,
+        hp: maxhp,
+        maxhp,
+        shield: 0,
+        statuses: {},
+        stunImmunity: 0,
+      });
+      emit({
+        kind: 'bossSummon',
+        index: boss.index,
+        spawned: [{ index, name: `${addDef.name} ${String.fromCharCode(65 + index)}` }],
+      });
+    }
+  }
+  return adjusted;
+}
+
 /** The non-hit halves of the five reactions (03 section 14). */
 function resolveReaction(
   state: BattleState,
@@ -895,6 +1153,8 @@ function resolveReaction(
   reaction: ReactionId,
   setupTurns: number,
   emit: Emit,
+  /** The cast that triggered it, for the Warden's bar key/clamp. */
+  bars?: { spell: Spell; targetCount: number },
 ): void {
   const lv = state.player.lv;
   let amount: number | undefined;
@@ -914,6 +1174,11 @@ function resolveReaction(
     amount = Math.max(1, Math.round(tick * setupTurns * wheelwright * enemyWitheredMult(target)));
   }
   if (amount !== undefined) {
+    // Reaction portions are wheel-keyed hits (03 s23): full on the
+    // Wheel bar, a glance elsewhere, and always clamped at the floor.
+    if (bars && target.kind === 'boss' && state.bossState?.kind === 'bars') {
+      amount = barsAdjust(state, target, bars.spell, true, bars.targetCount, amount, emit);
+    }
     target.hp = Math.max(0, target.hp - amount);
   }
   emit({ kind: 'reaction', reaction, index: target.index, amount, hpAfter: target.hp });
@@ -1094,9 +1359,86 @@ function doFlee(state: BattleState, emit: Emit, rng: Rng): boolean {
 
 /* ---------- enemy phase ---------- */
 
+/**
+ * The familiar acts after the player each round (03 section 22): one
+ * typed hit at the Call spell's computed power, proc at element.proc/2
+ * (hex restores the full proc), echo strikes twice, thirst heals the
+ * player for 35% of familiar damage. Twin Calls alternate elements per
+ * round. Immune to statuses; rune crit applies.
+ */
+function familiarPhase(state: BattleState, emit: Emit, rng: Rng): void {
+  const fam = state.familiar;
+  if (!fam || fam.hp <= 0) return;
+  const spell = fam.spell;
+  const element = spell.e2 && state.round % 2 === 0 ? spell.e2 : spell.element;
+  const alive = aliveEnemies(state);
+  const target = alive[0];
+  if (!target) return;
+  emit({ kind: 'familiarAct', element });
+  const rune = RUNES[spell.rune];
+  const hits = spellHits(spell);
+  const crit = critProfile(spell);
+  let total = 0;
+  for (let h = 0; h < hits; h++) {
+    if (target.hp <= 0) break;
+    const def = defOf(target);
+    const mult = elementMult(element, def.weak, def.resist);
+    let dmg = spellPower(spell, state.player.lv) * variance(rng, spell) * mult;
+    const isCrit = rng() < crit.chance;
+    if (isCrit) dmg *= crit.mult;
+    dmg *= enemyWitheredMult(target);
+    dmg = Math.max(COMBAT.minDamage, Math.round(dmg));
+    let remaining = dmg;
+    if (target.shield > 0) {
+      const absorbed = Math.min(target.shield, remaining);
+      target.shield -= absorbed;
+      remaining -= absorbed;
+    }
+    let shown: number | null = null;
+    if (target.kind === 'boss' && state.bossState?.kind === 'bars') {
+      remaining = barsAdjust(state, target, spell, false, 1, remaining, emit);
+      shown = remaining;
+    }
+    target.hp = Math.max(0, target.hp - remaining);
+    total += shown ?? dmg;
+    state.elementsHit[element] = true;
+    emit({
+      kind: 'enemyHit',
+      index: target.index,
+      amount: shown ?? dmg,
+      crit: isCrit,
+      mult,
+      hpAfter: target.hp,
+      shieldAfter: target.shield,
+    });
+    if (target.hp <= 0) {
+      emit({ kind: 'enemyDown', index: target.index });
+      break;
+    }
+    const baseProc = ELEMENTS[element].proc;
+    const proc = rune.procBonus !== undefined ? baseProc : baseProc * FAMILIAR.procFrac;
+    if (rng() < proc) {
+      const status = ELEMENTS[element].status;
+      if (applyEnemyStatus(target, status)) {
+        emit({ kind: 'enemyStatus', index: target.index, status });
+      }
+    }
+  }
+  if (total > 0 && rune.healFrac) {
+    const heal = Math.max(1, Math.round(total * rune.healFrac));
+    state.player.hp = Math.min(state.player.maxhp, state.player.hp + heal);
+    emit({ kind: 'playerHeal', amount: heal, hpAfter: state.player.hp });
+  }
+  checkVictory(state, emit);
+}
+
 function enemyPhase(state: BattleState, emit: Emit, rng: Rng): void {
   // Iterate a snapshot: mid-phase summons join next round, not this one.
-  for (const enemy of [...state.enemies]) {
+  // Mire pair rider: mired enemies act last this round (03 s15).
+  const order = [...state.enemies].sort(
+    (a, b) => Number(a.mired ?? false) - Number(b.mired ?? false),
+  );
+  for (const enemy of order) {
     if (enemy.hp <= 0) continue;
 
     if (!tickEnemyDots(state, enemy, emit)) continue;
@@ -1131,6 +1473,12 @@ function enemyPhase(state: BattleState, emit: Emit, rng: Rng): void {
       if (state.phase !== 'player') return;
     }
 
+    // Rot pair rider: DoTs from that spell tick at the END of the
+    // enemy turn too (03 section 15).
+    if (enemy.rotDots && enemy.hp > 0) {
+      if (!tickEnemyDots(state, enemy, emit)) continue;
+    }
+
     for (const decaying of ['chilled', 'withered'] as const) {
       const turns = enemy.statuses[decaying] ?? 0;
       if (turns > 0) {
@@ -1139,6 +1487,8 @@ function enemyPhase(state: BattleState, emit: Emit, rng: Rng): void {
       }
     }
     if (enemy.stunImmunity > 0) enemy.stunImmunity -= 1;
+    if (enemy.mired) enemy.mired = false;
+    if (enemy.noShieldTurns !== undefined && enemy.noShieldTurns > 0) enemy.noShieldTurns -= 1;
   }
 }
 
@@ -1149,10 +1499,28 @@ function tickEnemyDots(state: BattleState, enemy: BattleEnemy, emit: Emit): bool
     if (turns <= 0) continue;
     enemy.statuses[status] = turns - 1;
     if (turns - 1 <= 0) delete enemy.statuses[status];
+    // Sealed takes 0 damage from every source; the mark still decays.
+    if (enemy.sealed) continue;
     const def = ENEMY_STATUSES[status];
     let base = (def.dot?.base ?? 0) + Math.ceil(state.player.lv * (def.dot?.perLv ?? 0));
     if (state.aspect && ELEMENTS[state.aspect].status === status) base *= ASPECT.dotMult;
-    const dmg = Math.max(1, Math.round(base * enemyWitheredMult(enemy)));
+    let dmg = Math.max(1, Math.round(base * enemyWitheredMult(enemy)));
+    if (enemy.kind === 'boss' && state.bossState?.kind === 'bars') {
+      const special = BOSSES[enemy.species as BossId].special;
+      if (special.kind === 'bars') {
+        // A tick is never the bar's key: it glances (03 s23, "full
+        // damage only from..."), and it cannot finish a bar; the last
+        // point falls to a keyed hit so the break announces properly.
+        dmg = Math.max(1, Math.round(dmg * special.offKeyMult));
+        const barIndex = Math.min(
+          special.barKeys.length - 1,
+          Math.floor((enemy.maxhp - enemy.hp) / special.barHp),
+        );
+        const floorHp = Math.max(0, enemy.maxhp - special.barHp * (barIndex + 1) + 1);
+        dmg = Math.min(dmg, Math.max(0, enemy.hp - floorHp));
+        if (dmg <= 0) continue;
+      }
+    }
     enemy.hp = Math.max(0, enemy.hp - dmg);
     emit({ kind: 'enemyDot', index: enemy.index, status, amount: dmg, hpAfter: enemy.hp });
     if (enemy.hp <= 0) {
@@ -1288,6 +1656,43 @@ function enemyAct(state: BattleState, enemy: BattleEnemy, emit: Emit, rng: Rng):
       }
     }
 
+    if (special.kind === 'bars' && bs.kind === 'bars') {
+      bs.turns += 1;
+      if (bs.unwriteArmed) {
+        // The gathered word lands at x2.2 unless answered (03 s23):
+        // a raised Veil, a Chill on the Warden, or a broken bar all
+        // spoil the page. A spoiled Unwriting wastes the Warden's turn.
+        bs.unwriteArmed = false;
+        const reason =
+          state.player.veil !== null
+            ? ('veil' as const)
+            : (enemy.statuses.chilled ?? 0) > 0
+              ? ('chill' as const)
+              : bs.barBrokeSinceArmed
+                ? ('bar' as const)
+                : null;
+        if (reason) {
+          // The word dies, not the turn: the Warden falls back to a
+          // plain move (03 s23 cancels the x2.2, nothing more).
+          emit({ kind: 'bossUnwrite', index: enemy.index, phase: 'cancel', reason });
+        } else {
+          performMove(
+            state,
+            enemy,
+            { name: special.unwriteName, mult: special.unwriteMult },
+            emit,
+            rng,
+          );
+          return;
+        }
+      } else if (bs.turns % special.unwriteEvery === 0) {
+        bs.unwriteArmed = true;
+        bs.barBrokeSinceArmed = false;
+        emit({ kind: 'bossUnwrite', index: enemy.index, phase: 'arm' });
+        return;
+      }
+    }
+
     if (special.kind === 'enrage' && bs.kind === 'enrage') {
       if (!bs.enraged && enemy.hp <= enemy.maxhp * special.belowHpFrac) {
         bs.enraged = true;
@@ -1356,6 +1761,23 @@ function dealDamageToPlayer(
   if (enemy.kind === 'boss' && state.bossState?.kind === 'enrage' && state.bossState.enraged) {
     const special = BOSSES[enemy.species as BossId].special;
     if (special.kind === 'enrage') dmg *= special.dmgMult;
+  }
+  // Steam pair rider: the scalded target's next move lands soft.
+  if (enemy.steamed) {
+    dmg *= STEAM_NEXT_MOVE_MULT;
+    enemy.steamed = false;
+  }
+  // A living familiar draws 40% of enemy attacks (03 section 22).
+  if (state.familiar && state.familiar.hp > 0 && rng() < FAMILIAR.redirectChance) {
+    const fam = state.familiar;
+    const famDmg = Math.max(1, Math.round(dmg));
+    fam.hp = Math.max(0, fam.hp - famDmg);
+    emit({ kind: 'familiarHit', amount: famDmg, hpAfter: fam.hp });
+    if (fam.hp <= 0) {
+      state.familiar = null;
+      emit({ kind: 'familiarFade', reason: 'fallen' });
+    }
+    return;
   }
   // Elite affixes (v1.1): fleet softens each of its two blows;
   // frenzied ramps below half health.
@@ -1440,6 +1862,7 @@ function applyMoveRider(
       break;
     }
     case 'selfShield': {
+      if ((enemy.noShieldTurns ?? 0) > 0) break; // Depth holds the water
       enemy.shield = rider.amount;
       emit({ kind: 'enemyShield', index: enemy.index, amount: enemy.shield });
       break;

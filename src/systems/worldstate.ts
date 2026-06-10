@@ -3,7 +3,7 @@
  * facing this tile mean" and apply the returned state changes.
  */
 import type { CompiledMap, EntityAt, ExitDef } from '../core/mapdefs.ts';
-import type { BossId, Dir, ElementId, GameState, ShrineId } from '../core/state.ts';
+import type { BossId, Dir, ElementId, GameState, MapId, ShrineId } from '../core/state.ts';
 import type { Rng } from '../core/rng.ts';
 import type { Spell } from '../core/state.ts';
 import { ELEMENT_IDS } from '../data/elements.ts';
@@ -31,7 +31,8 @@ export type Interaction =
   | { kind: 'gate'; id: string }
   | { kind: 'teleport'; bossId: string }
   | { kind: 'egate'; id: string }
-  | { kind: 'murk' };
+  | { kind: 'murk' }
+  | { kind: 'trial'; key: TrialKey };
 
 /** What interacting with the faced tile means, if anything. */
 export function interactionFor(map: CompiledMap, entity: EntityAt | null): Interaction | null {
@@ -57,7 +58,42 @@ export function interactionFor(map: CompiledMap, entity: EntityAt | null): Inter
       return { kind: 'teleport', bossId: entity.ref };
     case 'egate':
       return { kind: 'egate', id: entity.ref };
+    case 'trial':
+      return { kind: 'trial', key: entity.ref as TrialKey };
   }
+}
+
+/** Trial stones demand one named reaction (03 section 23). */
+export type TrialKey = 'shatter' | 'blight' | 'kindle';
+
+export const TRIALS: Record<TrialKey, { title: string; flag: string; demand: string }> = {
+  shatter: {
+    title: 'Trial of Frost',
+    flag: 'trial_frost',
+    demand: 'FROST, it reads. Chill me, then strike with storm. SHATTER me or leave.',
+  },
+  blight: {
+    title: 'Trial of Rot',
+    flag: 'trial_rot',
+    demand: 'ROT, it reads. Poison me, then call the gloom. BLIGHT me or leave.',
+  },
+  kindle: {
+    title: 'Trial of Flame',
+    flag: 'trial_flame',
+    demand: 'FLAME, it reads. Wither me, then put me to the torch. KINDLE me or leave.',
+  },
+};
+
+export const TRIAL_KEYS: readonly TrialKey[] = ['shatter', 'blight', 'kindle'];
+
+/**
+ * The sanctum stair stays sealed until the Wraith falls (03 section
+ * 23: the Hollow drains). Returns the dialogue id barring the way, or
+ * null when the exit is open.
+ */
+export function exitLocked(state: GameState, to: MapId): string | null {
+  if (to === 'sanctum' && !state.world.bosses.valewraith) return 'sanctum_stair_sealed';
+  return null;
 }
 
 /**

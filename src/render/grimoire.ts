@@ -14,6 +14,7 @@ import {
   displayName,
   makeSpell,
   potCost,
+  potencyCapFor,
   sanitizeGivenName,
   spellCost,
   spellHits,
@@ -26,7 +27,7 @@ import {
 } from '../systems/spellcraft.ts';
 import { COMBAT } from '../data/constants.ts';
 import { ESSENCE } from '../data/essence.ts';
-import { MASTERY, masteryTier } from '../data/wheel.ts';
+import { MASTERY, masteryTier, TWIN } from '../data/wheel.ts';
 import { CHARMS, CHARM_IDS, FEATS, type CharmId } from '../data/discovery.ts';
 import { ENEMIES, type EnemySpeciesId } from '../data/enemies.ts';
 import { exportCode } from '../systems/spellcodes.ts';
@@ -121,6 +122,13 @@ export function closeGrimoire(): void {
   const done = ctx.onClose;
   ctx = null;
   done();
+}
+
+/** The composition under the cursor, twin nature included. */
+function craftedSpell(): Spell {
+  const spell = makeSpell(sel.element, sel.form, sel.rune, sel.p);
+  if (sel.e2 && sel.e2 !== sel.element) spell.e2 = sel.e2;
+  return spell;
 }
 
 function unlocked(): { elements: string[]; forms: string[]; runes: string[] } {
@@ -358,6 +366,7 @@ function buildChips(): void {
     'element',
     u.elements,
   );
+  buildTwinChips(u.elements);
   chipRow(
     'chForm',
     FORM_IDS,
@@ -374,10 +383,54 @@ function buildChips(): void {
   );
 }
 
+/**
+ * Twin inscription (03 section 15): a second element row appears once
+ * the three trials are done. Picking the primary again clears it.
+ */
+function buildTwinChips(unlockedElements: string[]): void {
+  if (!ctx) return;
+  const open = ctx.state.world.flags['trials_complete'] === true;
+  el('twinSec').style.display = open ? 'block' : 'none';
+  if (!open) {
+    sel.e2 = undefined;
+    return;
+  }
+  if (sel.e2 === sel.element) sel.e2 = undefined;
+  const wrap = el('chElem2');
+  wrap.innerHTML = '';
+  const none = document.createElement('button');
+  none.className = `chip${sel.e2 === undefined ? ' sel' : ''}`;
+  none.textContent = 'None';
+  none.onclick = () => {
+    playSfx('select');
+    sel.e2 = undefined;
+    rebuild();
+  };
+  wrap.appendChild(none);
+  for (const id of ELEMENT_IDS) {
+    if (id === sel.element) continue;
+    const isUnlocked = unlockedElements.includes(id);
+    const chip = document.createElement('button');
+    chip.className = `chip${sel.e2 === id ? ' sel' : ''}${isUnlocked ? '' : ' lock'}`;
+    chip.textContent = isUnlocked ? ELEMENTS[id].label : `🔒 ${ELEMENTS[id].label}`;
+    chip.onclick = () => {
+      if (!isUnlocked) {
+        playSfx('deny');
+        toast(hintFor('element', id), true);
+        return;
+      }
+      playSfx('select');
+      sel.e2 = id;
+      rebuild();
+    };
+    wrap.appendChild(chip);
+  }
+}
+
 function refreshPreviewInfo(): void {
   if (!ctx) return;
   const lv = ctx.state.player.lv;
-  const spell = makeSpell(sel.element, sel.form, sel.rune, sel.p);
+  const spell = craftedSpell();
   const element = ELEMENTS[spell.element];
   const rune = RUNES[spell.rune];
   const form = FORMS[spell.form];
@@ -388,11 +441,16 @@ function refreshPreviewInfo(): void {
 
   // Potency slider readout + the full cost ledger (02: the cost is a
   // conversation, never a surprise).
-  el<HTMLInputElement>('potency').value = String(Math.round(sel.p * 100));
+  const slider = el<HTMLInputElement>('potency');
+  const cap = potencyCapFor(sel.rune);
+  slider.max = String(Math.round(cap * 100));
+  if (sel.p > cap) sel.p = cap;
+  slider.value = String(Math.round(sel.p * 100));
   el('potencyV').textContent = `x${sel.p.toFixed(2)}`;
   el('potLedger').textContent =
     `${String(COMBAT.costBase)} base · form x${String(form.mp)} · rune x${String(rune.mp)}` +
     ` · potency x${potCost(sel.p).toFixed(2)}` +
+    (spell.e2 ? ` · twin x${String(TWIN.mpMult)}` : '') +
     (tier >= 3 ? ' · mastery -1' : '') +
     ` = ${String(spellCost(spell, mods))} MP`;
 
@@ -484,7 +542,7 @@ function buildSlots(): void {
     b.onclick = () => {
       if (!ctx) return;
       playSfx('confirm');
-      const crafted = makeSpell(sel.element, sel.form, sel.rune, sel.p);
+      const crafted = craftedSpell();
       const given = sanitizeGivenName(givenName);
       if (given && given !== spellName(crafted)) crafted.given = given;
       ctx.onInscribe(i, crafted);
@@ -500,7 +558,14 @@ function buildSlots(): void {
 
 /* ---------- animated sigil preview ---------- */
 
-const DOT_COUNT: Record<FormId, number> = { wisp: 3, bolt: 5, lance: 7, nova: 9, veil: 6 };
+const DOT_COUNT: Record<FormId, number> = {
+  wisp: 3,
+  bolt: 5,
+  lance: 7,
+  nova: 9,
+  veil: 6,
+  call: 8,
+};
 
 /** Draw one frame of the sigil. t is seconds; cosmetic animation only. */
 export function drawSigilFrame(t: number): void {

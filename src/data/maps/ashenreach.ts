@@ -137,5 +137,6 @@ export const ashenreach = {
     }
   ],
   "gates": [],
-  "triggers": []
+  "triggers": [],
+  "trials": []
 } as const satisfies CompiledMap;

@@ -5,6 +5,7 @@
 @zone hollow 1,1 48,18 northhollow.hollow
 @zone cliffs 1,19 48,38 northhollow.cliffs
 @exit 24,38 -> hearth 15,1
+@exit 28,2 -> sanctum 20,25
 @shrine keen 2,23
 @spring 40,5
 @boss valewraith 24,3

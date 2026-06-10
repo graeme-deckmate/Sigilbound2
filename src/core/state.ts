@@ -5,7 +5,7 @@
  */
 
 export type ElementId = 'ember' | 'rime' | 'volt' | 'thorn' | 'gloom';
-export type FormId = 'wisp' | 'bolt' | 'lance' | 'nova' | 'veil';
+export type FormId = 'wisp' | 'bolt' | 'lance' | 'nova' | 'veil' | 'call';
 export type RuneId =
   | 'none'
   | 'fury'
@@ -22,12 +22,12 @@ export type RuneId =
   | 'hollowlight'
   | 'wraithmark';
 
-export type MapId = 'hearth' | 'hearthvale' | 'westwood' | 'ashenreach' | 'northhollow';
+export type MapId = 'hearth' | 'hearthvale' | 'westwood' | 'ashenreach' | 'northhollow' | 'sanctum';
 
 /** Rune shrines, keyed by the rune they grant. */
 export type ShrineId = 'fury' | 'thirst' | 'echo' | 'keen';
 
-export type BossId = 'bogmaw' | 'thornveil' | 'ashenwarden' | 'valewraith';
+export type BossId = 'bogmaw' | 'thornveil' | 'ashenwarden' | 'valewraith' | 'hollowwarden';
 
 export type Dir = 'up' | 'down' | 'left' | 'right';
 
@@ -43,6 +43,9 @@ export type StatusMap = Partial<Record<PlayerStatusId, number>>;
 /** A crafted spell is its composition; stats and name derive from it. */
 export interface Spell {
   element: ElementId;
+  /** Twin element (Act 4 unlock, 03 section 15). Order matters for
+   *  naming and reaction-check order only. */
+  e2?: ElementId;
   form: FormId;
   rune: RuneId;
   /** Potency, locked at inscribe (docs/03 section 4). v1.1. */

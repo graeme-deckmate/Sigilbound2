@@ -82,6 +82,13 @@ export const northhollow = {
       "to": "hearth",
       "tx": 15,
       "ty": 1
+    },
+    {
+      "x": 28,
+      "y": 2,
+      "to": "sanctum",
+      "tx": 20,
+      "ty": 25
     }
   ],
   "npcs": [],
@@ -137,5 +144,6 @@ export const northhollow = {
     }
   ],
   "gates": [],
-  "triggers": []
+  "triggers": [],
+  "trials": []
 } as const satisfies CompiledMap;

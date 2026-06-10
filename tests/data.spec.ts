@@ -16,26 +16,26 @@ import { DIALOGUE } from '../src/data/dialogue.ts';
 import { SHRINE_IDS } from '../src/data/constants.ts';
 
 describe('table completeness', () => {
-  it('has 5 elements, 5 forms, 12 runes (6 + wyrd + 5 relics)', () => {
+  it('has 5 elements, 6 forms, 12 runes (6 + wyrd + 5 relics)', () => {
     expect(ELEMENT_IDS).toHaveLength(5);
-    expect(FORM_IDS).toHaveLength(5);
+    expect(FORM_IDS).toHaveLength(6);
     expect(RUNE_IDS).toHaveLength(12);
     expect(Object.keys(ELEMENTS)).toHaveLength(5);
-    expect(Object.keys(FORMS)).toHaveLength(5);
+    expect(Object.keys(FORMS)).toHaveLength(6);
     expect(Object.keys(RUNES)).toHaveLength(12);
   });
 
-  it('has 13 enemy species (12 + glimmerkin) and 4 bosses', () => {
-    expect(ENEMY_IDS).toHaveLength(13);
-    expect(Object.keys(ENEMIES)).toHaveLength(13);
-    expect(BOSS_IDS).toHaveLength(4);
-    expect(Object.keys(BOSSES)).toHaveLength(4);
+  it('has 14 enemy species (12 + glimmerkin + trial guardian) and 5 bosses', () => {
+    expect(ENEMY_IDS).toHaveLength(14);
+    expect(Object.keys(ENEMIES)).toHaveLength(14);
+    expect(BOSS_IDS).toHaveLength(5);
+    expect(Object.keys(BOSSES)).toHaveLength(5);
   });
 
-  it('covers 22 unlock entries: 5 elements + 5 forms + 12 runes', () => {
-    expect(UNLOCKS).toHaveLength(22);
+  it('covers 23 unlock entries: 5 elements + 6 forms + 12 runes', () => {
+    expect(UNLOCKS).toHaveLength(23);
     expect(UNLOCKS.filter((u) => u.kind === 'element')).toHaveLength(5);
-    expect(UNLOCKS.filter((u) => u.kind === 'form')).toHaveLength(5);
+    expect(UNLOCKS.filter((u) => u.kind === 'form')).toHaveLength(6);
     expect(UNLOCKS.filter((u) => u.kind === 'rune')).toHaveLength(12);
   });
 });
@@ -58,11 +58,12 @@ describe('enemy roster integrity', () => {
       if (id === 'glimmerkin') continue; // never attacks, by design (v1.1)
       const e = ENEMIES[id];
       expect(e.h0).toBeGreaterThan(0);
-      expect(e.hpl).toBeGreaterThan(0);
+      // Trial guardians scale by fixed trial level, not per-level HP.
+      expect(e.hpl).toBeGreaterThanOrEqual(id === 'trialguardian' ? 0 : 1);
       expect(e.a0).toBeGreaterThan(0);
       expect(e.al).toBeGreaterThan(0);
       expect(e.xpBase).toBeGreaterThan(0);
-      expect(e.xpPerLv).toBeGreaterThan(0);
+      expect(e.xpPerLv).toBeGreaterThanOrEqual(id === 'trialguardian' ? 0 : 1);
       expect(e.moves.length).toBeGreaterThanOrEqual(3);
       expect(e.moves.some((m) => m.mult > 0)).toBe(true);
       for (const m of e.moves) {
@@ -115,8 +116,8 @@ describe('enemy roster integrity', () => {
 });
 
 describe('formation integrity', () => {
-  it('all 8 zones exist with sane bands and members', () => {
-    expect(ZONE_IDS).toHaveLength(8);
+  it('all 9 zones exist with sane bands and members', () => {
+    expect(ZONE_IDS).toHaveLength(9);
     for (const z of ZONE_IDS) {
       const t = ZONES[z];
       expect(t.levelMin).toBeGreaterThanOrEqual(1);

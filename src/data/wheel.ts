@@ -132,3 +132,54 @@ export const ASPECT = {
   /** DoTs of the ascendant element tick harder. */
   dotMult: 1.1,
 } as const;
+
+/* ---------- twin-element spells (03 section 15, Act 4) ---------- */
+
+export const TWIN = {
+  mpMult: 1.6,
+  matchupCap: 1.3,
+  procFrac: 0.5,
+} as const;
+
+export type TwinRider =
+  | 'steam' // target's next move x0.7
+  | 'storm' // single-target arcs to one other enemy at 50%
+  | 'wildfire' // on kill, Burning 100% to all remaining
+  | 'hollowflame' // ignores shields
+  | 'static' // Shatter from this spell +120% instead of +60%
+  | 'mire' // target acts last next round
+  | 'depth' // target cannot gain shields 2 turns
+  | 'surge' // +3 MP per enemy hit
+  | 'night' // Withered applied is +40% taken
+  | 'rot'; // DoTs applied tick start AND end of turn
+
+export interface TwinPairDef {
+  a: ElementId;
+  b: ElementId;
+  prefix: string;
+  rider: TwinRider;
+}
+
+export const TWIN_PAIRS: readonly TwinPairDef[] = [
+  { a: 'ember', b: 'rime', prefix: 'Steam', rider: 'steam' },
+  { a: 'ember', b: 'volt', prefix: 'Storm', rider: 'storm' },
+  { a: 'ember', b: 'thorn', prefix: 'Wildfire', rider: 'wildfire' },
+  { a: 'ember', b: 'gloom', prefix: 'Hollowflame', rider: 'hollowflame' },
+  { a: 'rime', b: 'volt', prefix: 'Static', rider: 'static' },
+  { a: 'rime', b: 'thorn', prefix: 'Mire', rider: 'mire' },
+  { a: 'rime', b: 'gloom', prefix: 'Depth', rider: 'depth' },
+  { a: 'volt', b: 'thorn', prefix: 'Surge', rider: 'surge' },
+  { a: 'volt', b: 'gloom', prefix: 'Night', rider: 'night' },
+  { a: 'thorn', b: 'gloom', prefix: 'Rot', rider: 'rot' },
+];
+
+export function twinPair(e1: ElementId, e2: ElementId): TwinPairDef | null {
+  return TWIN_PAIRS.find((p) => (p.a === e1 && p.b === e2) || (p.a === e2 && p.b === e1)) ?? null;
+}
+
+export const STATIC_SHATTER_BONUS = 1.2;
+export const STEAM_NEXT_MOVE_MULT = 0.7;
+export const STORM_ARC_FRAC = 0.5;
+export const NIGHT_WITHER_TAKEN = 1.4;
+export const SURGE_PAIR_MP = 3;
+export const DEPTH_NO_SHIELD_TURNS = 2;
