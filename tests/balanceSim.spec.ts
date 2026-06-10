@@ -9,10 +9,10 @@
 import { describe, expect, it } from 'vitest';
 import { mulberry32, randInt, type Rng } from '../src/core/rng.ts';
 import { newGame } from '../src/core/save.ts';
-import type { GameState, Spell } from '../src/core/state.ts';
+import type { ElementId, GameState, Spell } from '../src/core/state.ts';
 import { maxHpAt, maxMpAt, unlockedIds } from '../src/systems/leveling.ts';
 import { makeSpell, elementMult, spellCost, spellPower } from '../src/systems/spellcraft.ts';
-import { weightedPick } from '../src/systems/encounters.ts';
+import { eligibleFormations, weightedPick } from '../src/systems/encounters.ts';
 import { FORMS } from '../src/data/forms.ts';
 import {
   initBattle,
@@ -30,23 +30,31 @@ const MAX_ROUNDS = 40;
 
 /* ---------- player setups ---------- */
 
-function playerAt(lv: number, spells: Spell[]): GameState {
+function playerAt(lv: number, spells: Spell[], starter: ElementId = 'ember'): GameState {
   const gs = newGame();
   gs.player.lv = lv;
+  gs.player.starter = starter;
   gs.player.maxhp = maxHpAt(lv);
   gs.player.maxmp = maxMpAt(lv);
   gs.player.hp = gs.player.maxhp;
   gs.player.mp = gs.player.maxmp;
-  gs.player.spells = [...spells, null, null, null, null].slice(0, 4);
+  gs.player.spells = [...spells, null, null, null, null, null].slice(0, 6);
   return gs;
 }
 
 /** Bolts of every element unlocked at this level (no shrines). */
-function boltsFor(lv: number): Spell[] {
+function boltsFor(lv: number, starter: ElementId = 'ember'): Spell[] {
   const shrines = { fury: false, thirst: false, echo: false, keen: false };
-  return unlockedIds('element', lv, shrines).map((e) =>
+  return unlockedIds('element', lv, shrines, starter).map((e) =>
     makeSpell(e as Spell['element'], 'bolt', 'none'),
   );
+}
+
+/** The true Lv 1-2 loadout: the starter's Wisp and Bolt, then growth. */
+function earlyKit(lv: number, starter: ElementId): Spell[] {
+  const kit: Spell[] = [makeSpell(starter, 'wisp', 'none')];
+  for (const e of boltsFor(lv, starter)) kit.push(e);
+  return kit;
 }
 
 /* ---------- policies ---------- */
@@ -556,5 +564,64 @@ describe('Vale Wraith balance (docs/02 + Phase 7 windows)', () => {
     const { medianTurns } = bossSim('valewraith', 11, 18_000);
     expect(medianTurns).toBeGreaterThanOrEqual(8);
     expect(medianTurns).toBeLessThanOrEqual(14);
+  });
+});
+
+/* ---------- v1.1 assertions: the RNG cliff and starter fairness ---------- */
+
+/**
+ * Weighted zone win rate under realistic encounters, honoring the Lv 1
+ * meadow singles rule via eligibleFormations (03 section 6).
+ */
+function zoneRate(zone: ZoneId, playerLv: number, starter: ElementId, seedBase: number): number {
+  let wins = 0;
+  for (let run = 0; run < RUNS; run++) {
+    const rng = mulberry32(seedBase + run);
+    const table = ZONES[zone];
+    const formation = weightedPick(rng, eligibleFormations(zone, playerLv));
+    const enemyLv = randInt(rng, table.levelMin, table.levelMax);
+    const gs = playerAt(playerLv, earlyKit(playerLv, starter), starter);
+    const result = fight(initBattle(gs, formation.members, enemyLv, zone).state, baseline, rng);
+    if (result.won) wins += 1;
+  }
+  return wins / RUNS;
+}
+
+describe('v1.1: the RNG cliff is gone (02 new assertions)', () => {
+  it('meadow baseline at Lv 1-2 sits within 10 points of Lv 3-4, every starter', () => {
+    for (const [si, starter] of (['ember', 'rime', 'thorn'] as const).entries()) {
+      const early =
+        (zoneRate('hearthvale.meadow', 1, starter, 20_000 + si * 7919) +
+          zoneRate('hearthvale.meadow', 2, starter, 21_000 + si * 7919)) /
+        2;
+      const late =
+        (zoneRate('hearthvale.meadow', 3, starter, 22_000 + si * 7919) +
+          zoneRate('hearthvale.meadow', 4, starter, 23_000 + si * 7919)) /
+        2;
+      expect(
+        Math.abs(early - late),
+        `${starter}: early ${String(early)} late ${String(late)}`,
+      ).toBeLessThanOrEqual(0.1);
+      // and the early game is genuinely winnable, not flat-at-the-bottom
+      expect(early, starter).toBeGreaterThanOrEqual(0.7);
+    }
+  });
+});
+
+describe('v1.1: starters are fair (02 new assertions)', () => {
+  it('Bogmaw-down rates per starter sit within 8 points of each other', () => {
+    const rates = (['ember', 'rime', 'thorn'] as const).map((starter, si) => {
+      let wins = 0;
+      for (let run = 0; run < RUNS; run++) {
+        const rng = mulberry32(24_000 + si * 7919 + run);
+        const gs = playerAt(4, boltsFor(4, starter), starter);
+        const result = fight(initBossBattle(gs, 'bogmaw', null).state, weaknessAware, rng);
+        if (result.won) wins += 1;
+      }
+      return wins / RUNS;
+    });
+    const spread = Math.max(...rates) - Math.min(...rates);
+    expect(spread, `rates ${rates.map((r) => r.toFixed(2)).join('/')}`).toBeLessThanOrEqual(0.08);
+    for (const r of rates) expect(r).toBeGreaterThanOrEqual(0.8);
   });
 });

@@ -33,6 +33,16 @@ function freshBattle(
   setup?: (gs: ReturnType<typeof newGame>) => void,
 ): BattleState {
   const gs = newGame();
+  // Post-Elder state: ember starter with its Wisp + Bolt (v1.0 parity).
+  gs.player.starter = 'ember';
+  gs.player.spells = [
+    makeSpell('ember', 'wisp', 'none'),
+    makeSpell('ember', 'bolt', 'none'),
+    null,
+    null,
+    null,
+    null,
+  ];
   setup?.(gs);
   return initBattle(gs, members, enemyLv, 'hearthvale.meadow').state;
 }
@@ -72,9 +82,9 @@ describe('weakness and resistance multipliers', () => {
     expect(hit?.mult).toBe(1.6);
   });
 
-  it('thorn vs gloop (resist) deals round(13 * 0.6) = 8', () => {
-    const state = freshBattle(['gloop'], 4, (gs) => {
-      gs.player.spells[0] = makeSpell('thorn', 'bolt', 'none');
+  it('ember vs pondscale (resist) deals round(13 * 0.6) = 8', () => {
+    const state = freshBattle(['pondscale'], 4, (gs) => {
+      gs.player.spells[0] = makeSpell('ember', 'bolt', 'none');
     });
     const { events } = reduce(
       state,
@@ -274,7 +284,7 @@ describe('focus cleanse order', () => {
     expect(find(r.events, 'playerCleanse')[0]?.status).toBe('burning');
     expect(r.state.player.statuses).toEqual(['chilled']);
     const f = find(r.events, 'focus')[0];
-    expect(f?.mp).toBe(8); // round(22 * 0.35)
+    expect(f?.mp).toBe(9); // round(26 * 0.35)
     expect(f?.hp).toBe(5); // round(46 * 0.10)
   });
 });
@@ -334,8 +344,8 @@ describe('riders and shields', () => {
     );
     const drain = find(r.events, 'mpDrain')[0];
     expect(drain?.amount).toBe(6);
-    // focus capped at maxmp 22 first, then the sigil drains 6
-    expect(r.state.player.mp).toBe(16);
+    // focus capped at maxmp 26 first, then the sigil drains 6
+    expect(r.state.player.mp).toBe(20);
   });
 
   it('enemy self shield absorbs spell damage before HP', () => {
@@ -417,7 +427,7 @@ describe('ui snapshots track the playback step by step', () => {
     );
     const cast = find(events, 'playerCast')[0];
     // cost is paid when the cast event shows, hp untouched
-    expect(cast?.ui.player.mp).toBe(22 - 9);
+    expect(cast?.ui.player.mp).toBe(26 - 9);
     expect(cast?.ui.player.hp).toBe(46);
 
     // echo hits land one at a time on the snapshot
@@ -435,7 +445,7 @@ describe('ui snapshots track the playback step by step', () => {
     expect(playerHits[1]?.ui.player.hp).toBe(playerHits[1]?.hpAfter);
     expect((playerHits[0]?.ui.player.hp ?? 0) > (playerHits[1]?.ui.player.hp ?? 0)).toBe(true);
     // mp in the enemy-attack snapshot still only reflects the cast cost
-    expect(playerHits[0]?.ui.player.mp).toBe(22 - 9);
+    expect(playerHits[0]?.ui.player.mp).toBe(26 - 9);
   });
 
   it('focus and veil snapshots carry restored values and shield', () => {
@@ -797,9 +807,9 @@ describe('commits', () => {
     expect(xpGained).toBe(34);
     expect(committed.stats.battles).toBe(1);
     expect(committed.world.graceSteps).toBe(4);
-    expect(levelsGained).toEqual([2]); // 34 >= 18, carries 16 into Lv2
+    expect(levelsGained).toEqual([2]); // 34 >= 14, carries 20 into Lv2
     expect(committed.player.lv).toBe(2);
-    expect(committed.player.xp).toBe(16);
+    expect(committed.player.xp).toBe(20);
     expect(committed.player.statuses).toEqual({});
   });
 

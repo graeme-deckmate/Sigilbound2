@@ -30,6 +30,8 @@ export interface BattleResult {
   state: GameState;
   xpGained: number;
   levelsGained: number[];
+  essenceGained: number;
+  essenceLost: number;
   bossId?: BossId;
 }
 
@@ -83,11 +85,14 @@ export class BattleScene extends Phaser.Scene {
       setup = initBossBattle(this.params.state, this.params.bossId, this.params.zone ?? null);
     } else {
       if (!this.params.encounter) throw new Error('Battle needs an encounter or a bossId');
+      const enc = this.params.encounter;
       setup = initBattle(
         this.params.state,
-        this.params.encounter.formation.members,
-        this.params.encounter.enemyLv,
-        this.params.encounter.zone,
+        enc.formation.members,
+        enc.enemyLv,
+        enc.zone,
+        { ambush: enc.ambush, elites: enc.elites, glimmer: enc.glimmer },
+        this.rng,
       );
     }
     this.battle = setup.state;
@@ -117,6 +122,11 @@ export class BattleScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, offAction);
 
     void this.play(setup.events).then(() => {
+      // An ambush can end the battle before the first command.
+      if (this.battle.phase !== 'player') {
+        void this.finish();
+        return;
+      }
       this.playerTurn();
     });
   }
@@ -165,6 +175,8 @@ export class BattleScene extends Phaser.Scene {
         .setOrigin(0.5, 1)
         .setScale(scale)
         .setDepth(2);
+      // Elite tint rule: promoted enemies carry a gold cast.
+      if (enemy.affix) sprite.setTint(0xffd9a0);
       this.sprites.set(enemy.index, sprite);
       this.baseY.set(enemy.index, y);
       const bob = this.tweens.add({
@@ -542,6 +554,31 @@ export class BattleScene extends Phaser.Scene {
       case 'bossEnrage':
         playSfx('boss_telegraph');
         break;
+      case 'ambush':
+        playSfx('encounter');
+        if (this.motionOk) this.cameras.main.shake(140, 0.006);
+        break;
+      case 'sealedHit':
+        playSfx('deny');
+        break;
+      case 'sealBreak': {
+        playSfx('shield_break');
+        this.flashSprite(event.index);
+        break;
+      }
+      case 'frenzy':
+        playSfx('boss_telegraph');
+        this.flashSprite(event.index);
+        break;
+      case 'glimmerFlee': {
+        playSfx('select');
+        const sprite = this.sprites.get(event.index);
+        if (sprite) {
+          this.tweens.add({ targets: sprite, alpha: 0, x: sprite.x + 30, duration: 420 });
+        }
+        bdom.updateEnemyRows(event.ui.enemies);
+        break;
+      }
       default:
         break;
     }
@@ -564,14 +601,25 @@ export class BattleScene extends Phaser.Scene {
   private async finish(): Promise<void> {
     this.finishing = true;
     const phase = this.battle.phase;
-    const { state, xpGained, levelsGained } = commitBattle(this.params.state, this.battle);
+    const { state, xpGained, levelsGained, essenceGained, essenceLost } = commitBattle(
+      this.params.state,
+      this.battle,
+    );
     const outcome: BattleResult['outcome'] =
       phase === 'victory' ? 'victory' : phase === 'defeat' ? 'defeat' : 'fled';
     await this.wait(350);
     await dom.irisTransition(() => {
       bdom.showBattle(false);
       dom.showTouchControls(true);
-      this.params.onDone({ outcome, state, xpGained, levelsGained, bossId: this.params.bossId });
+      this.params.onDone({
+        outcome,
+        state,
+        xpGained,
+        levelsGained,
+        essenceGained,
+        essenceLost,
+        bossId: this.params.bossId,
+      });
       this.scene.wake('World');
       this.scene.stop();
     });

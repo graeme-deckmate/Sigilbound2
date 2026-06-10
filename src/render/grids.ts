@@ -463,6 +463,23 @@ const VALEWRAITH: BattleSprite = {
   pal: { k: '#3a2f6b', v: '#c9b8ff', m: '#1a1433' },
 };
 
+/** Glimmerkin: a skittish mote of vale-light (v1.1 rare roll). */
+const GLIMMERKIN_SPRITE: BattleSprite = {
+  grid: [
+    '....gg....',
+    '..ggyygg..',
+    '.gyywwyyg.',
+    '.gywwwwyg.',
+    'ggywwwwygg',
+    '.gywwwwyg.',
+    '.gyywwyyg.',
+    '..ggyygg..',
+    '....gg....',
+    '...g..g...',
+  ],
+  pal: { g: '#9d7bff', y: '#ffd84a', w: '#ffffff' },
+};
+
 export const BATTLE_SPRITES: Readonly<Record<string, BattleSprite>> = {
   gloop: GLOOP,
   pondscale: PONDSCALE,
@@ -480,6 +497,7 @@ export const BATTLE_SPRITES: Readonly<Record<string, BattleSprite>> = {
   galeharrow: GALEHARROW,
   hollowshade: HOLLOWSHADE,
   valewraith: VALEWRAITH,
+  glimmerkin: GLIMMERKIN_SPRITE,
 };
 
 /** Every grid registered here gets row-uniformity asserted in tests. */
@@ -502,4 +520,5 @@ export const ALL_GRIDS: Readonly<Record<string, PixelGrid>> = {
   galeharrow: GALEHARROW.grid,
   hollowshade: HOLLOWSHADE.grid,
   valewraith: VALEWRAITH.grid,
+  glimmerkin: GLIMMERKIN_SPRITE.grid,
 };

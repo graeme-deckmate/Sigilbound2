@@ -21,20 +21,23 @@ function memStore(): KVStore {
 }
 
 describe('newGame', () => {
-  it('starts per the docs: Lv1, 46/22, Emberwisp + Emberbolt, Hearth', () => {
+  it('starts per v1.1: Lv1, 46/26, empty slots awaiting the Elder, Hearth', () => {
     const g = newGame();
-    expect(g.version).toBe(1);
+    expect(g.version).toBe(2);
     expect(g.player.lv).toBe(1);
     expect(g.player.hp).toBe(46);
     expect(g.player.maxhp).toBe(46);
-    expect(g.player.mp).toBe(22);
-    expect(g.player.maxmp).toBe(22);
-    expect(g.player.spells).toEqual([
-      { element: 'ember', form: 'wisp', rune: 'none' },
-      { element: 'ember', form: 'bolt', rune: 'none' },
-      null,
-      null,
-    ]);
+    expect(g.player.mp).toBe(26);
+    expect(g.player.maxmp).toBe(26);
+    expect(g.player.spells).toEqual([null, null, null, null, null, null]);
+    expect(g.player.starter).toBeNull();
+    expect(g.player.slotsUnlocked).toBe(4);
+    expect(g.player.essence).toBe(0);
+    expect(g.player.mastery).toEqual({ ember: 0, rime: 0, volt: 0, thorn: 0, gloom: 0 });
+    expect(g.player.charms).toEqual({ owned: [], equipped: [null, null] });
+    expect(g.world.aspect).toBeNull();
+    expect(g.world.essenceMarker).toBeNull();
+    expect(g.notes).toEqual([]);
     expect(g.world.mapId).toBe('hearth');
     expect(Object.values(g.world.shrines).every((v) => !v)).toBe(true);
     expect(Object.values(g.world.bosses).every((v) => !v)).toBe(true);
@@ -99,18 +102,82 @@ describe('migrate', () => {
   });
 
   it('rejects unknown versions', () => {
-    expect(() => migrate({ version: 2, player: {}, world: {} })).toThrow(SaveError);
+    expect(() => migrate({ version: 3, player: {}, world: {} })).toThrow(SaveError);
+    expect(() => migrate({ version: 0, player: {}, world: {} })).toThrow(SaveError);
   });
 
-  it('fills defaults for a minimal v1 payload', () => {
+  it('fills defaults for a minimal v1 payload and upgrades it to v2', () => {
     const g = migrate({ version: 1, player: {}, world: {} });
+    expect(g.version).toBe(2);
     expect(g.player.lv).toBe(1);
     expect(g.player.hp).toBe(46);
-    expect(g.player.spells).toEqual([null, null, null, null]);
+    expect(g.player.spells).toEqual([null, null, null, null, null, null]);
+    // every v1 run began with Ember; the elder never re-asks
+    expect(g.player.starter).toBe('ember');
+    expect(g.player.slotsUnlocked).toBe(4);
+    expect(g.player.essence).toBe(0);
+    expect(g.world.aspect).toBeNull();
+    expect(g.world.essenceMarker).toBeNull();
+    expect(g.notes).toEqual([]);
     expect(g.world.mapId).toBe('hearth');
     expect(g.settings.textSpeed).toBe(1);
     expect(g.settings.dpadSide).toBe('left');
     expect(g.stats.battles).toBe(0);
+  });
+
+  it('v1 spells gain potency 1.0 in the upgrade', () => {
+    const g = migrate({
+      version: 1,
+      player: { spells: [{ element: 'rime', form: 'lance', rune: 'keen' }] },
+      world: {},
+    });
+    expect(g.player.spells[0]).toEqual({ element: 'rime', form: 'lance', rune: 'keen', p: 1 });
+  });
+
+  it('v2 round-trips potency, given names, essence, and the marker', () => {
+    const fresh = newGame();
+    fresh.player.starter = 'rime';
+    fresh.player.essence = 23;
+    fresh.player.slotsUnlocked = 5;
+    fresh.player.mastery.rime = 7;
+    fresh.player.spells[0] = {
+      element: 'rime',
+      form: 'bolt',
+      rune: 'none',
+      p: 1.5,
+      given: 'Coldsnap',
+    };
+    fresh.world.essenceMarker = { mapId: 'westwood', x: 9, y: 12, amount: 11 };
+    fresh.notes = ['A gate of frost bars the old cellar.'];
+    const g = migrate(JSON.parse(JSON.stringify(fresh)));
+    expect(g.player.spells[0]).toEqual({
+      element: 'rime',
+      form: 'bolt',
+      rune: 'none',
+      p: 1.5,
+      given: 'Coldsnap',
+    });
+    expect(g.player.essence).toBe(23);
+    expect(g.player.slotsUnlocked).toBe(5);
+    expect(g.player.starter).toBe('rime');
+    expect(g.player.mastery.rime).toBe(7);
+    expect(g.world.essenceMarker).toEqual({ mapId: 'westwood', x: 9, y: 12, amount: 11 });
+    expect(g.notes).toEqual(['A gate of frost bars the old cellar.']);
+  });
+
+  it('a v2 save with a null starter still asks the elder', () => {
+    const fresh = newGame();
+    const g = migrate(JSON.parse(JSON.stringify(fresh)));
+    expect(g.player.starter).toBeNull();
+  });
+
+  it('clamps out-of-range potency back into the slider range', () => {
+    const g = migrate({
+      version: 2,
+      player: { spells: [{ element: 'ember', form: 'bolt', rune: 'none', p: 9 }] },
+      world: {},
+    });
+    expect(g.player.spells[0]?.p).toBe(1.5);
   });
 
   it('clamps hp/mp to max and sanitizes bad leaf values', () => {
@@ -139,7 +206,9 @@ describe('migrate', () => {
       world: {},
     });
     expect(g.player.spells).toEqual([
-      { element: 'ember', form: 'bolt', rune: 'none' },
+      { element: 'ember', form: 'bolt', rune: 'none', p: 1 },
+      null,
+      null,
       null,
       null,
       null,

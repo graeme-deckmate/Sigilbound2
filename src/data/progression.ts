@@ -3,12 +3,15 @@ import type { Spell } from '../core/state.ts';
 
 export const LEVEL_CAP = 12;
 
-/** xpNext(lv) = XP_BASE + (lv - 1) * XP_PER_LEVEL */
-export const XP_BASE = 18;
-export const XP_PER_LEVEL = 14;
+/** xpNext(lv) = round(XP_BASE + (lv - 1)^XP_EXP * XP_SCALE) (v1.1 reshape:
+ *  cheaper levels 2-3, pricier 9-11). */
+export const XP_BASE = 14;
+export const XP_SCALE = 14;
+export const XP_EXP = 1.35;
 
 export const BASE_HP = 46;
-export const BASE_MP = 22;
+/** v1.1: +4 starting MP (the Lv 1 fourth-bolt fix). */
+export const BASE_MP = 26;
 export const HP_PER_LEVEL = 8;
 export const MP_PER_LEVEL = 4;
 
@@ -27,10 +30,21 @@ export const FOCUS_HP_FRAC = 0.1;
 /** Flee success chance; disabled in boss battles. */
 export const FLEE_CHANCE = 0.65;
 
-/** Starting loadout, from the prototype (canon): slots 1-2 inscribed. */
-export const STARTING_SPELLS: readonly (Spell | null)[] = [
-  { element: 'ember', form: 'wisp', rune: 'none' },
-  { element: 'ember', form: 'bolt', rune: 'none' },
-  null,
-  null,
-];
+/** Spell slots available before essence purchases (slots 5-6). */
+export const BASE_SLOTS = 4;
+export const MAX_SLOTS = 6;
+
+/**
+ * The Elder's gift once the starter is chosen (03 section 5): the
+ * starter element's Wisp and Bolt at default potency, slots 1-2.
+ */
+export function starterSpells(element: Spell['element']): readonly (Spell | null)[] {
+  return [
+    { element, form: 'wisp', rune: 'none', p: 1 },
+    { element, form: 'bolt', rune: 'none', p: 1 },
+    null,
+    null,
+    null,
+    null,
+  ];
+}

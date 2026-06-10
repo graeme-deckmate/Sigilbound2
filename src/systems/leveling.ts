@@ -2,7 +2,7 @@
  * XP, level-ups, and unlock evaluation. Pure functions over GameState
  * fragments; numbers come from src/data/.
  */
-import type { GameState, ShrineId } from '../core/state.ts';
+import type { ElementId, GameState, ShrineId } from '../core/state.ts';
 import {
   BASE_HP,
   BASE_MP,
@@ -10,17 +10,18 @@ import {
   LEVEL_CAP,
   MP_PER_LEVEL,
   XP_BASE,
-  XP_PER_LEVEL,
+  XP_EXP,
+  XP_SCALE,
 } from '../data/progression.ts';
-import { UNLOCKS, type UnlockDef } from '../data/unlocks.ts';
+import { isStarterElement, starterElementLevel, UNLOCKS, type UnlockDef } from '../data/unlocks.ts';
 
 export type PlayerState = GameState['player'];
 export type ShrineFlags = Record<ShrineId, boolean>;
 
-/** XP needed to clear the given level. Infinity at the cap. */
+/** XP needed to clear the given level (v1.1 reshape). Infinity at cap. */
 export function xpNext(lv: number): number {
   if (lv >= LEVEL_CAP) return Infinity;
-  return XP_BASE + (lv - 1) * XP_PER_LEVEL;
+  return Math.round(XP_BASE + Math.pow(lv - 1, XP_EXP) * XP_SCALE);
 }
 
 export function maxHpAt(lv: number): number {
@@ -57,7 +58,20 @@ export function applyXp(
   return { player: p, levelsGained };
 }
 
-export function isUnlocked(def: UnlockDef, lv: number, shrines: ShrineFlags): boolean {
+/** The level a starter-triggered unlock resolves to, given the pick. */
+function starterLevel(def: UnlockDef, starter: ElementId | null): number {
+  if (def.kind === 'element' && isStarterElement(def.id)) {
+    return starterElementLevel(def.id, starter && isStarterElement(starter) ? starter : null);
+  }
+  return 1;
+}
+
+export function isUnlocked(
+  def: UnlockDef,
+  lv: number,
+  shrines: ShrineFlags,
+  starter: ElementId | null = null,
+): boolean {
   const t = def.trigger;
   switch (t.type) {
     case 'start':
@@ -66,17 +80,30 @@ export function isUnlocked(def: UnlockDef, lv: number, shrines: ShrineFlags): bo
       return lv >= t.lv;
     case 'shrine':
       return shrines[t.shrine];
+    case 'starter':
+      return lv >= starterLevel(def, starter);
   }
 }
 
 /** Ids of unlocked parts of one kind, in UNLOCKS order. */
-export function unlockedIds(kind: UnlockDef['kind'], lv: number, shrines: ShrineFlags): string[] {
-  return UNLOCKS.filter((u) => u.kind === kind && isUnlocked(u, lv, shrines)).map((u) => u.id);
+export function unlockedIds(
+  kind: UnlockDef['kind'],
+  lv: number,
+  shrines: ShrineFlags,
+  starter: ElementId | null = null,
+): string[] {
+  return UNLOCKS.filter((u) => u.kind === kind && isUnlocked(u, lv, shrines, starter)).map(
+    (u) => u.id,
+  );
 }
 
 /** Parts that unlock exactly at this level (level-up toasts). */
-export function unlocksAtLevel(lv: number): UnlockDef[] {
-  return UNLOCKS.filter((u) => u.trigger.type === 'level' && u.trigger.lv === lv);
+export function unlocksAtLevel(lv: number, starter: ElementId | null = null): UnlockDef[] {
+  return UNLOCKS.filter((u) => {
+    if (u.trigger.type === 'level') return u.trigger.lv === lv;
+    if (u.trigger.type === 'starter') return starterLevel(u, starter) === lv && lv > 1;
+    return false;
+  });
 }
 
 /** Parts granted by this shrine (shrine toasts). */
@@ -85,7 +112,7 @@ export function unlocksAtShrine(shrine: ShrineId): UnlockDef[] {
 }
 
 /** Locked-chip hint text (docs/03-CONTENT-DATA section 5). */
-export function unlockHint(def: UnlockDef): string {
+export function unlockHint(def: UnlockDef, starter: ElementId | null = null): string {
   const t = def.trigger;
   switch (t.type) {
     case 'start':
@@ -94,5 +121,7 @@ export function unlockHint(def: UnlockDef): string {
       return `Reach Lv ${String(t.lv)}`;
     case 'shrine':
       return `Pray at the ${t.region} shrine.`;
+    case 'starter':
+      return `Reach Lv ${String(starterLevel(def, starter))}`;
   }
 }

@@ -48,5 +48,13 @@
   "dreamer_lore": {
     "speaker": "DREAMER",
     "pages": ["I dreamt the Wraith was a Warden once. The fourth one. Nobody likes that dream."]
+  },
+  "elder_grimoire": {
+    "speaker": "ELDER",
+    "pages": ["Take the Grimoire. Its first page is blank, and it is asking."]
+  },
+  "elder_start_south": {
+    "speaker": "ELDER",
+    "pages": ["Start south. Even a Gloop will test a new wisp."]
   }
 }

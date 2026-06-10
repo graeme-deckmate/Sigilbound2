@@ -136,28 +136,32 @@ describe('veil shield: round(14 * (rune.pw ?? 1) * lvScale * 0.90)', () => {
 });
 
 describe('element multiplier vs enemy tables', () => {
-  it('weak 1.6, resist 0.6, neutral 1.0 against the Gloop', () => {
-    const { weak, resist } = ENEMIES.gloop;
-    expect(elementMult('ember', weak, resist)).toBe(1.6);
-    expect(elementMult('volt', weak, resist)).toBe(1.6);
-    expect(elementMult('thorn', weak, resist)).toBe(0.6);
-    expect(elementMult('rime', weak, resist)).toBe(1.0);
-    expect(elementMult('gloom', weak, resist)).toBe(1.0);
+  it('weak 1.6, resist 0.6, neutral 1.0 across the Act 1 tables', () => {
+    const gloop = ENEMIES.gloop;
+    expect(elementMult('ember', gloop.weak, gloop.resist)).toBe(1.6);
+    expect(elementMult('volt', gloop.weak, gloop.resist)).toBe(1.6);
+    // v1.1 tuning: gloop lost its thorn resist (starter cliff fix)
+    expect(elementMult('thorn', gloop.weak, gloop.resist)).toBe(1.0);
+    expect(elementMult('gloom', gloop.weak, gloop.resist)).toBe(1.0);
+    const pond = ENEMIES.pondscale;
+    expect(elementMult('rime', pond.weak, pond.resist)).toBe(1.6);
+    expect(elementMult('ember', pond.weak, pond.resist)).toBe(0.6);
   });
 });
 
 describe('progression formula table', () => {
-  it('xpNext: 18 at Lv1, 32 at Lv2, 158 at Lv11, Infinity at cap', () => {
-    expect(xpNext(1)).toBe(18);
-    expect(xpNext(2)).toBe(32);
-    expect(xpNext(11)).toBe(158);
+  it('xpNext v1.1 reshape: 14 at Lv1, 28 at Lv2, 50 at Lv3, 327 at Lv11, Infinity at cap', () => {
+    expect(xpNext(1)).toBe(14);
+    expect(xpNext(2)).toBe(28);
+    expect(xpNext(3)).toBe(50);
+    expect(xpNext(11)).toBe(327);
     expect(xpNext(12)).toBe(Infinity);
   });
 
-  it('Lv1 is 46 HP / 22 MP; Lv12 is 134 HP / 66 MP', () => {
+  it('Lv1 is 46 HP / 26 MP; Lv12 is 134 HP / 70 MP (v1.1 MP base)', () => {
     expect(maxHpAt(1)).toBe(46);
-    expect(maxMpAt(1)).toBe(22);
+    expect(maxMpAt(1)).toBe(26);
     expect(maxHpAt(12)).toBe(134);
-    expect(maxMpAt(12)).toBe(66);
+    expect(maxMpAt(12)).toBe(70);
   });
 });

@@ -272,6 +272,19 @@ export function createEntityTextures(scene: Phaser.Scene): void {
     ctx.fillRect(5, 10, 2, 1);
     ctx.fillRect(10, 11, 2, 1);
   });
+  makeEntityTexture(scene, 'ent_essence', (ctx) => {
+    ctx.fillStyle = '#6f4fd8';
+    ctx.beginPath();
+    ctx.ellipse(8, 12, 5, 2.5, 0, 0, 7);
+    ctx.fill();
+    ctx.fillStyle = '#9d7bff';
+    ctx.fillRect(6, 7, 2, 4);
+    ctx.fillRect(9, 5, 2, 6);
+    ctx.fillRect(4, 9, 1, 2);
+    ctx.fillStyle = '#d9ccff';
+    ctx.fillRect(9, 5, 1, 1);
+    ctx.fillRect(6, 7, 1, 1);
+  });
   makeEntityTexture(scene, 'ent_teleporter', (ctx) => {
     ctx.fillStyle = '#2e2554';
     ctx.beginPath();

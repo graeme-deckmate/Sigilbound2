@@ -50,6 +50,21 @@ export const COMBAT = {
   procCap: 0.95,
   weakMult: 1.6,
   resistMult: 0.6,
+  /** Potency slider (v1.1, 03 section 4): 0.70..1.50 step 0.05,
+   *  default 1.00, locked at inscribe. Wraithmark extends to 1.80
+   *  (Phase 14). */
+  potencyMin: 0.7,
+  potencyMax: 1.5,
+  potencyStep: 0.05,
+  potencyDefault: 1,
+  /** Snap detents for the slider handle (02 UX). */
+  potencyDetents: [0.7, 1, 1.5],
+  /** potCost piecewise-linear anchor points (p, costMult). */
+  potCostAnchors: [
+    [0.7, 0.6],
+    [1, 1],
+    [1.5, 2],
+  ],
   /** Every resolved hit deals at least this much. */
   minDamage: 1,
   /** veilShield = round(veilBase * (rune.pw ?? 1) * lvScale * form.pw). */

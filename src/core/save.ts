@@ -4,12 +4,12 @@
  * Single auto slot + single manual slot. Never called mid-battle;
  * battle-only statuses are stripped on save.
  */
-import type { Dir, GameState, MapId, Spell } from './state.ts';
-import { DIRS, MAP_IDS, SHRINE_IDS, START, WORLD_BOSS_IDS } from '../data/constants.ts';
+import type { Dir, ElementId, GameState, MapId, Spell } from './state.ts';
+import { COMBAT, DIRS, MAP_IDS, SHRINE_IDS, START, WORLD_BOSS_IDS } from '../data/constants.ts';
 import { ELEMENT_IDS } from '../data/elements.ts';
 import { FORM_IDS } from '../data/forms.ts';
 import { RUNE_IDS } from '../data/runes.ts';
-import { BASE_HP, BASE_MP, STARTING_SPELLS } from '../data/progression.ts';
+import { BASE_HP, BASE_MP, BASE_SLOTS, MAX_SLOTS } from '../data/progression.ts';
 
 export interface KVStore {
   getItem(key: string): string | null;
@@ -29,7 +29,7 @@ export class SaveError extends Error {}
 
 export function newGame(): GameState {
   return {
-    version: 1,
+    version: 2,
     player: {
       lv: 1,
       xp: 0,
@@ -37,7 +37,13 @@ export function newGame(): GameState {
       mp: BASE_MP,
       maxhp: BASE_HP,
       maxmp: BASE_MP,
-      spells: STARTING_SPELLS.map((s) => (s ? { ...s } : null)),
+      // Slots stay empty until the Elder's starter choice fills 1-2.
+      spells: Array.from({ length: MAX_SLOTS }, () => null),
+      slotsUnlocked: BASE_SLOTS,
+      starter: null,
+      essence: 0,
+      mastery: { ember: 0, rime: 0, volt: 0, thorn: 0, gloom: 0 },
+      charms: { owned: [], equipped: [null, null] },
       statuses: {},
     },
     world: {
@@ -50,7 +56,10 @@ export function newGame(): GameState {
       graceSteps: 0,
       respawn: { mapId: START.mapId, x: START.x, y: START.y },
       flags: {},
+      aspect: null,
+      essenceMarker: null,
     },
+    notes: [],
     settings: {
       master: 1,
       sfx: 1,
@@ -93,19 +102,29 @@ function asSpell(v: unknown): Spell | null {
     typeof rune === 'string' &&
     (RUNE_IDS as readonly string[]).includes(rune)
   ) {
-    return { element, form, rune } as Spell;
+    // v1 spells carry no potency: they were inscribed at 1.0.
+    const rawP = num(v['p'], 1);
+    const p = Math.min(COMBAT.potencyMax, Math.max(COMBAT.potencyMin, rawP));
+    const given = typeof v['given'] === 'string' ? v['given'].slice(0, 18) : undefined;
+    const spell = { element, form, rune, p } as Spell;
+    if (given && given.length > 0) spell.given = given;
+    return spell;
   }
   return null;
 }
 
 /**
- * Normalize a parsed save payload into a valid v1 GameState.
- * Throws SaveError when the payload is not a v1 save at all; missing or
- * malformed leaf fields fall back to sane defaults instead.
+ * Normalize a parsed save payload into a valid v2 GameState.
+ * v1 payloads upgrade in place: spells gain potency 1.0, the starter
+ * backfills as Ember (every v1 run started with it), and the v1.1
+ * fields take their defaults. Throws SaveError when the payload is not
+ * a v1 or v2 save at all; missing or malformed leaf fields fall back
+ * to sane defaults instead.
  */
 export function migrate(raw: unknown): GameState {
   if (!isObj(raw)) throw new SaveError('save: not an object');
-  if (raw['version'] !== 1) throw new SaveError('save: unknown version');
+  const version = raw['version'];
+  if (version !== 1 && version !== 2) throw new SaveError('save: unknown version');
   if (!isObj(raw['player']) || !isObj(raw['world'])) {
     throw new SaveError('save: missing player or world');
   }
@@ -118,7 +137,23 @@ export function migrate(raw: unknown): GameState {
   const maxhp = Math.max(1, num(p['maxhp'], fresh.player.maxhp));
   const maxmp = Math.max(0, num(p['maxmp'], fresh.player.maxmp));
   const rawSpells = Array.isArray(p['spells']) ? p['spells'] : [];
-  const spells = Array.from({ length: 4 }, (_, i) => asSpell(rawSpells[i]));
+  const spells = Array.from({ length: MAX_SLOTS }, (_, i) => asSpell(rawSpells[i]));
+
+  // v1 saves predate the Elder's question; they all began with Ember.
+  const starter =
+    version === 1
+      ? 'ember'
+      : p['starter'] === null
+        ? null
+        : oneOf<ElementId>(['ember', 'rime', 'thorn'], p['starter'], 'ember');
+  const slotsRaw = num(p['slotsUnlocked'], BASE_SLOTS);
+  const slotsUnlocked: 4 | 5 | 6 = slotsRaw >= 6 ? 6 : slotsRaw === 5 ? 5 : 4;
+  const masteryRaw = isObj(p['mastery']) ? p['mastery'] : {};
+  const charmsRaw = isObj(p['charms']) ? p['charms'] : {};
+  const ownedRaw = Array.isArray(charmsRaw['owned']) ? charmsRaw['owned'] : [];
+  const equippedRaw = Array.isArray(charmsRaw['equipped']) ? charmsRaw['equipped'] : [];
+  const asCharm = (v: unknown): string | null => (typeof v === 'string' ? v : null);
+  const markerRaw = isObj(w['essenceMarker']) ? w['essenceMarker'] : null;
 
   const shrines = isObj(w['shrines']) ? w['shrines'] : {};
   const bosses = isObj(w['bosses']) ? w['bosses'] : {};
@@ -128,7 +163,7 @@ export function migrate(raw: unknown): GameState {
   const textSpeed: 0 | 1 | 2 = ts === 0 ? 0 : ts === 2 ? 2 : 1;
 
   return {
-    version: 1,
+    version: 2,
     player: {
       lv: Math.max(1, num(p['lv'], 1)),
       xp: Math.max(0, num(p['xp'], 0)),
@@ -137,6 +172,16 @@ export function migrate(raw: unknown): GameState {
       maxhp,
       maxmp,
       spells,
+      slotsUnlocked,
+      starter,
+      essence: Math.max(0, Math.floor(num(p['essence'], 0))),
+      mastery: Object.fromEntries(
+        ELEMENT_IDS.map((id) => [id, Math.max(0, Math.floor(num(masteryRaw[id], 0)))]),
+      ) as GameState['player']['mastery'],
+      charms: {
+        owned: ownedRaw.filter((c): c is string => typeof c === 'string'),
+        equipped: [asCharm(equippedRaw[0]), asCharm(equippedRaw[1])],
+      },
       statuses: {}, // battle-only, never restored from disk
     },
     world: {
@@ -165,7 +210,23 @@ export function migrate(raw: unknown): GameState {
         }
         return out;
       })(),
+      aspect:
+        typeof w['aspect'] === 'string'
+          ? oneOf<ElementId>(ELEMENT_IDS, w['aspect'], 'ember')
+          : null,
+      essenceMarker:
+        markerRaw && num(markerRaw['amount'], 0) > 0
+          ? {
+              mapId: oneOf<MapId>(MAP_IDS, markerRaw['mapId'], fresh.world.mapId),
+              x: num(markerRaw['x'], 0),
+              y: num(markerRaw['y'], 0),
+              amount: Math.floor(num(markerRaw['amount'], 0)),
+            }
+          : null,
     },
+    notes: (Array.isArray(raw['notes']) ? raw['notes'] : []).filter(
+      (n): n is string => typeof n === 'string',
+    ),
     settings: {
       master: Math.min(1, Math.max(0, num(s['master'], 1))),
       sfx: Math.min(1, Math.max(0, num(s['sfx'], 1))),

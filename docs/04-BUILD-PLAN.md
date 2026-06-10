@@ -1,6 +1,6 @@
-# 04 - BUILD PLAN
+# 04 - BUILD PLAN (v1.1)
 
-Ten phases. One phase per Claude Code session (Phase 5-7 may take two). Every phase ends green: tests pass, lint clean, game boots, PROGRESS.md updated. Do not start a phase with a red baseline.
+Phases 0-9 shipped v1.0. Phases 11-15 are the accepted v1.1 expansion (docs/05). One phase per Claude Code session (11, 13, 14 may take two). Every phase ends green: tests pass, lint clean, game boots, PROGRESS.md updated. Do not start a phase with a red baseline. Phase 10 (Capacitor) moves to post-v1.1 stretch.
 
 ---
 
@@ -98,7 +98,66 @@ Ten phases. One phase per Claude Code session (Phase 5-7 may take two). Every ph
 
 **Accept:** all tests green in CI, deployed URL plays start to finish on a phone.
 
-## Phase 10 (stretch, post-v1.0): Capacitor Android
+## Phase 11: Curve, variance, economy foundations
+**Goal:** the difficulty cliff is gone and essence exists.
+- Starter element choice (Elder dialogue + unlock backfill per 03 section 5); save migration v2 (starter, essence, mastery, charms fields)
+- Early smoothing: MP 26 base, XP curve reshape, Lv 1 meadow single-enemy rule (03 section 6)
+- Elites + rare rolls (03 section 13); elite tint rule; promoted-enemy battle rows
+- Essence: earn/spend/defeat-drop (03 section 16); slots 5-6 purchase at shrines; Grimoire 6-slot UI
+- Potency slider with full cost ledger in the Grimoire; rename field (2G)
+- Notes page scaffold (empty until 13 fills it)
+- Sim: starter-fairness, RNG-cliff, and elite assertions added; all v1.0 windows re-pass
+
+**Accept:** new save asks the starter and plays Act 1 smoothly with each pick; sim asserts Lv 1-2 baseline within 10 points of Lv 3-4 per starter; an elite appears post-Bogmaw and pays +5 essence; slot 5 purchasable at 40 essence; potency 1.5 spell shows correct cost (exact-value tests per 03 section 4).
+
+## Phase 12: The Vale's Wheel
+**Goal:** two-turn plans exist.
+- Reaction engine in the battle reducer (03 section 14), log lines, reaction SFX + color
+- Mastery (03 section 17): per-battle ticks, tiers, Grimoire Mastery page
+- Surges (03 section 18) + Wyrd rune wiring (peddler comes in 13; DEV grant for testing)
+- Unstable Greedy gating (mastery tier 2)
+- Vale Aspects (03 section 25): rotation, HUD glyph, battle snapshot
+- Teaching copy: twin gossip line, one new sign
+- Sim: reaction-aware policy; "reactions pay" assertion
+
+**Accept:** reducer tests for all 5 reactions (consume + exception via dev-granted stormcoil), echo react-then-reapply, twin gossip teaches it in-game; surge table rolls verified deterministic per seed; reaction-aware beats weakness-aware on Act 2 median turns.
+
+## Phase 13: The discovery layer
+**Goal:** the vale rewards going back.
+- Element gates + caches (03 section 19), @egate map directive + validator rules (gated caches exempt from initial flood-fill like boss gates)
+- Relic runes (4 cache relics; wraithmark in 14)
+- Charms (03 section 20): 2 slots, effects, swap UI
+- Peddler Murk: location schedule, trades, intro copy
+- Scrolls (03 section 24): shrine crafting, battle SCROLL button, cap logic
+- Commissions (03 section 21): predicates, rewards, Notes lines
+- Waystone rematches (03 section 16)
+- Feats + Bestiary pages (03 section 24); spell codes export/import
+
+**Accept:** every gate opens with any matching spell and pays its cache exactly once; all 8 charms function (unit tests); a scroll casts at potency 2.5 for 0 MP; each commission completes on its predicate; rematch entry/reward flows; sb1 codes round-trip and name missing parts; connectivity tests green with gates.
+
+## Phase 14: Act 4, twins, summons
+**Goal:** the optional ceiling.
+- Sanctum map + formations + palette + music id (03 section 23); North Hollow stair reveal post-Wraith
+- Trial stones: sealed guardians keyed to Shatter/Blight/Kindle; trial 1 grants Call, all three unlock twins
+- Call form + familiars (03 section 22) with rune interactions
+- Twin inscription (03 section 15): Grimoire pair UI, twin cost/matchup/proc rules, 10 riders
+- Hollow Warden: 3 shape-keyed bars, Unwriting telegraph, wraithmark drop
+- Keeper commission opens post-trials
+- Sim: Hollow Warden ceiling assertion (reaction-aware 40-60% at Lv 12, no floor)
+
+**Accept:** full Act 4 playable post-Wraith; each trial demands and verifies its reaction; familiar acts/redirects/fades per spec with rune tests; all 10 twin riders unit-tested; Hollow Warden sim lands in window; wraithmark extends potency to 1.8 stable.
+
+## Phase 15: NG+, polish, re-ship
+**Goal:** v1.1 ships.
+- NG+ (03 section 25): ending-screen offer, carry/reset rules, scaling, title pip
+- Balance pass across ALL checkpoints (old windows + new assertions); tune data only; log in PROGRESS
+- Copy pass (no em dashes, page lengths); fold finalized in-phase copy back into 03 section 26
+- Perf pass (new overlays pooled, slider at 60fps); save migration tested v1 -> v2
+- Deploy: Pages + itch.io zip refresh; README updated
+
+**Accept:** NG+ run reaches Act 2 in browser test with carried grimoire; all tests green in CI; v1.0 saves migrate cleanly; deployed URL plays start to NG+ start on a phone.
+
+## Phase 16 (stretch, post-v1.1): Capacitor Android
 - Wrap dist with Capacitor, handle back button (cancel action), safe areas, audio focus
 - Internal APK for Grae's Pixel; Play listing is out of scope
 

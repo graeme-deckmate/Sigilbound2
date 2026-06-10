@@ -85,26 +85,26 @@ describe('unlock gating', () => {
 describe('applyXp', () => {
   it('levels up at exactly xpNext with carryover and full restore', () => {
     const p0 = { ...newGame().player, hp: 10, mp: 2 };
-    const { player: p1, levelsGained } = applyXp(p0, 18);
+    const { player: p1, levelsGained } = applyXp(p0, 14);
     expect(levelsGained).toEqual([2]);
     expect(p1.lv).toBe(2);
     expect(p1.xp).toBe(0);
     expect(p1.maxhp).toBe(54);
-    expect(p1.maxmp).toBe(26);
+    expect(p1.maxmp).toBe(30);
     expect(p1.hp).toBe(54);
-    expect(p1.mp).toBe(26);
+    expect(p1.mp).toBe(30);
   });
 
   it('does not level below the threshold', () => {
-    const { player, levelsGained } = applyXp(newGame().player, 17);
+    const { player, levelsGained } = applyXp(newGame().player, 13);
     expect(levelsGained).toEqual([]);
     expect(player.lv).toBe(1);
-    expect(player.xp).toBe(17);
+    expect(player.xp).toBe(13);
   });
 
   it('chains multiple levels from one award', () => {
-    // 18 (Lv1->2) + 32 (Lv2->3) = 50, plus 5 left over
-    const { player, levelsGained } = applyXp(newGame().player, 55);
+    // 14 (Lv1->2) + 28 (Lv2->3) = 42, plus 5 left over
+    const { player, levelsGained } = applyXp(newGame().player, 47);
     expect(levelsGained).toEqual([2, 3]);
     expect(player.lv).toBe(3);
     expect(player.xp).toBe(5);
@@ -130,5 +130,52 @@ describe('applyXp', () => {
     applyXp(p0, 100);
     expect(p0.lv).toBe(1);
     expect(p0.xp).toBe(0);
+  });
+});
+
+describe('starter element backfill (v1.1, 03 section 5)', () => {
+  const none = { fury: false, thirst: false, echo: false, keen: false };
+
+  it('chose Ember: Rime at Lv 2, Thorn at Lv 6', () => {
+    expect(unlockedIds('element', 1, none, 'ember')).toEqual(['ember']);
+    expect(unlockedIds('element', 2, none, 'ember')).toEqual(['ember', 'rime']);
+    expect(unlockedIds('element', 5, none, 'ember')).toEqual(['ember', 'rime', 'volt']);
+    expect(unlockedIds('element', 6, none, 'ember')).toEqual(['ember', 'rime', 'volt', 'thorn']);
+  });
+
+  it('chose Rime: Thorn at Lv 2, Ember at Lv 6', () => {
+    expect(unlockedIds('element', 1, none, 'rime')).toEqual(['rime']);
+    expect(unlockedIds('element', 2, none, 'rime')).toEqual(['rime', 'thorn']);
+    expect(unlockedIds('element', 6, none, 'rime')).toEqual(['ember', 'rime', 'volt', 'thorn']);
+  });
+
+  it('chose Thorn: Ember at Lv 2, Rime at Lv 6', () => {
+    expect(unlockedIds('element', 1, none, 'thorn')).toEqual(['thorn']);
+    expect(unlockedIds('element', 2, none, 'thorn')).toEqual(['ember', 'thorn']);
+    expect(unlockedIds('element', 6, none, 'thorn')).toEqual(['ember', 'rime', 'volt', 'thorn']);
+  });
+
+  it('volt and gloom stay level-gated regardless of starter', () => {
+    for (const starter of ['ember', 'rime', 'thorn'] as const) {
+      expect(unlockedIds('element', 3, none, starter)).not.toContain('volt');
+      expect(unlockedIds('element', 4, none, starter)).toContain('volt');
+      expect(unlockedIds('element', 7, none, starter)).not.toContain('gloom');
+      expect(unlockedIds('element', 8, none, starter)).toContain('gloom');
+    }
+  });
+
+  it('unlocksAtLevel surfaces backfill toasts at 2 and 6', () => {
+    const at2 = unlocksAtLevel(2, 'rime').map((u) => u.id);
+    expect(at2).toContain('thorn');
+    const at6 = unlocksAtLevel(6, 'rime').map((u) => u.id);
+    expect(at6).toContain('ember');
+    // the chosen starter never appears as a level-up toast
+    expect(unlocksAtLevel(1, 'rime')).toEqual([]);
+  });
+
+  it('locked starter chips hint the starter-relative level', () => {
+    const thornDef = UNLOCKS.find((u) => u.kind === 'element' && u.id === 'thorn');
+    expect(thornDef && unlockHint(thornDef, 'ember')).toBe('Reach Lv 6');
+    expect(thornDef && unlockHint(thornDef, 'rime')).toBe('Reach Lv 2');
   });
 });

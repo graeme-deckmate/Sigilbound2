@@ -18,7 +18,8 @@ export type EnemySpeciesId =
   | 'ashling'
   | 'quartzling'
   | 'galeharrow'
-  | 'hollowshade';
+  | 'hollowshade'
+  | 'glimmerkin';
 
 export type MoveRider =
   | { type: 'playerStatus'; status: PlayerStatusId; chance: number }
@@ -62,6 +63,7 @@ export const ENEMY_IDS: readonly EnemySpeciesId[] = [
   'quartzling',
   'galeharrow',
   'hollowshade',
+  'glimmerkin',
 ];
 
 export const ENEMIES: Record<EnemySpeciesId, EnemyDef> = {
@@ -76,7 +78,7 @@ export const ENEMIES: Record<EnemySpeciesId, EnemyDef> = {
     xpBase: 11,
     xpPerLv: 3,
     weak: ['ember', 'volt'],
-    resist: ['thorn'],
+    resist: [],
     moves: [
       { name: 'squelches forward', mult: 1.0 },
       { name: 'spits stinging ooze', mult: 0.85 },
@@ -248,6 +250,22 @@ export const ENEMIES: Record<EnemySpeciesId, EnemyDef> = {
     ],
   },
 
+  /* Rare roll bonus creature (v1.1, 03 section 13): never attacks,
+     flees at the end of round 2; the reducer drives that behavior. */
+  glimmerkin: {
+    id: 'glimmerkin',
+    name: 'Glimmerkin',
+    h0: 14,
+    hpl: 4,
+    a0: 0,
+    al: 0,
+    xpBase: 30,
+    xpPerLv: 6,
+    weak: [],
+    resist: [],
+    moves: [{ name: 'glimmers softly', mult: 0 }],
+  },
+
   /* Act 3: North Hollow (enemy Lv 8-12) */
   quartzling: {
     id: 'quartzling',
@@ -389,7 +407,7 @@ export const BOSSES: Record<BossId, BossDef> = {
     a0: 9,
     al: 2.0,
     xp: 60,
-    weak: ['ember'],
+    weak: ['ember', 'thorn'],
     resist: [],
     moves: [
       { name: 'maw crush', mult: 1.1 },

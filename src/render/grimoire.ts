@@ -11,7 +11,10 @@ import { ENEMY_STATUSES } from '../data/statuses.ts';
 import { UNLOCKS } from '../data/unlocks.ts';
 import { unlockHint, unlockedIds, type ShrineFlags } from '../systems/leveling.ts';
 import {
+  displayName,
   makeSpell,
+  potCost,
+  sanitizeGivenName,
   spellCost,
   spellHits,
   spellName,
@@ -21,6 +24,8 @@ import {
   veilRiderProc,
   veilShield,
 } from '../systems/spellcraft.ts';
+import { COMBAT } from '../data/constants.ts';
+import { ESSENCE } from '../data/essence.ts';
 import { toast } from './dom.ts';
 import { playSfx } from '../audio/synth.ts';
 
@@ -37,8 +42,10 @@ interface GrimoireCtx {
 }
 
 let ctx: GrimoireCtx | null = null;
-const sel: Spell = { element: 'ember', form: 'bolt', rune: 'none' };
+const sel: Spell = { element: 'ember', form: 'bolt', rune: 'none', p: 1 };
+let givenName = '';
 let closeBound = false;
+let page: 'spells' | 'notes' = 'spells';
 
 export function isGrimoireOpen(): boolean {
   return ctx !== null;
@@ -47,15 +54,37 @@ export function isGrimoireOpen(): boolean {
 export function openGrimoire(context: GrimoireCtx): void {
   ctx = context;
   const unlockedSpells = unlocked();
-  if (!unlockedSpells.elements.includes(sel.element)) sel.element = 'ember';
+  const fallback = context.state.player.starter ?? 'ember';
+  if (!unlockedSpells.elements.includes(sel.element)) sel.element = fallback;
   if (!unlockedSpells.forms.includes(sel.form)) sel.form = 'wisp';
   if (!unlockedSpells.runes.includes(sel.rune)) sel.rune = 'none';
+  page = 'spells';
   el('forge').style.display = 'block';
   if (!closeBound) {
     closeBound = true;
     el('forgeclose').addEventListener('click', () => {
       playSfx('select');
       closeGrimoire();
+    });
+    el('tabSpells').addEventListener('click', () => {
+      playSfx('select');
+      page = 'spells';
+      rebuild();
+    });
+    el('tabNotes').addEventListener('click', () => {
+      playSfx('select');
+      page = 'notes';
+      rebuild();
+    });
+    const slider = el<HTMLInputElement>('potency');
+    slider.addEventListener('input', () => {
+      sel.p = Number(slider.value) / 100;
+      refreshPreviewInfo();
+    });
+    const rename = el<HTMLInputElement>('renameField');
+    rename.addEventListener('input', () => {
+      givenName = rename.value;
+      refreshPreviewInfo();
     });
   }
   rebuild();
@@ -73,22 +102,48 @@ function unlocked(): { elements: string[]; forms: string[]; runes: string[] } {
   if (!ctx) return { elements: [], forms: [], runes: [] };
   const lv = ctx.state.player.lv;
   const shrines: ShrineFlags = ctx.state.world.shrines;
+  const starter = ctx.state.player.starter;
   return {
-    elements: unlockedIds('element', lv, shrines),
-    forms: unlockedIds('form', lv, shrines),
-    runes: unlockedIds('rune', lv, shrines),
+    elements: unlockedIds('element', lv, shrines, starter),
+    forms: unlockedIds('form', lv, shrines, starter),
+    runes: unlockedIds('rune', lv, shrines, starter),
   };
 }
 
 function hintFor(kind: 'element' | 'form' | 'rune', id: string): string {
   const def = UNLOCKS.find((u) => u.kind === kind && u.id === id);
-  return def ? unlockHint(def) : '';
+  return def ? unlockHint(def, ctx?.state.player.starter ?? null) : '';
 }
 
 function rebuild(): void {
+  if (!ctx) return;
+  el('essChip').textContent = `✦ ${String(ctx.state.player.essence)} essence`;
+  el('tabSpells').classList.toggle('sel', page === 'spells');
+  el('tabNotes').classList.toggle('sel', page === 'notes');
+  el('spellsPage').style.display = page === 'spells' ? 'block' : 'none';
+  el('notesPage').style.display = page === 'notes' ? 'block' : 'none';
+  if (page === 'notes') {
+    buildNotes();
+    return;
+  }
   buildChips();
   refreshPreviewInfo();
   buildSlots();
+}
+
+/** Notes page scaffold (v1.1): Phase 13 fills state.notes. */
+function buildNotes(): void {
+  if (!ctx) return;
+  const wrap = el('notesList');
+  wrap.replaceChildren(
+    ...ctx.state.notes.map((line) => {
+      const div = document.createElement('div');
+      div.className = 'noteline';
+      div.textContent = line;
+      return div;
+    }),
+  );
+  el('notesEmpty').style.display = ctx.state.notes.length === 0 ? 'block' : 'none';
 }
 
 function chipRow(
@@ -154,10 +209,20 @@ function buildChips(): void {
 function refreshPreviewInfo(): void {
   if (!ctx) return;
   const lv = ctx.state.player.lv;
-  const spell = makeSpell(sel.element, sel.form, sel.rune);
+  const spell = makeSpell(sel.element, sel.form, sel.rune, sel.p);
   const element = ELEMENTS[spell.element];
   const rune = RUNES[spell.rune];
-  el('pvname').textContent = spellName(spell);
+  const form = FORMS[spell.form];
+  const given = sanitizeGivenName(givenName);
+  el('pvname').textContent = given ? `${given} (${spellName(spell)})` : spellName(spell);
+
+  // Potency slider readout + the full cost ledger (02: the cost is a
+  // conversation, never a surprise).
+  el<HTMLInputElement>('potency').value = String(Math.round(sel.p * 100));
+  el('potencyV').textContent = `x${sel.p.toFixed(2)}`;
+  el('potLedger').textContent =
+    `${String(COMBAT.costBase)} base · form x${String(form.mp)} · rune x${String(rune.mp)}` +
+    ` · potency x${potCost(sel.p).toFixed(2)} = ${String(spellCost(spell))} MP`;
 
   const cost = `Cost <b style="color:var(--mp)">${String(spellCost(spell))} MP</b>`;
   const statusName = ENEMY_STATUSES[element.status].label;
@@ -195,22 +260,51 @@ function buildSlots(): void {
   if (!ctx) return;
   const wrap = el('slotlist');
   wrap.innerHTML = '';
+  const unlockedSlots = ctx.state.player.slotsUnlocked;
   ctx.state.player.spells.forEach((spell, i) => {
     const b = document.createElement('button');
     b.className = 'slotbtn';
-    const name = spell ? spellName(spell) : '';
     b.innerHTML = `<span></span><small></small>`;
     const label = b.querySelector('span');
     const meta = b.querySelector('small');
-    if (label) label.textContent = `${String(i + 1)}. ${spell ? name : 'empty'}`;
-    if (meta) meta.textContent = spell ? `${String(spellCost(spell))} MP` : 'tap to inscribe';
+    if (i >= unlockedSlots) {
+      // Sealed pages: bought at any shrine (03 section 16).
+      const price = i === 4 ? ESSENCE.slot5 : ESSENCE.slot6;
+      if (label) label.textContent = `${String(i + 1)}. (sealed page)`;
+      if (meta) meta.textContent = `${String(price)} essence, at a shrine`;
+      b.disabled = true;
+      wrap.appendChild(b);
+      return;
+    }
+    if (spell) {
+      const shown = displayName(spell);
+      const subtitle = spell.given ? ` (${spellName(spell)})` : '';
+      if (label) {
+        label.textContent = `${String(i + 1)}. ${shown}`;
+        if (subtitle) {
+          const sub = document.createElement('span');
+          sub.className = 'subtitle';
+          sub.textContent = subtitle;
+          label.appendChild(sub);
+        }
+      }
+      if (meta) meta.textContent = `${String(spellCost(spell))} MP · x${(spell.p ?? 1).toFixed(2)}`;
+    } else {
+      if (label) label.textContent = `${String(i + 1)}. empty`;
+      if (meta) meta.textContent = 'tap to inscribe';
+    }
     b.onclick = () => {
       if (!ctx) return;
       playSfx('confirm');
-      const crafted = makeSpell(sel.element, sel.form, sel.rune);
+      const crafted = makeSpell(sel.element, sel.form, sel.rune, sel.p);
+      const given = sanitizeGivenName(givenName);
+      if (given && given !== spellName(crafted)) crafted.given = given;
       ctx.onInscribe(i, crafted);
+      givenName = '';
+      el<HTMLInputElement>('renameField').value = '';
       buildSlots();
-      toast(`Inscribed: ${spellName(crafted)}`, true);
+      refreshPreviewInfo();
+      toast(`Inscribed: ${displayName(crafted)}`, true);
     };
     wrap.appendChild(b);
   });

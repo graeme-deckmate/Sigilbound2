@@ -20,6 +20,8 @@ import { ELEMENTS } from '../data/elements.ts';
 import { RUNES } from '../data/runes.ts';
 import { BOSSES, ENEMIES, type EnemyMove, type EnemySpeciesId } from '../data/enemies.ts';
 import { ENEMY_STATUSES, PLAYER_STATUSES } from '../data/statuses.ts';
+import { AFFIXES, ELITE, GLIMMERKIN, type AffixId } from '../data/elites.ts';
+import { ESSENCE, defeatDrop } from '../data/essence.ts';
 import type { ZoneId } from '../data/formations.ts';
 import {
   GRACE_AFTER_BATTLE,
@@ -33,7 +35,7 @@ import {
   elementMult,
   spellCost,
   spellHits,
-  spellName,
+  displayName,
   spellPower,
   spellProc,
   spellTargeting,
@@ -81,6 +83,16 @@ export interface BattleEnemy {
   statuses: Partial<Record<EnemyStatusId, number>>;
   /** Turns of stun immunity after a stun expires (docs/02). */
   stunImmunity: number;
+  /** Elite promotion affix (v1.1, 03 section 13). */
+  affix?: AffixId;
+  /** Sealed elites take 0 damage until the seal breaks. */
+  sealed?: boolean;
+  /** Frenzy announced (one-shot log line). */
+  frenzied?: boolean;
+  /** Glimmerkin: never attacks, flees at the end of round 2. */
+  glimmer?: boolean;
+  /** Fled the battle (no XP, no essence). hp is 0 but it did not fall. */
+  escaped?: boolean;
 }
 
 /** Unified combat numbers for minions and bosses. */
@@ -235,6 +247,11 @@ export type BattleEventBody =
   | { kind: 'veilReapply'; amount: number }
   | { kind: 'fleeFail' }
   | { kind: 'fled' }
+  | { kind: 'ambush' }
+  | { kind: 'sealedHit'; index: number; key: ElementId | null }
+  | { kind: 'sealBreak'; index: number }
+  | { kind: 'frenzy'; index: number }
+  | { kind: 'glimmerFlee'; index: number }
   | { kind: 'victory'; xp: number }
   | { kind: 'defeat' }
   | { kind: 'bossIntro'; text: string }
@@ -258,11 +275,22 @@ export interface ReduceResult {
 
 /* ---------- setup ---------- */
 
+export interface BattleVariance {
+  /** Enemies act first in round 1 ("You are set upon!"). */
+  ambush?: boolean;
+  /** Per-member elite affixes from the encounter roll. */
+  elites?: (AffixId | null)[];
+  /** Glimmerkin bonus encounter. */
+  glimmer?: boolean;
+}
+
 export function initBattle(
   gs: GameState,
   members: readonly EnemySpeciesId[],
   enemyLv: number,
   zone: ZoneId | null,
+  variance?: BattleVariance,
+  rng?: Rng,
 ): ReduceResult {
   const counts = new Map<EnemySpeciesId, number>();
   for (const m of members) counts.set(m, (counts.get(m) ?? 0) + 1);
@@ -273,19 +301,30 @@ export function initBattle(
     const nth = seen.get(species) ?? 0;
     seen.set(species, nth + 1);
     const suffix = dupes ? ` ${String.fromCharCode(65 + nth)}` : '';
-    const maxhp = def.h0 + def.hpl * enemyLv;
-    return {
+    const affix = variance?.elites?.[index] ?? null;
+    const isGlimmer = variance?.glimmer === true && species === 'glimmerkin';
+    const maxhp = isGlimmer ? GLIMMERKIN.h0 + GLIMMERKIN.hpl * enemyLv : def.h0 + def.hpl * enemyLv;
+    const enemy: BattleEnemy = {
       index,
       kind: 'minion',
       species,
-      displayName: `${def.name}${suffix}`,
+      displayName: affix ? `${AFFIXES[affix].prefix} ${def.name}${suffix}` : `${def.name}${suffix}`,
       lv: enemyLv,
       hp: maxhp,
       maxhp,
       shield: 0,
       statuses: {},
       stunImmunity: 0,
-    } satisfies BattleEnemy;
+    };
+    if (affix) {
+      enemy.affix = affix;
+      if (affix === 'veiled') {
+        enemy.shield = ELITE.veiledShieldBase + ELITE.veiledShieldPerLv * enemyLv;
+      }
+      if (affix === 'sealed') enemy.sealed = true;
+    }
+    if (isGlimmer) enemy.glimmer = true;
+    return enemy;
   });
   const state: BattleState = {
     phase: 'player',
@@ -304,10 +343,18 @@ export function initBattle(
     },
     enemies,
   };
-  return {
-    state,
-    events: [{ kind: 'intro', names: enemies.map((e) => e.displayName), ui: snapshotOf(state) }],
-  };
+  const events: BattleEvent[] = [
+    { kind: 'intro', names: enemies.map((e) => e.displayName), ui: snapshotOf(state) },
+  ];
+  // Ambush: the pack acts before the player's first turn (03 section 13).
+  if (variance?.ambush && rng) {
+    const emit: Emit = (body) => {
+      events.push({ ...body, ui: snapshotOf(state) });
+    };
+    emit({ kind: 'ambush' });
+    enemyPhase(state, emit, rng);
+  }
+  return { state, events };
 }
 
 /** Boss battles: flat hp, fixed level, special state machine (docs/03). */
@@ -461,7 +508,7 @@ function castSpell(
     emit({
       kind: 'playerCast',
       spell,
-      name: spellName(spell),
+      name: displayName(spell),
       element: spell.element,
       targets: [],
     });
@@ -480,7 +527,7 @@ function castSpell(
   emit({
     kind: 'playerCast',
     spell,
-    name: spellName(spell),
+    name: displayName(spell),
     element: spell.element,
     targets: targets.map((t) => t.index),
   });
@@ -511,6 +558,18 @@ function castSpell(
         }
         const special = BOSSES[target.species as BossId].special;
         submergedOverride = special.kind === 'submerge' ? special.voltMult : null;
+      }
+
+      // Sealed elites: 0 damage until the seal breaks. Any weakness
+      // element cracks it (Wheel reactions join in Phase 12).
+      if (target.sealed) {
+        if (def.weak.includes(spell.element)) {
+          target.sealed = false;
+          emit({ kind: 'sealBreak', index: target.index });
+        } else {
+          emit({ kind: 'sealedHit', index: target.index, key: def.weak[0] ?? null });
+          continue;
+        }
       }
 
       // The Wraith fears what it attunes to; everything else glances.
@@ -572,6 +631,22 @@ function castSpell(
           emit({ kind: 'enemyStatus', index: target.index, status });
         }
       }
+      // Mirrorhide: the struck hide answers with the element's own
+      // affliction (volt has no player stun: it drains MP instead).
+      if (target.affix === 'mirrorhide' && rng() < ELITE.mirrorChance) {
+        if (spell.element === 'volt') {
+          const drained = Math.min(player.mp, ELITE.mirrorVoltMpDrain);
+          if (drained > 0) {
+            player.mp -= drained;
+            emit({ kind: 'mpDrain', amount: drained, mpAfter: player.mp });
+          }
+        } else {
+          const reflected = ELEMENTS[spell.element].status;
+          if (reflected !== 'stunned' && applyPlayerStatus(player, reflected)) {
+            emit({ kind: 'playerStatus', status: reflected });
+          }
+        }
+      }
     }
   }
 
@@ -626,8 +701,27 @@ function enemyPhase(state: BattleState, emit: Emit, rng: Rng): void {
       continue;
     }
 
+    if (enemy.glimmer) {
+      // Never attacks; at the end of round 2 it slips away (03 section 13).
+      if (state.round >= GLIMMERKIN.fleesAfterRound) {
+        enemy.hp = 0;
+        enemy.escaped = true;
+        emit({ kind: 'glimmerFlee', index: enemy.index });
+        checkVictory(state, emit);
+        if (state.phase !== 'player') return;
+      } else {
+        emit({ kind: 'enemyMove', index: enemy.index, move: 'glimmers softly' });
+      }
+      continue;
+    }
+
     enemyAct(state, enemy, emit, rng);
     if (state.phase !== 'player') return;
+    // Fleet elites act twice, each blow softened (03 section 13).
+    if (enemy.affix === 'fleet' && enemy.hp > 0 && (enemy.statuses.stunned ?? 0) <= 0) {
+      enemyAct(state, enemy, emit, rng);
+      if (state.phase !== 'player') return;
+    }
 
     for (const decaying of ['chilled', 'withered'] as const) {
       const turns = enemy.statuses[decaying] ?? 0;
@@ -804,6 +898,15 @@ function enemyAct(state: BattleState, enemy: BattleEnemy, emit: Emit, rng: Rng):
       return;
     }
   }
+  // Frenzied elites announce the ramp once, crossing half health.
+  if (
+    enemy.affix === 'frenzied' &&
+    !enemy.frenzied &&
+    enemy.hp <= enemy.maxhp * ELITE.frenziedAtHpFrac
+  ) {
+    enemy.frenzied = true;
+    emit({ kind: 'frenzy', index: enemy.index });
+  }
   const def = defOf(enemy);
   const move = weightedPick(
     rng,
@@ -844,6 +947,12 @@ function dealDamageToPlayer(
   if (enemy.kind === 'boss' && state.bossState?.kind === 'enrage' && state.bossState.enraged) {
     const special = BOSSES[enemy.species as BossId].special;
     if (special.kind === 'enrage') dmg *= special.dmgMult;
+  }
+  // Elite affixes (v1.1): fleet softens each of its two blows;
+  // frenzied ramps below half health.
+  if (enemy.affix === 'fleet') dmg *= ELITE.fleetMult;
+  if (enemy.affix === 'frenzied' && enemy.hp <= enemy.maxhp * ELITE.frenziedAtHpFrac) {
+    dmg *= ELITE.frenziedMult;
   }
   dmg = Math.max(1, Math.round(dmg));
 
@@ -942,7 +1051,23 @@ function playerDotPhase(state: BattleState, emit: Emit): void {
 }
 
 function battleXp(state: BattleState): number {
-  return state.enemies.reduce((sum, e) => sum + defOf(e).xpFor(e.lv), 0);
+  return state.enemies.reduce((sum, e) => {
+    if (e.escaped) return sum;
+    const base = e.glimmer ? GLIMMERKIN.xpBase + GLIMMERKIN.xpPerLv * e.lv : defOf(e).xpFor(e.lv);
+    return sum + (e.affix ? base * ELITE.xpMult : base);
+  }, 0);
+}
+
+/** Essence earned by a won battle (03 section 16). */
+export function battleEssence(state: BattleState): number {
+  let total = ESSENCE.victory;
+  for (const e of state.enemies) {
+    if (e.escaped) continue;
+    if (e.affix) total += ESSENCE.elite;
+    if (e.affix === 'sealed') total += ESSENCE.sealedBonus;
+    if (e.glimmer) total += ESSENCE.glimmerCaught;
+  }
+  return total;
 }
 
 function checkVictory(state: BattleState, emit: Emit): void {
@@ -957,6 +1082,10 @@ export interface CommitResult {
   state: GameState;
   xpGained: number;
   levelsGained: number[];
+  /** Essence earned on victory (03 section 16). */
+  essenceGained: number;
+  /** Essence dropped at the defeat marker. */
+  essenceLost: number;
 }
 
 /** Fold a finished battle back into the GameState (docs/02 rules). */
@@ -967,6 +1096,21 @@ export function commitBattle(gs: GameState, battle: BattleState): CommitResult {
 
   if (battle.phase === 'defeat') {
     next.stats.defeats += 1;
+    // Half the essence (round up) drops where you fell, as a single
+    // recoverable marker. A second defeat forfeits the older drop
+    // (03 section 16; flagged for Grae's playtest in PROGRESS).
+    const drop = defeatDrop(next.player.essence);
+    let essenceLost = 0;
+    if (drop > 0) {
+      next.player.essence -= drop;
+      next.world.essenceMarker = {
+        mapId: gs.world.mapId,
+        x: gs.world.x,
+        y: gs.world.y,
+        amount: drop,
+      };
+      essenceLost = drop;
+    }
     next.player.hp = next.player.maxhp;
     next.player.mp = next.player.maxmp;
     next.world.mapId = next.world.respawn.mapId;
@@ -974,7 +1118,7 @@ export function commitBattle(gs: GameState, battle: BattleState): CommitResult {
     next.world.y = next.world.respawn.y;
     next.world.facing = 'down';
     next.world.graceSteps = GRACE_AFTER_DEFEAT;
-    return { state: next, xpGained: 0, levelsGained: [] };
+    return { state: next, xpGained: 0, levelsGained: [], essenceGained: 0, essenceLost };
   }
 
   next.player.hp = battle.player.hp;
@@ -982,15 +1126,23 @@ export function commitBattle(gs: GameState, battle: BattleState): CommitResult {
   next.world.graceSteps = GRACE_AFTER_BATTLE;
 
   if (battle.phase === 'fled') {
-    return { state: next, xpGained: 0, levelsGained: [] };
+    return { state: next, xpGained: 0, levelsGained: [], essenceGained: 0, essenceLost: 0 };
   }
 
   next.stats.battles += 1;
   if (battle.bossId) next.world.bosses[battle.bossId] = true;
+  const essence = battleEssence(battle);
+  next.player.essence += essence;
   const xp = battleXp(battle);
   const leveled = applyXp(next.player, xp);
   next.player = leveled.player;
-  return { state: next, xpGained: xp, levelsGained: leveled.levelsGained };
+  return {
+    state: next,
+    xpGained: xp,
+    levelsGained: leveled.levelsGained,
+    essenceGained: essence,
+    essenceLost: 0,
+  };
 }
 
 /* ---------- helpers for UI ---------- */

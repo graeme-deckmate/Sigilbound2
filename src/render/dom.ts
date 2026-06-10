@@ -147,11 +147,56 @@ export function openDialog(entry: DialogueEntry, onDone?: () => void): void {
   dlgQueue = [...entry.pages];
   dlgDone = onDone ?? null;
   dialogOpen = true;
+  choiceOpen = false;
+  el('dchoices').style.display = 'none';
   const name = el('dname');
   name.textContent = entry.speaker;
   name.style.display = entry.speaker ? 'block' : 'none';
   el('dialog').style.display = 'block';
   nextDialogLine();
+}
+
+let choiceOpen = false;
+
+/**
+ * A dialog page with tappable options (v1.1: the Elder's starter ask,
+ * shrine slot purchases). The A button cannot skip past it; picking an
+ * option closes the dialog and fires onPick.
+ */
+export function openChoice(
+  speaker: string,
+  prompt: string,
+  options: readonly string[],
+  onPick: (index: number) => void,
+): void {
+  dialogOpen = true;
+  choiceOpen = true;
+  dlgQueue = [];
+  dlgDone = null;
+  const name = el('dname');
+  name.textContent = speaker;
+  name.style.display = speaker ? 'block' : 'none';
+  el('dtext').textContent = prompt;
+  const wrap = el('dchoices');
+  wrap.replaceChildren(
+    ...options.map((label, i) => {
+      const b = document.createElement('button');
+      b.className = 'spbtn util';
+      b.textContent = label;
+      b.onclick = () => {
+        playSfx('confirm');
+        choiceOpen = false;
+        dialogOpen = false;
+        wrap.style.display = 'none';
+        el('dialog').style.display = 'none';
+        onPick(i);
+      };
+      return b;
+    }),
+  );
+  wrap.style.display = 'flex';
+  el('dialog').style.display = 'block';
+  playSfx('select');
 }
 
 function nextDialogLine(): void {
@@ -161,6 +206,7 @@ function nextDialogLine(): void {
 
 export function advanceDialog(): void {
   if (!dialogOpen) return;
+  if (choiceOpen) return; // choices take a tap on an option, not A
   if (dlgQueue.length > 0) {
     nextDialogLine();
     return;

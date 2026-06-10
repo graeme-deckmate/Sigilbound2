@@ -216,6 +216,17 @@
         font-size: 23px;
         line-height: 1.25;
       }
+      #dialog .dchoices {
+        display: none;
+        gap: 7px;
+        margin-top: 10px;
+        flex-wrap: wrap;
+      }
+      #dialog .dchoices .spbtn {
+        flex: 1;
+        text-align: center;
+        min-width: 90px;
+      }
       #dialog .dmore {
         position: absolute;
         right: 12px;
@@ -549,6 +560,65 @@
         margin: 0 auto;
         padding: 16px 14px 30px;
       }
+      .ftabs {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 6px 0 4px;
+      }
+      .ftab {
+        font-family: var(--f-ui);
+        font-size: 18px;
+        letter-spacing: 2px;
+        color: var(--dim);
+        background: var(--night);
+        border: 2px solid var(--night2);
+        border-radius: 8px;
+        padding: 7px 14px;
+        cursor: pointer;
+        min-height: 40px;
+      }
+      .ftab.sel {
+        color: var(--gold);
+        border-color: var(--gold);
+      }
+      .esschip {
+        margin-left: auto;
+        font-size: 19px;
+        color: var(--arcane);
+      }
+      .ledger {
+        font-size: 17px;
+        color: var(--dim);
+        margin-top: 4px;
+      }
+      #renameField {
+        width: 100%;
+        font-family: var(--f-ui);
+        font-size: 21px;
+        color: var(--parch);
+        background: var(--night);
+        border: 2px solid var(--night2);
+        border-radius: 10px;
+        padding: 9px 12px;
+        min-height: 46px;
+      }
+      #renameField:focus-visible {
+        outline: 2px solid var(--gold);
+      }
+      .slotbtn .subtitle {
+        color: var(--dim);
+        font-size: 16px;
+      }
+      .slotbtn:disabled {
+        opacity: 0.45;
+      }
+      #notesList .noteline {
+        font-size: 20px;
+        color: var(--parch);
+        padding: 6px 2px;
+        border-bottom: 1px solid var(--night2);
+      }
       #forge h2 {
         font-family: var(--f-display);
         font-size: 15px;
@@ -807,6 +877,7 @@
       <div id="dialog">
         <div class="dname" id="dname"></div>
         <div id="dtext"></div>
+        <div class="dchoices" id="dchoices"></div>
         <div class="dmore">▼</div>
       </div>
 
@@ -821,29 +892,61 @@
       <div id="forge">
         <div class="inner">
           <h2>THE GRIMOIRE</h2>
-          <div class="sub">Bind an element, a form and a rune. Inscribe the spell into a slot.</div>
-          <div class="fsec">
-            <div class="flab">ELEMENT</div>
-            <div class="chips" id="chElem"></div>
+          <div class="ftabs">
+            <button class="ftab sel" id="tabSpells">SPELLS</button>
+            <button class="ftab" id="tabNotes">NOTES</button>
+            <span class="esschip" id="essChip"></span>
           </div>
-          <div class="fsec">
-            <div class="flab">FORM</div>
-            <div class="chips" id="chForm"></div>
-          </div>
-          <div class="fsec">
-            <div class="flab">RUNE</div>
-            <div class="chips" id="chRune"></div>
-          </div>
-          <div id="preview">
-            <canvas id="pvcv" width="52" height="52"></canvas>
-            <div id="pvinfo">
-              <div id="pvname"></div>
-              <div id="pvstats"></div>
+          <div id="spellsPage">
+            <div class="sub">
+              Bind an element, a form and a rune. Tune it, name it, inscribe it.
+            </div>
+            <div class="fsec">
+              <div class="flab">ELEMENT</div>
+              <div class="chips" id="chElem"></div>
+            </div>
+            <div class="fsec">
+              <div class="flab">FORM</div>
+              <div class="chips" id="chForm"></div>
+            </div>
+            <div class="fsec">
+              <div class="flab">RUNE</div>
+              <div class="chips" id="chRune"></div>
+            </div>
+            <div class="fsec">
+              <div class="flab">POTENCY</div>
+              <div class="srow">
+                <input id="potency" type="range" min="70" max="150" step="5" list="potTicks" />
+                <span class="sval" id="potencyV"></span>
+              </div>
+              <datalist id="potTicks">
+                <option value="70"></option>
+                <option value="100"></option>
+                <option value="150"></option>
+              </datalist>
+              <div class="ledger" id="potLedger"></div>
+            </div>
+            <div id="preview">
+              <canvas id="pvcv" width="52" height="52"></canvas>
+              <div id="pvinfo">
+                <div id="pvname"></div>
+                <div id="pvstats"></div>
+              </div>
+            </div>
+            <div class="fsec">
+              <div class="flab">NAME (OPTIONAL)</div>
+              <input id="renameField" type="text" maxlength="18" autocomplete="off" />
+            </div>
+            <div id="slots">
+              <div class="flab">INSCRIBE TO SLOT</div>
+              <div id="slotlist"></div>
             </div>
           </div>
-          <div id="slots">
-            <div class="flab">INSCRIBE TO SLOT</div>
-            <div id="slotlist"></div>
+          <div id="notesPage" style="display: none">
+            <div class="sub" id="notesEmpty">
+              No notes yet. The Vale will give you reasons to write.
+            </div>
+            <div id="notesList"></div>
           </div>
           <button id="forgeclose">Close grimoire</button>
         </div>

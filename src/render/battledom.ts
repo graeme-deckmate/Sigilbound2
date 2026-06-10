@@ -7,7 +7,7 @@ import type { BattleState, UiSnapshot } from '../systems/battle.ts';
 import { canCast } from '../systems/battle.ts';
 import {
   spellCost,
-  spellName,
+  displayName,
   spellPower,
   spellHits,
   spellTargeting,
@@ -156,7 +156,7 @@ export function buildCommands(state: BattleState, handlers: CommandHandlers): vo
           ? `${String(spellCost(spell))} MP · shield`
           : `${String(spellCost(spell))} MP · pow ${String(spellPower(spell, state.player.lv))}${hits}`;
       b.innerHTML = `${dot}<span class="nm"></span><span class="meta">${meta}</span>`;
-      b.querySelector('.nm')!.textContent = spellName(spell);
+      b.querySelector('.nm')!.textContent = displayName(spell);
       b.disabled = !canCast(state, slot);
       b.onclick = () => {
         handlers.onCast(slot);

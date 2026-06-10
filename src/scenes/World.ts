@@ -26,12 +26,16 @@ import { resolveStep, type EncounterRoll } from '../systems/encounters.ts';
 import {
   applyExit,
   applyShrineGrant,
+  applySlotPurchase,
   applySpringRestore,
   facingPos,
   interactionFor,
   npcDialogueId,
   sigilCount,
 } from '../systems/worldstate.ts';
+import { starterSpells } from '../data/progression.ts';
+import { ESSENCE } from '../data/essence.ts';
+import type { ElementId } from '../core/state.ts';
 import { isGrimoireOpen } from '../render/grimoire.ts';
 import { isSettingsOpen } from '../render/settingsdom.ts';
 import { createEntityTextures, createTilesetTexture, tileIndexFor } from '../render/tiles.ts';
@@ -79,6 +83,7 @@ export class WorldScene extends Phaser.Scene {
   private targetY = 0;
   private progress = 0;
   private busy = false;
+  private markerSprite: Phaser.GameObjects.Image | null = null;
 
   constructor() {
     super({ key: 'World' });
@@ -169,6 +174,11 @@ export class WorldScene extends Phaser.Scene {
     dom.applyDpadSettings(this.state.settings.dpadSide, this.state.settings.dpadScale);
     dom.showWorldUi(true);
     this.refreshHud();
+    this.renderEssenceMarker();
+
+    // A fresh save: the Elder asks what the first page answers to
+    // (03 section 26, final copy) before the Vale opens up.
+    if (this.state.player.starter === null) this.askStarter();
 
     if (import.meta.env.DEV) {
       (window as unknown as Record<string, unknown>)['__debug'] = {
@@ -185,8 +195,83 @@ export class WorldScene extends Phaser.Scene {
         allShrines: (): void => {
           this.state.world.shrines = { fury: true, thirst: true, echo: true, keen: true };
         },
+        giveEssence: (n: number): void => {
+          this.state.player.essence += n;
+        },
+        slayBogmaw: (): void => {
+          this.state.world.bosses.bogmaw = true;
+        },
       };
     }
+  }
+
+  /** The starter choice (v1.1): grants the element's Wisp and Bolt. */
+  private askStarter(): void {
+    this.busy = true;
+    const page1 = DIALOGUE['elder_grimoire'];
+    const page3 = DIALOGUE['elder_start_south'];
+    const ask = (): void => {
+      dom.openChoice(
+        'ELDER',
+        'Ember burns answers. Rime keeps them. Thorn grows its own.',
+        ['Ember', 'Rime', 'Thorn'],
+        (i) => {
+          const starter: ElementId = (['ember', 'rime', 'thorn'] as const)[i] ?? 'ember';
+          this.state.player.starter = starter;
+          this.state.player.spells = starterSpells(starter).map((sp) => (sp ? { ...sp } : null));
+          playSfx('unlock');
+          dom.toast(`✦ ${ELEMENTS[starter].label.toUpperCase()} answers`, true);
+          this.refreshHud();
+          this.autoSave();
+          if (page3) {
+            dom.openDialog(page3, () => {
+              this.busy = false;
+            });
+          } else {
+            this.busy = false;
+          }
+        },
+      );
+    };
+    if (page1) {
+      dom.openDialog(page1, ask);
+    } else {
+      ask();
+    }
+  }
+
+  /** Dropped-essence marker (03 section 16): drawn on its map only. */
+  private renderEssenceMarker(): void {
+    this.markerSprite?.destroy();
+    this.markerSprite = null;
+    const m = this.state.world.essenceMarker;
+    if (!m || m.mapId !== this.map.id) return;
+    this.markerSprite = this.add
+      .image(m.x * TILE, m.y * TILE, 'ent_essence')
+      .setOrigin(0, 0)
+      .setDepth(5);
+    this.tweens.add({
+      targets: this.markerSprite,
+      alpha: 0.6,
+      duration: 700,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
+  }
+
+  /** Walking onto the marker reclaims the dropped essence. */
+  private tryRecoverEssence(): void {
+    const m = this.state.world.essenceMarker;
+    if (!m || m.mapId !== this.map.id) return;
+    if (m.x !== this.state.world.x || m.y !== this.state.world.y) return;
+    this.state.player.essence += m.amount;
+    this.state.world.essenceMarker = null;
+    this.markerSprite?.destroy();
+    this.markerSprite = null;
+    playSfx('unlock');
+    dom.toast(`✦ ${String(m.amount)} essence reclaimed`, true);
+    this.autoSave();
   }
 
   private bindTopButtons(): void {
@@ -373,6 +458,7 @@ export class WorldScene extends Phaser.Scene {
     this.state.world.y = this.targetY;
     this.state.stats.steps += 1;
     this.snapPlayer();
+    this.tryRecoverEssence();
 
     const exit = exitAt(this.map, this.targetX, this.targetY);
     if (exit) {
@@ -406,6 +492,8 @@ export class WorldScene extends Phaser.Scene {
         zone: zoneAt(this.map, this.targetX, this.targetY)?.table ?? null,
         graceSteps: this.state.world.graceSteps,
         stepCount: this.state.stats.steps,
+        playerLv: this.state.player.lv,
+        eliteEligible: this.state.world.bosses.bogmaw,
       },
       this.worldRng,
     );
@@ -485,6 +573,9 @@ export class WorldScene extends Phaser.Scene {
       this.scene.restart({ state: this.state });
       const entry = DIALOGUE['defeat_wake'];
       if (entry) dom.openDialog(entry);
+      if (result.essenceLost > 0) {
+        dom.toast(`${String(result.essenceLost)} essence fell where you did`, true);
+      }
       return;
     }
     if (result.bossId === 'valewraith' && result.outcome === 'victory') {
@@ -501,6 +592,7 @@ export class WorldScene extends Phaser.Scene {
       this.scene.restart({ state: this.state });
     }
     if (result.xpGained > 0) dom.toast(`+${String(result.xpGained)} XP`);
+    if (result.essenceGained > 0) dom.toast(`+${String(result.essenceGained)} essence`);
     result.levelsGained.forEach((lv, i) => {
       setTimeout(
         () => {
@@ -516,6 +608,32 @@ export class WorldScene extends Phaser.Scene {
         500 + i * 900,
       );
     });
+  }
+
+  /**
+   * Shrines sell Grimoire slots 5 and 6 (03 section 16). Offered only
+   * when the next slot is affordable, so shrines never nag.
+   */
+  private offerSlotPurchase(): void {
+    const unlocked = this.state.player.slotsUnlocked;
+    if (unlocked >= 6) return;
+    const slot = unlocked === 4 ? 5 : 6;
+    const price = slot === 5 ? ESSENCE.slot5 : ESSENCE.slot6;
+    if (this.state.player.essence < price) return;
+    dom.openChoice(
+      'SHRINE',
+      `The shrine hums over your grimoire. A ${String(slot)}th page, for ${String(price)} essence?`,
+      [`Pay ${String(price)} essence`, 'Not now'],
+      (i) => {
+        if (i !== 0) return;
+        const bought = applySlotPurchase(this.state, ESSENCE);
+        if (!bought) return;
+        this.state = bought.state;
+        playSfx('unlock');
+        dom.toast(`✦ Grimoire slot ${String(bought.slot)} unbound`, true);
+        this.autoSave();
+      },
+    );
   }
 
   private interact(): void {
@@ -556,11 +674,16 @@ export class WorldScene extends Phaser.Scene {
           if (entry) {
             dom.openDialog(entry, () => {
               dom.toast(`✦ Rune of ${runeLabel} unlocked`, true);
+              this.offerSlotPurchase();
             });
           }
         } else {
           const entry = DIALOGUE['shrine_used'];
-          if (entry) dom.openDialog(entry);
+          if (entry) {
+            dom.openDialog(entry, () => {
+              this.offerSlotPurchase();
+            });
+          }
         }
         break;
       }

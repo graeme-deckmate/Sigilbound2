@@ -101,6 +101,33 @@ export function npcDialogueId(npcId: string, fallback: string, state: GameState)
   return fallback;
 }
 
+/**
+ * Buy the next Grimoire slot at a shrine (03 section 16): slot 5 costs
+ * 40 essence, slot 6 costs 80. Returns null when maxed or unaffordable.
+ */
+export function applySlotPurchase(
+  state: GameState,
+  prices: { slot5: number; slot6: number },
+): { state: GameState; slot: 5 | 6; price: number } | null {
+  const unlocked = state.player.slotsUnlocked;
+  if (unlocked >= 6) return null;
+  const slot = unlocked === 4 ? 5 : 6;
+  const price = slot === 5 ? prices.slot5 : prices.slot6;
+  if (state.player.essence < price) return null;
+  return {
+    state: {
+      ...state,
+      player: {
+        ...state.player,
+        essence: state.player.essence - price,
+        slotsUnlocked: slot,
+      },
+    },
+    slot,
+    price,
+  };
+}
+
 /** Apply a map exit: land on the target map at the target tile. */
 export function applyExit(state: GameState, exit: ExitDef): GameState {
   return {

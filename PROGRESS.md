@@ -4,8 +4,8 @@ Claude Code: read this first every session. Update it before you stop. Keep entr
 
 ## Status
 
-Current phase: **Phase 9 complete (deploy push pending Grae). v1.0 candidate.**
-Last session: 2026-06-10 (Phases 0 through 9)
+Current phase: **Phase 11 complete. Next: Phase 12 (The Vale's Wheel).**
+Last session: 2026-06-10 (Phase 11: curve, variance, economy foundations)
 Deployed URL: - (awaiting GitHub repo push + Pages enable; see Setup needed)
 
 ## Phase checklist
@@ -21,7 +21,12 @@ Deployed URL: - (awaiting GitHub repo push + Pages enable; see Setup needed)
 - [x] Phase 8: Audio, settings, accessibility (Lighthouse on the deployed URL pending)
 - [x] Phase 9: Balance, polish, ship prep (push + Pages + phone test pending, needs Grae's GitHub)
 - [x] Owner additions (Grae, 2026-06-10): boss teleporters home; title Continue / New Game
-- [ ] Phase 10: Capacitor Android (stretch)
+- [x] Phase 11: Curve, variance, economy foundations (Grae playtest of starter feel + essence forfeiture pending)
+- [ ] Phase 12: The Vale's Wheel (v1.1)
+- [ ] Phase 13: The discovery layer (v1.1)
+- [ ] Phase 14: Act 4, twins, summons (v1.1)
+- [ ] Phase 15: NG+, polish, re-ship (v1.1)
+- [ ] Phase 16: Capacitor Android (stretch)
 
 ## Setup needed from Grae (one-time)
 
@@ -117,7 +122,27 @@ Deployed URL: - (awaiting GitHub repo push + Pages enable; see Setup needed)
 - 2026-06-10 (Phase 9 + owner additions): Teleporters: a defeated boss leaves a WAYSTONE on its tile (derived from world.bosses at scene build, so old saves get them with no migration). Interacting plays a two-page dialogue then warps to the Hearth spawn via the normal exit pipeline and auto-saves. New EntityAt kind 'teleporter', interaction kind 'teleport', ent_teleporter texture, dialogue id 'teleporter'; covered in worldstate.spec. Title: with any save present (auto or manual) the cover shows CONTINUE plus NEW GAME; NEW GAME arms to "ERASE + BEGIN?" for 3s and a second tap writes a fresh auto save and starts over (manual slot kept as a recovery path). Verified in browser end to end.
 - 2026-06-10 (Phase 9): Copy pass is now a test (tests/copy.spec.ts): no em dashes in dialogue JSON or the player-string modules, dialogue pages <= 130 chars. Perf review: floaters pooled (14), World.update allocation-free, sigil preview only draws while the Grimoire is open, music voices are one-shot WebAudio nodes by design. README written; `npm run zip` builds sigilbound-itch.zip (index.html at root); git repo initialized with the v1.0 commit on main.
 
+- 2026-06-10 (v1.1 design session): Depth proposal (docs/05) written, reassessed with the v1.0 brief lifted, and ACCEPTED with Grae's 10 answers (decision log in docs/05). Docs revised: 00-BRIEF rewritten for v1.1 (v1.0 brief recoverable from git history), 02 + 03 + 04 extended. Headline systems: starter element choice, Vale's Wheel reactions, potency slider, element mastery, surges/Wyrd, essence economy (free inscription preserved), elites, gates + caches + relic runes, charms, scrolls, peddler, commissions, Vale Aspects, Act 4 Sunken Sanctum (Call form, twin elements, Hollow Warden superboss), NG+, bestiary/feats/notes/spell codes. Rejected on identity grounds: cast-failure chance, gear, party system, gold, procedural maps, servers.
+- 2026-06-10 (v1.1 design session): Claude rulings accepted: no 6th element (Wheel is a load-bearing 5-cycle; twins expand identity to 15), level cap stays 12, scrolls cap 3, Summon ships with Act 4.
+- 2026-06-10 (v1.1 design session): XP curve reshaped (03 section 6: 14 + (lv-1)^1.35 * 14) and base MP 22 -> 26. Both are first-pass numbers for the Phase 11 sim to validate; tune data freely within the 02 assertions.
+
+- 2026-06-10 (Phase 11): Save v2: Spell gained potency `p` (clamped to the slider range on load) and optional `given` rename; player gained starter/essence/mastery/charms/slotsUnlocked and spells went to 6 fixed slots; world gained aspect + essenceMarker; top-level notes[] scaffolds the Notes page. v1 saves upgrade in place (spells p=1, starter backfilled as 'ember' since every v1 run started there, everything else defaulted); v2 with starter null still asks the Elder. Migration round-trip + clamp tests in save.spec. Phase 12 needs no new fields (aspect and mastery are already in the shape).
+- 2026-06-10 (Phase 11): Potency per 03 section 4: potCost piecewise through (0.7,0.6)/(1.0,1.0)/(1.5,2.0) in COMBAT.potCostAnchors; cost/power/veilShield all take p; exact-value tests at the detents (bolt 4/6/12 MP, fury bolt 20 at 1.5, wisp floors at 2). Grimoire: slider (step 0.05, detents are natural stops at 70/100/150 with datalist ticks), full cost ledger line ("6 base · form x1.45 · rune x1.65 · potency x2.00 = N MP"), rename field (sanitizeGivenName 1-18 chars; given name shows everywhere, generated name becomes the subtitle, log lines use the player's name), 6-slot list with sealed pages priced 40/80, essence chip, Spells/Notes tabs (notes empty-state copy authored per tone rules).
+- 2026-06-10 (Phase 11): Early smoothing: BASE_MP 26; xpNext = round(14 + (lv-1)^1.35 * 14) (14/28/50/76/105/137/171/208/246/286/327); Lv 1 hearthvale.meadow re-weights to single-enemy formations (eligibleFormations; marsh untouched). Starter choice: Elder sequence on any save with starter null, final 03 section 26 copy, choice page is a new dom.openChoice component (A cannot skip it); grants the starter's Wisp + Bolt; unlock backfill via starter-relative levels (UNLOCKS 'starter' trigger + starterElementLevel; volt/gloom stay level-gated; toasts and chip hints starter-aware).
+- 2026-06-10 (Phase 11): Elites + rares per 03 section 13: 10% promotion post-Bogmaw (first member; members share a level so "highest" is a tie), elite pack/ambush/glimmer rares at 4% weighted 2:1:1 rolled before the formation pick. Reducer: veiled shield 10+2lv, frenzied announce + x1.4 below half, mirrorhide 35% reflect (volt drains 4 MP instead), fleet double act at x0.6, sealed takes 0 until a weakness element cracks it (log names the key; Wheel reactions join in Phase 12). Glimmerkin roster entry (never attacks, flees end of round 2, escaped enemies pay nothing). Elite battle rows carry the prefix, sprites a gold tint (0xffd9a0), new log lines + SFX mapped.
+- 2026-06-10 (Phase 11): Essence per 03 section 16: +1 victory, +5 per elite, +1 sealed bonus, +6 glimmer caught; xp x2 for promoted kills; commitBattle returns essenceGained/essenceLost; defeat drops ceil(essence/2) as the single world marker at the defeat tile (second death forfeits the old drop, AS SPEC'D, flagged below), walk-on recovery with toast, marker rendered with a pulse on its map. Boss-arena marker placement reads "the tile you stood on when the fight started", which for bosses is the interaction tile (arena entrance adjacent). Slots 5/6 sell at any shrine through the choice dialog, offered only when affordable (applySlotPurchase, tested).
+- 2026-06-10 (Phase 11) **BALANCE TUNING LOG** (data only; first-pass v1.1 numbers missed two 02 assertions):
+  - gloop resist ['thorn'] -> []: the thorn starter's meadow cliff (gloop dominates early rolls; resisted starts sat 11.5 points under the Lv 3-4 rate vs the 10-point window). Gloop keeps weak ember+volt.
+  - bogmaw weak ['ember'] -> ['ember','thorn']: starter fairness (rime starters are the only path without ember by Lv 4; spread was 10.5 points vs the 8-point window). With thorn added, every starter path holds a Bogmaw weakness by Lv 4 (rime gets thorn at Lv 2). Spread now within window, all starters >= 80%.
+  - MP 26 + the XP reshape re-passed every v1.0 window unchanged (Wraith 84%/17%, Wardens, zone floors all green).
+- 2026-06-10 (Phase 11) sim notes: RNG-cliff asserted on hearthvale.meadow (the smoothing lever per 03 section 6; marsh is designed to sting early so it sits outside the flatness window); early kits are the literal Elder gift (starter wisp+bolt) plus backfill bolts; Bogmaw fairness uses Lv 4 weakness-aware play per starter. New elite/ambush/glimmer draw orders documented in elites.spec headers.
+
 ## Questions for Grae
+
+- **Q2 interpretation check (v1.1):** your answer "should remove the 2 old statuses" was read as: a Wheel reaction CONSUMES its setup status (and in Snare/Kindle the old status is gone, replaced by the new one). Spec'd that way in 03 section 14. If you meant something else (e.g. removing two of the five v1.0 statuses from the game entirely), flag it before Phase 12 builds the reducer.
+- **Essence forfeiture (v1.1):** IMPLEMENTED AS SPEC'D and live in your build: one marker, second death forfeits the older drop. Please feel it out in the playtest (die in the marsh twice without recovering); say the word if it should stack or persist instead.
+- **Phase 11 tuning to bless into 03:** gloop lost its thorn resist and Bogmaw gained a thorn weakness (full rationale in the tuning log). Both are starter-fairness fixes the 02 assertions forced; fold them into 03's tables or tell me to find different levers.
+- **Summon unlock placement (v1.1):** Call is granted at the FIRST trial cleared, any order, so the rest of the Sanctum gets to use it. If you would rather it be a Hollow Warden reward, say so before Phase 14.
 
 - Act 2 balance: 03's authored numbers missed 02's windows so hard that optimal play lost almost every Warden fight; I tuned data per the guardrails (full log above). The docs should be reconciled: either bless the tuned numbers into 03 or revisit 02's windows. Playtest both Wardens and the deep zones to confirm the feel.
 - 02's boss rule "<= 25% two levels under" conflicts with Phase 6's acceptance "both Wardens beatable at Lv 6-8" for the Lv-8-target Ashen Warden: at Lv 6 it now sits ~35% with optimal play (beatable, hard). The sim asserts a 20-60% band there; pick a side if you want it tighter.

@@ -25,9 +25,9 @@ describe('table completeness', () => {
     expect(Object.keys(RUNES)).toHaveLength(6);
   });
 
-  it('has 12 enemy species and 4 bosses', () => {
-    expect(ENEMY_IDS).toHaveLength(12);
-    expect(Object.keys(ENEMIES)).toHaveLength(12);
+  it('has 13 enemy species (12 + glimmerkin) and 4 bosses', () => {
+    expect(ENEMY_IDS).toHaveLength(13);
+    expect(Object.keys(ENEMIES)).toHaveLength(13);
     expect(BOSS_IDS).toHaveLength(4);
     expect(Object.keys(BOSSES)).toHaveLength(4);
   });
@@ -55,6 +55,7 @@ describe('enemy roster integrity', () => {
 
   it('every species has positive stats and at least one damaging move', () => {
     for (const id of ENEMY_IDS) {
+      if (id === 'glimmerkin') continue; // never attacks, by design (v1.1)
       const e = ENEMIES[id];
       expect(e.h0).toBeGreaterThan(0);
       expect(e.hpl).toBeGreaterThan(0);

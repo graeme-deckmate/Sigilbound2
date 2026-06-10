@@ -13,8 +13,31 @@ export function makeSpell(
   element: Spell['element'],
   form: Spell['form'],
   rune: Spell['rune'],
+  p: number = COMBAT.potencyDefault,
 ): Spell {
-  return { element, form, rune };
+  return { element, form, rune, p };
+}
+
+/**
+ * Potency cost multiplier (v1.1, 03 section 4): piecewise linear
+ * through (0.70, 0.60), (1.00, 1.00), (1.50, 2.00). Clamped to the
+ * anchor range; the wraithmark segment extends it in Phase 14.
+ */
+export function potCost(p: number): number {
+  const anchors = COMBAT.potCostAnchors;
+  const first = anchors[0];
+  const last = anchors[anchors.length - 1];
+  if (!first || !last) return 1;
+  if (p <= first[0]) return first[1];
+  for (let i = 1; i < anchors.length; i++) {
+    const a = anchors[i - 1];
+    const b = anchors[i];
+    if (a && b && p <= b[0]) {
+      const t = (p - a[0]) / (b[0] - a[0]);
+      return a[1] + t * (b[1] - a[1]);
+    }
+  }
+  return last[1];
 }
 
 /** ElementPrefix + FormRoot + RuneSuffix, e.g. "Gloomnova of Hexes". */
@@ -22,11 +45,25 @@ export function spellName(spell: Spell): string {
   return ELEMENTS[spell.element].label + spell.form + RUNES[spell.rune].suffix;
 }
 
-/** MP cost: max(2, round(6 * form.mp * rune.mp)). */
+/** What logs and slots show: the given name, else the generated one. */
+export function displayName(spell: Spell): string {
+  return spell.given && spell.given.length > 0 ? spell.given : spellName(spell);
+}
+
+/** Trim and bound a player-entered name; null when unusable (1-18 chars). */
+export function sanitizeGivenName(raw: string): string | null {
+  const t = raw.trim().slice(0, 18);
+  return t.length >= 1 ? t : null;
+}
+
+/** MP cost: max(2, round(6 * form.mp * rune.mp * potCost(p))). */
 export function spellCost(spell: Spell): number {
   const form = FORMS[spell.form];
   const rune = RUNES[spell.rune];
-  return Math.max(COMBAT.costMin, Math.round(COMBAT.costBase * form.mp * rune.mp));
+  return Math.max(
+    COMBAT.costMin,
+    Math.round(COMBAT.costBase * form.mp * rune.mp * potCost(spell.p)),
+  );
 }
 
 /** 1 + (lv - 1) * 0.22 */
@@ -41,9 +78,9 @@ function levelScale(lv: number): number {
 export function spellPower(spell: Spell, lv: number): number {
   const form = FORMS[spell.form];
   const rune = RUNES[spell.rune];
-  let p = COMBAT.basePower * form.pw * (rune.pw ?? 1) * levelScale(lv);
-  if (rune.hits !== undefined) p *= rune.pwEach ?? 1;
-  return Math.round(p);
+  let power = COMBAT.basePower * form.pw * (rune.pw ?? 1) * spell.p * levelScale(lv);
+  if (rune.hits !== undefined) power *= rune.pwEach ?? 1;
+  return Math.round(power);
 }
 
 /** Number of hits per cast (echo gives 2). */
@@ -62,11 +99,11 @@ export function critProfile(spell: Spell): { chance: number; mult: number } {
   return RUNES[spell.rune].crit ?? { chance: COMBAT.critChance, mult: COMBAT.critMult };
 }
 
-/** Shield from casting a Veil spell: round(14 * (rune.pw ?? 1) * lvScale * form.pw). */
+/** Shield: round(14 * (rune.pw ?? 1) * p * lvScale * form.pw). */
 export function veilShield(spell: Spell, lv: number): number {
   const form = FORMS[spell.form];
   const rune = RUNES[spell.rune];
-  return Math.round(COMBAT.veilBase * (rune.pw ?? 1) * levelScale(lv) * form.pw);
+  return Math.round(COMBAT.veilBase * (rune.pw ?? 1) * spell.p * levelScale(lv) * form.pw);
 }
 
 /** Veil rider proc chance when an enemy strikes the shield. */

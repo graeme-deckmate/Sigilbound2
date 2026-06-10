@@ -31,10 +31,15 @@ export interface Spell {
   element: ElementId;
   form: FormId;
   rune: RuneId;
+  /** Potency, locked at inscribe (docs/03 section 4). v1.1. */
+  p: number;
+  /** Player-given name (1-18 chars); the generated name becomes the
+   *  subtitle. Absent = the generated name is the name. v1.1. */
+  given?: string;
 }
 
 export interface GameState {
-  version: 1;
+  version: 2;
   player: {
     lv: number;
     xp: number;
@@ -42,8 +47,18 @@ export interface GameState {
     mp: number;
     maxhp: number;
     maxmp: number;
-    /** Equip slots, fixed length 4. */
+    /** Equip slots, fixed length 6; slots beyond slotsUnlocked are null. */
     spells: (Spell | null)[];
+    /** How many spell slots are usable (4 base; 5 and 6 bought). v1.1. */
+    slotsUnlocked: 4 | 5 | 6;
+    /** Starter element; null until the Elder has asked (v1.1). */
+    starter: ElementId | null;
+    /** Essence held (v1.1 single currency). */
+    essence: number;
+    /** Per-element mastery points (effects activate in Phase 12). */
+    mastery: Record<ElementId, number>;
+    /** Charms owned and the two equip slots (Phase 13 fills these). */
+    charms: { owned: string[]; equipped: [string | null, string | null] };
     /** Battle-only, cleared on save. */
     statuses: StatusMap;
   };
@@ -68,7 +83,16 @@ export interface GameState {
      * same treatment as respawn.
      */
     flags: Record<string, boolean>;
+    /** Vale Aspect element; Phase 12 rotates it. Null until then. */
+    aspect: ElementId | null;
+    /**
+     * Dropped essence from the last unrecovered defeat (03 section 16).
+     * One marker only; a second defeat forfeits the older drop.
+     */
+    essenceMarker: { mapId: MapId; x: number; y: number; amount: number } | null;
   };
+  /** Grimoire Notes page lines, player voice (Phase 13 fills). v1.1. */
+  notes: string[];
   settings: {
     master: number;
     sfx: number;

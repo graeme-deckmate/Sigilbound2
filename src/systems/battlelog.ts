@@ -103,6 +103,18 @@ export function battleLine(
       return 'The veil shatters!';
     case 'veilReapply':
       return `The veil echoes back: ${String(event.amount)}.`;
+    case 'ambush':
+      return 'You are set upon!';
+    case 'sealedHit':
+      return event.key
+        ? `The seal holds. ${elementLabel(event.key)} would crack it.`
+        : 'The seal holds fast.';
+    case 'sealBreak':
+      return 'The seal shatters!';
+    case 'frenzy':
+      return `${the(event.index)} goes frenzied! Its blows fall harder.`;
+    case 'glimmerFlee':
+      return 'The Glimmerkin slips away, glittering.';
     case 'fleeFail':
       return names.length === 1
         ? `No escape! The ${names[0] ?? ''} blocks the way.`
