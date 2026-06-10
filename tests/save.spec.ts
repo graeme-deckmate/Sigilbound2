@@ -116,6 +116,7 @@ describe('migrate', () => {
     expect(g.player.starter).toBe('ember');
     expect(g.player.slotsUnlocked).toBe(4);
     expect(g.player.essence).toBe(0);
+    expect(g.player.ngPlus).toBe(0);
     expect(g.world.aspect).toBeNull();
     expect(g.world.essenceMarker).toBeNull();
     expect(g.notes).toEqual([]);

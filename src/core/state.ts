@@ -78,6 +78,8 @@ export interface GameState {
     charms: { owned: string[]; equipped: [string | null, string | null] };
     /** Carried scrolls: compositions cast once at potency 2.5 for 0 MP. */
     scrolls: Spell[];
+    /** NG+ cycles completed (03 section 25). */
+    ngPlus: number;
     /** Battle-only, cleared on save. */
     statuses: StatusMap;
   };

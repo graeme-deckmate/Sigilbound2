@@ -4,8 +4,8 @@ Claude Code: read this first every session. Update it before you stop. Keep entr
 
 ## Status
 
-Current phase: **Phase 14 complete. Next: Phase 15 (NG+, balance pass, re-ship).**
-Last session: 2026-06-11 (Phase 14: Act 4, the Sunken Sanctum)
+Current phase: **v1.1 COMPLETE (Phases 0-15). Phase 16 (Capacitor Android) is stretch and needs Grae's hardware.**
+Last session: 2026-06-11 (Phases 14 + 15: Act 4 and NG+, v1.1 ships)
 Deployed URL: - (awaiting GitHub repo push + Pages enable; see Setup needed)
 
 ## Phase checklist
@@ -25,7 +25,7 @@ Deployed URL: - (awaiting GitHub repo push + Pages enable; see Setup needed)
 - [x] Phase 12: The Vale's Wheel (reactions live in Grae's running playtest; watch for the violet line)
 - [x] Phase 13: The discovery layer (v1.1)
 - [x] Phase 14: Act 4, twins, summons (Grae playtest of the Sanctum + Hollow Warden pending)
-- [ ] Phase 15: NG+, polish, re-ship (v1.1)
+- [x] Phase 15: NG+, polish, re-ship (Pages deploy + phone test pending, needs Grae's GitHub)
 - [ ] Phase 16: Capacitor Android (stretch)
 
 ## Setup needed from Grae (one-time)
@@ -156,6 +156,13 @@ Deployed URL: - (awaiting GitHub repo push + Pages enable; see Setup needed)
 - 2026-06-11 (Phase 14) **SIM + TUNING LOG**: target "reaction-aware optimal play at Lv 12 wins 40-60%". First pass (turn-wasting cancel + full DoT ticks + no familiar in kit) measured 0% (the player bled out), then 72.5% once the optimal kit used thirst sustain + the Call familiar, then 67% with DoT ticks glancing, and 58.0% (median 29 turns) after the Unwriting cancel was read as costing the word, not the turn. Final policy: veil the telegraph, keep a familiar up, weave defensive veils below 70% hp, kill shades with the shatter bolt, chill-shatter the wheel bar only with the detonator banked, p1.5 thirst lance for the author. No enemy data was touched; the two rule readings above were the levers, both flagged under Questions.
 - 2026-06-11 (Phase 14): events added bossUnwrite{arm/cancel+reason}, barBreak, familiarSummon/Act/Hit/Fade, sealedHit.demand; battlelog lines authored per 02 tone. Sprites: Trial Guardian (graven stone, gold demand-glyph) and Hollow Warden (drowned violet, raised pen) battle grids; ent_trial world texture (satisfied stones dim). ZONE_BACKDROPS sanctum.halls drowned violet. 41 new tests (twins 18, act4 22, sim 1); 320 total, lint clean.
 
+- 2026-06-11 (Phase 15): NG+ per 03 s25: beginNgPlus (pure, systems/ngplus.ts) carries grimoire (renames included), starter (the Elder does not re-ask), mastery, charms, slots, the five relic rune flags, feats, bestiary, lifetime stats and settings; resets level/xp/essence/scrolls/notes/sigils/shrines/world flags/gates/caches. player.ngPlus counts cycles (save-repaired to 0, so v1 and pre-15 v2 saves load clean). Interpretations: essence, scrolls, notes and shrine runes reset because 03 lists them in neither column (essence is economy, scrolls are consumables, notes would mislead a re-sealed world, shrines re-grant free); wyrd is not a relic so Murk resells it; lifetime stats persist.
+- 2026-06-11 (Phase 15): Scaling: flat per cycle, never compounding. Enemies (minions, bosses, summons, rematch adds) hp x1.5 and atk x1.5; battle essence x2; elites 25% (ELITE.chanceNgPlus) with eligibility from step one; glimmerkin get an independent 6% pre-roll (StepArgs.glimmerChance, draw order unchanged when absent); aspects also rotate on map transitions; Hollow Warden +2 levels AND x1.5 hp with bars stretched to 3x210 (barsAdjust and the DoT clamp read the scaled bar). Re-opened relic caches pay 15 essence ("the relic remembers you").
+- 2026-06-11 (Phase 15): Ending screen gained BEGIN AGAIN (NG+) below KEEP WANDERING: violet, arm-to-confirm ("THE VALE FORGETS?", 3s window), saves the fresh cycle before the fade. Entering the Ending with ngPlus > 0 grants the twice_written feat. Title wordmark shows one gold pip per completed cycle (cap 7) in arcane violet.
+- 2026-06-11 (Phase 15): Fixed in passing: World never passed the zone eliteChance (sanctum's 15% from Phase 14 now actually applies outside NG+).
+- 2026-06-11 (Phase 15): Balance re-pass: all 328 tests green including every v1.0 window, the v1.1 assertions, and the Hollow Warden 40-60% gate (58.0%). No data tuned this phase. Copy pass: zero em dashes repo-wide; final Act 4 + NG+ copy folded into 03 section 26 per the build plan. Perf: the twin chip row and ending buttons are build-once DOM/graphics, no per-frame work. Build + sigilbound-itch.zip refreshed (precache 1.38 MB).
+- 2026-06-11 (Phase 15) browser acceptance: in the dev preview, a veteran Lv 12 save at the Ending began NG+ via the armed button; the World restarted at Hearth Lv 1 with the carried grimoire (renamed "Sparkpen" intact), slots 6, mastery 50, wraithmark flag held, bosses and essence reset; walking the real west door reached Westwood (Act 2) and the aspect rotated on the transition (volt); a live westwood battle spawned a Lv 7 Mossback at exactly 170 hp ((36+11*7) x 1.5) with the ng flag set; reloading showed SIGILBOUND ✦ on the title. Save migration v1 -> v2 re-verified in tests with the ngPlus default.
+
 ## Questions for Grae
 
 - **Q2 interpretation check (v1.1):** your answer "should remove the 2 old statuses" was read as: a Wheel reaction CONSUMES its setup status (and in Snare/Kindle the old status is gone, replaced by the new one). Spec'd that way in 03 section 14. If you meant something else (e.g. removing two of the five v1.0 statuses from the game entirely), flag it before Phase 12 builds the reducer.
@@ -166,6 +173,7 @@ Deployed URL: - (awaiting GitHub repo push + Pages enable; see Setup needed)
 - **Unwriting cancel (Phase 14):** "Veil, Chill, or a bar break cancels it" was read as canceling the x2.2 word only; the Warden still takes a plain move that turn. The turn-wasting reading measured 67-72% optimal win rate (above the 40-60% gate); this reading lands 58%. Bless or pick another lever.
 - **DoTs vs bars (Phase 14):** burn/venom ticks on the Warden glance at x0.25 like off-key hits and can never finish a bar. Strictly 03 only scopes "other hits"; full ticks let an ember familiar melt bars unkeyed (72.5% win rate). Bless or correct.
 - **Familiar power mods (Phase 14):** the familiar's hit uses raw Call power (no mastery/aspect bonuses). Flag if it should inherit the caster's modifiers.
+- **NG+ reset scope (Phase 15):** essence, scrolls, notes and the four shrine runes reset with the world (03 s25 lists them in neither the keep nor reset column; reasoning in the decisions log). Bless or move any of them to the carry side.
 
 - Act 2 balance: 03's authored numbers missed 02's windows so hard that optimal play lost almost every Warden fight; I tuned data per the guardrails (full log above). The docs should be reconciled: either bless the tuned numbers into 03 or revisit 02's windows. Playtest both Wardens and the deep zones to confirm the feel.
 - 02's boss rule "<= 25% two levels under" conflicts with Phase 6's acceptance "both Wardens beatable at Lv 6-8" for the Lv-8-target Ashen Warden: at Lv 6 it now sits ~35% with optimal play (beatable, hard). The sim asserts a 20-60% band there; pick a side if you want it tighter.

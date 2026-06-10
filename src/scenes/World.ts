@@ -36,7 +36,9 @@ import {
   TRIALS,
   type TrialKey,
 } from '../systems/worldstate.ts';
-import { starterSpells } from '../data/progression.ts';
+import { NG_PLUS, starterSpells } from '../data/progression.ts';
+import { ELITE, RARE } from '../data/elites.ts';
+import { ZONES } from '../data/formations.ts';
 import { ESSENCE } from '../data/essence.ts';
 import {
   CHARM,
@@ -369,6 +371,12 @@ export class WorldScene extends Phaser.Scene {
       }
     };
     const grantRelic = (rune: string): void => {
+      if (this.state.world.flags[`rune_${rune}`]) {
+        // NG+ re-opening: the relic is already written; take its worth.
+        this.state.player.essence += NG_PLUS.relicCacheEssence;
+        dom.toast(`+${String(NG_PLUS.relicCacheEssence)} essence (the relic remembers you)`);
+        return;
+      }
       this.state.world.flags[`rune_${rune}`] = true;
       dom.toast(`✦ Relic rune: ${rune.toUpperCase()}`, true);
       this.checkRelicRoad();
@@ -804,6 +812,8 @@ export class WorldScene extends Phaser.Scene {
       }
       this.busy = true;
       this.state = applyExit(this.state, exit);
+      // NG+: the Vale leans differently behind every door (03 s25).
+      if (this.state.player.ngPlus > 0) this.state = rotateAspect(this.state, this.worldRng);
       this.autoSave();
       void dom.irisTransition(() => {
         this.scene.restart({ state: this.state });
@@ -826,14 +836,18 @@ export class WorldScene extends Phaser.Scene {
       }
     }
 
+    const ng = this.state.player.ngPlus > 0;
+    const zoneTable = zoneAt(this.map, this.targetX, this.targetY)?.table ?? null;
     const result = resolveStep(
       {
         tile: tileAt(this.map, this.targetX, this.targetY),
-        zone: zoneAt(this.map, this.targetX, this.targetY)?.table ?? null,
+        zone: zoneTable,
         graceSteps: this.state.world.graceSteps,
         stepCount: this.state.stats.steps,
         playerLv: this.state.player.lv,
-        eliteEligible: this.state.world.bosses.bogmaw,
+        eliteEligible: this.state.world.bosses.bogmaw || ng,
+        eliteChance: ng ? ELITE.chanceNgPlus : zoneTable ? ZONES[zoneTable].eliteChance : undefined,
+        glimmerChance: ng ? RARE.glimmerChanceNgPlus : undefined,
         regenEvery: this.state.player.charms.equipped.includes('springstep')
           ? CHARM.springstepRegen
           : undefined,

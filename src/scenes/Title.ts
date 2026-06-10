@@ -72,6 +72,12 @@ export class TitleScene extends Phaser.Scene {
     this.tagline.setOrigin(0.5);
 
     const saved = this.savedState();
+    // NG+ pips: one mark per finished cycle (03 section 25).
+    if (saved && saved.player.ngPlus > 0) {
+      const pips = '✦'.repeat(Math.min(saved.player.ngPlus, 7));
+      this.wordmark.setText(`SIGILBOUND ${pips}`);
+      this.wordmark.setColor(PALETTE.arcane);
+    }
     if (saved) {
       this.primary = this.buildButton('CONTINUE', 98, () => {
         this.start(saved);

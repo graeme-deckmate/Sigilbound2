@@ -45,6 +45,7 @@ export function newGame(): GameState {
       mastery: { ember: 0, rime: 0, volt: 0, thorn: 0, gloom: 0 },
       charms: { owned: [], equipped: [null, null] },
       scrolls: [],
+      ngPlus: 0,
       statuses: {},
     },
     world: {
@@ -203,6 +204,7 @@ export function migrate(raw: unknown): GameState {
       scrolls: (Array.isArray(p['scrolls']) ? p['scrolls'] : [])
         .map(asSpell)
         .filter((sp): sp is Spell => sp !== null),
+      ngPlus: Math.max(0, num(p['ngPlus'], 0)),
       statuses: {}, // battle-only, never restored from disk
     },
     world: {

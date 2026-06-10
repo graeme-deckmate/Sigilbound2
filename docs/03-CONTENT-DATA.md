@@ -479,3 +479,24 @@ New dialogue copy written in this doc is final (Elder choice page, Murk intro, t
 3. "Start south. Even a Gloop will test a new wisp."
 
 Twin gossip teaching the Wheel (final, replaces twins_gossip_b in rotation after Act 1): "Burn, frost, shock, thorn, gloom. Each one cashes in the one before. Gran called it the Wheel."
+
+**Act 4 and NG+ copy (final, folded back from Phases 14-15):**
+
+Trial stone demands (choice page title is the trial name):
+- Trial of Frost: "FROST, it reads. Chill me, then strike with storm. SHATTER me or leave."
+- Trial of Rot: "ROT, it reads. Poison me, then call the gloom. BLIGHT me or leave."
+- Trial of Flame: "FLAME, it reads. Wither me, then put me to the torch. KINDLE me or leave."
+- Satisfied stone: "The stone is satisfied. It hums an old, settled note."
+
+Sanctum lore trio:
+1. "The Vale did not build this place. It remembered it, and the memory sank."
+2. "Three trials, three answers. The Wheel turns even under water."
+3. "Past this hall sits the one who writes the Vale's forgetting." / "Bring your own pen."
+
+Sanctum stair (North Hollow summit basin): sealed: "A stair winds down into drowned dark, but the way is sealed stone." / "Something below is still holding its breath." Open: "The Hollow has drained. The stair waits, patient as ink."
+
+Hollow Warden log lines: bar break: "Its script shifts." Unwriting telegraph: "The Warden lifts its pen. UNWRITING gathers." Cancels: veil "Your veil holds. The word dies unwritten." / chill "Too cold to write. The word dies." / bar "The broken bar spoils the page. The word dies." Aftermath (chamber): "The chamber is quiet. The script on the walls has nothing left to say."
+
+Unlock toasts: first trial: "The CALL form is yours. Something will answer." All trials: "Twin inscription unlocked. Two natures, one page." Warden felled: "The WRAITHMARK rune is yours."
+
+NG+ (ending screen): button "BEGIN AGAIN (NG+)", armed "THE VALE FORGETS?", toast on start "The Vale forgets. You do not." Re-opened relic cache: "+15 essence (the relic remembers you)".

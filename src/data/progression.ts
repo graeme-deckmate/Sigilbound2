@@ -48,3 +48,15 @@ export function starterSpells(element: Spell['element']): readonly (Spell | null
     null,
   ];
 }
+
+/** NG+ scaling (03 section 25): flat per cycle, never compounding. */
+export const NG_PLUS = {
+  hpMult: 1.5,
+  atkMult: 1.5,
+  /** Victory base and elite/glimmer bonuses double. */
+  essenceMult: 2,
+  /** The Hollow Warden fights two levels up. */
+  wardenLvBonus: 2,
+  /** A relic cache already claimed pays essence instead. */
+  relicCacheEssence: 15,
+} as const;

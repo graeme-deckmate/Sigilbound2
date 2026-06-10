@@ -1,8 +1,13 @@
 # SIGILBOUND
 
-A 2 to 3 hour top-down pixel adventure where you craft your own spells.
-Roam the Vale, bind an element, a form and a rune in the Grimoire, and
-take on instanced turn-based battles that strike from the tall grass.
+A 3 to 5 hour top-down pixel adventure where you craft your own spells.
+Roam the Vale, bind an element, a form and a rune in the Grimoire, tune
+the potency, name the page, and take on instanced turn-based battles
+that strike from the tall grass. v1.1 adds the Vale's Wheel (status
+reactions), element mastery, surges, elites, essence, gates and relic
+runes, charms, scrolls, a wandering peddler, commissions, Vale Aspects,
+a fourth act under the mountain (the Call familiar, twin-element
+spells, an optional superboss) and NG+.
 Built with TypeScript, Vite and Phaser 3; ships as an installable PWA.
 
 **Play:** (deploy pending; GitHub Pages link lands here)

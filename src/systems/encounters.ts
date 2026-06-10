@@ -23,6 +23,8 @@ export interface StepArgs {
   eliteEligible: boolean;
   /** Zone override of ELITE.chance (sanctum runs hotter). */
   eliteChance?: number;
+  /** NG+ standalone glimmer roll (03 section 25: 6%). */
+  glimmerChance?: number;
   /** Regen cadence in steps (6 base; 4 with Springstep). */
   regenEvery?: number;
 }
@@ -111,8 +113,13 @@ export function resolveStep(args: StepArgs, rng: Rng): StepResult {
   const table = ZONES[zone];
 
   // Rare roll first, independent of the formation pick (03 section 13).
+  // NG+ gives glimmerkin their own generous roll (03 section 25).
   let rare: RareKind | null = null;
-  if (rng() < RARE.chance) rare = rareKind(rng);
+  if (args.glimmerChance !== undefined && rng() < args.glimmerChance) {
+    rare = 'glimmer';
+  } else if (rng() < RARE.chance) {
+    rare = rareKind(rng);
+  }
 
   if (rare === 'glimmer') {
     const enemyLv = randInt(rng, table.levelMin, table.levelMax);

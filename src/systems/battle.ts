@@ -51,6 +51,7 @@ import {
   FOCUS_HP_FRAC,
   FOCUS_MP_FRAC,
   FLEE_CHANCE,
+  NG_PLUS,
 } from '../data/progression.ts';
 import {
   castSurges,
@@ -224,6 +225,8 @@ export interface BattleState {
   severeSurges: number;
   /** Per-species discovery captured this battle. */
   seen: Record<string, { weak: ElementId[]; statuses: string[]; reactions: string[] }>;
+  /** NG+ cycle active: enemies x1.5 hp/atk, essence x2 (03 s25). */
+  ng: boolean;
   /** Summoned familiar (Call form, 03 section 22). Battle-scoped. */
   familiar: { spell: Spell; hp: number; maxhp: number } | null;
   player: BattlePlayer;
@@ -378,7 +381,10 @@ export function initBattle(
     const suffix = dupes ? ` ${String.fromCharCode(65 + nth)}` : '';
     const affix = variance?.elites?.[index] ?? null;
     const isGlimmer = variance?.glimmer === true && species === 'glimmerkin';
-    const maxhp = isGlimmer ? GLIMMERKIN.h0 + GLIMMERKIN.hpl * enemyLv : def.h0 + def.hpl * enemyLv;
+    const ngHp = gs.player.ngPlus > 0 ? NG_PLUS.hpMult : 1;
+    const maxhp = Math.round(
+      (isGlimmer ? GLIMMERKIN.h0 + GLIMMERKIN.hpl * enemyLv : def.h0 + def.hpl * enemyLv) * ngHp,
+    );
     const enemy: BattleEnemy = {
       index,
       kind: 'minion',
@@ -417,6 +423,7 @@ export function initBattle(
     playerTookHit: false,
     severeSurges: 0,
     seen: {},
+    ng: gs.player.ngPlus > 0,
     familiar: null,
     player: {
       lv: gs.player.lv,
@@ -464,15 +471,19 @@ export function initBossBattle(
   rematch?: { lvBonus: number; rng: Rng },
 ): ReduceResult {
   const def = BOSSES[bossId];
-  const lvBonus = rematch?.lvBonus ?? 0;
+  const ng = gs.player.ngPlus > 0;
+  const ngHp = ng ? NG_PLUS.hpMult : 1;
+  // The Hollow Warden fights two levels up in NG+ (03 section 25).
+  const lvBonus =
+    (rematch?.lvBonus ?? 0) + (ng && bossId === 'hollowwarden' ? NG_PLUS.wardenLvBonus : 0);
   const enemy: BattleEnemy = {
     index: 0,
     kind: 'boss',
     species: bossId,
     displayName: def.name,
     lv: def.lv + lvBonus,
-    hp: def.hp,
-    maxhp: def.hp,
+    hp: Math.round(def.hp * ngHp),
+    maxhp: Math.round(def.hp * ngHp),
     shield: 0,
     statuses: {},
     stunImmunity: 0,
@@ -516,6 +527,7 @@ export function initBossBattle(
     playerTookHit: false,
     severeSurges: 0,
     seen: {},
+    ng,
     familiar: null,
     player: {
       lv: gs.player.lv,
@@ -539,7 +551,7 @@ export function initBossBattle(
     for (let i = 0; i < add.count; i++) {
       const index = state.enemies.length;
       const lv = def.lv + lvBonus - 2;
-      const maxhp = addDef.h0 + addDef.hpl * lv;
+      const maxhp = Math.round((addDef.h0 + addDef.hpl * lv) * ngHp);
       const affix = AFFIX_IDS[
         Math.min(AFFIX_IDS.length - 1, Math.floor(rematch.rng() * AFFIX_IDS.length))
       ] as AffixId;
@@ -1097,7 +1109,9 @@ function barsAdjust(
 ): number {
   const def = BOSSES[boss.species as BossId].special;
   if (def.kind !== 'bars') return dmg;
-  const barIndex = Math.min(def.barKeys.length - 1, Math.floor((boss.maxhp - boss.hp) / def.barHp));
+  // NG+ scales the boss x1.5, so the bars stretch with it (3 x 210).
+  const barHp = Math.round(def.barHp * (state.ng ? NG_PLUS.hpMult : 1));
+  const barIndex = Math.min(def.barKeys.length - 1, Math.floor((boss.maxhp - boss.hp) / barHp));
   const key = def.barKeys[barIndex];
   // Choir: 03 s23 names nova as a qualifying shape, so an all-cast
   // counts even when the Warden stands alone.
@@ -1109,7 +1123,7 @@ function barsAdjust(
         : spell.p >= SURGE.greedyAt;
   let adjusted = onKey ? dmg : Math.max(1, Math.round(dmg * def.offKeyMult));
   // clamp at the bar boundary
-  const barFloor = boss.maxhp - def.barHp * (barIndex + 1);
+  const barFloor = boss.maxhp - barHp * (barIndex + 1);
   const room = boss.hp - Math.max(0, barFloor);
   if (adjusted >= room && boss.hp - adjusted > 0) {
     adjusted = room;
@@ -1123,7 +1137,9 @@ function barsAdjust(
       // the transition summons one shade (03 section 23)
       const addDef = ENEMIES[def.summonSpecies];
       const index = state.enemies.length;
-      const maxhp = addDef.h0 + addDef.hpl * def.summonLv;
+      const maxhp = Math.round(
+        (addDef.h0 + addDef.hpl * def.summonLv) * (state.ng ? NG_PLUS.hpMult : 1),
+      );
       state.enemies.push({
         index,
         kind: 'minion',
@@ -1512,11 +1528,12 @@ function tickEnemyDots(state: BattleState, enemy: BattleEnemy, emit: Emit): bool
         // damage only from..."), and it cannot finish a bar; the last
         // point falls to a keyed hit so the break announces properly.
         dmg = Math.max(1, Math.round(dmg * special.offKeyMult));
+        const ngBar = Math.round(special.barHp * (state.ng ? NG_PLUS.hpMult : 1));
         const barIndex = Math.min(
           special.barKeys.length - 1,
-          Math.floor((enemy.maxhp - enemy.hp) / special.barHp),
+          Math.floor((enemy.maxhp - enemy.hp) / ngBar),
         );
-        const floorHp = Math.max(0, enemy.maxhp - special.barHp * (barIndex + 1) + 1);
+        const floorHp = Math.max(0, enemy.maxhp - ngBar * (barIndex + 1) + 1);
         dmg = Math.min(dmg, Math.max(0, enemy.hp - floorHp));
         if (dmg <= 0) continue;
       }
@@ -1569,7 +1586,9 @@ function enemyAct(state: BattleState, enemy: BattleEnemy, emit: Emit, rng: Rng):
         const def = ENEMIES[special.summonSpecies];
         for (let i = 0; i < special.summonCount; i++) {
           const index = state.enemies.length;
-          const maxhp = def.h0 + def.hpl * special.summonLv;
+          const maxhp = Math.round(
+            (def.h0 + def.hpl * special.summonLv) * (state.ng ? NG_PLUS.hpMult : 1),
+          );
           state.enemies.push({
             index,
             kind: 'minion',
@@ -1611,7 +1630,9 @@ function enemyAct(state: BattleState, enemy: BattleEnemy, emit: Emit, rng: Rng):
         const spawned: { index: number; name: string }[] = [];
         for (let i = 0; i < special.summonCount; i++) {
           const index = state.enemies.length;
-          const maxhp = def.h0 + def.hpl * special.summonLv;
+          const maxhp = Math.round(
+            (def.h0 + def.hpl * special.summonLv) * (state.ng ? NG_PLUS.hpMult : 1),
+          );
           state.enemies.push({
             index,
             kind: 'minion',
@@ -1756,6 +1777,7 @@ function dealDamageToPlayer(
   const def = defOf(enemy);
   const player = state.player;
   let dmg = (def.a0 + def.al * enemy.lv) * move.mult * variance(rng);
+  if (state.ng) dmg *= NG_PLUS.atkMult;
   if (chilled) dmg *= ENEMY_STATUSES.chilled.dealtMult ?? 1;
   if (player.statuses.includes('withered')) dmg *= PLAYER_STATUSES.withered.takenMult ?? 1;
   if (enemy.kind === 'boss' && state.bossState?.kind === 'enrage' && state.bossState.enraged) {
@@ -1898,7 +1920,7 @@ function battleXp(state: BattleState): number {
   }, 0);
 }
 
-/** Essence earned by a won battle (03 section 16). */
+/** Essence earned by a won battle (03 section 16; x2 in NG+). */
 export function battleEssence(state: BattleState): number {
   let total = ESSENCE.victory;
   if (hasCharm(state.player, 'graverobber')) total += CHARM.graverobberEssence;
@@ -1908,7 +1930,7 @@ export function battleEssence(state: BattleState): number {
     if (e.affix === 'sealed') total += ESSENCE.sealedBonus;
     if (e.glimmer) total += ESSENCE.glimmerCaught;
   }
-  return total;
+  return total * (state.ng ? NG_PLUS.essenceMult : 1);
 }
 
 function checkVictory(state: BattleState, emit: Emit): void {

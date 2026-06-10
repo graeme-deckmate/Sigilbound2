@@ -4,11 +4,17 @@ import { FONT_DISPLAY, FONT_UI, PALETTE } from '../data/constants.ts';
 import * as dom from '../render/dom.ts';
 import { playMusic, applyAudioSettings } from '../audio/music.ts';
 import { playSfx } from '../audio/synth.ts';
+import { beginNgPlus } from '../systems/ngplus.ts';
+import { save } from '../core/save.ts';
 
 const HEADING = 'THE VALE RESTS';
 const PROLOGUE = 'The Wraith is undone. Light returns to the Vale.';
 const BUTTON_LABEL = 'KEEP WANDERING';
 const ROAM_TOAST = 'The Vale is yours to wander.';
+const NG_LABEL = 'BEGIN AGAIN (NG+)';
+const NG_ARMED_LABEL = 'THE VALE FORGETS?';
+const NG_TOAST = 'The Vale forgets. You do not.';
+const NG_ARM_MS = 3000;
 
 interface EndingSceneData {
   state: GameState;
@@ -33,6 +39,11 @@ export class EndingScene extends Phaser.Scene {
   private button!: Phaser.GameObjects.Container;
   private buttonFace!: Phaser.GameObjects.Graphics;
   private buttonLabel!: Phaser.GameObjects.Text;
+  private ngButton!: Phaser.GameObjects.Container;
+  private ngFace!: Phaser.GameObjects.Graphics;
+  private ngLabel!: Phaser.GameObjects.Text;
+  private ngArmed = false;
+  private ngArmTimer: Phaser.Time.TimerEvent | null = null;
   private leaving = false;
 
   constructor() {
@@ -42,6 +53,7 @@ export class EndingScene extends Phaser.Scene {
   init(data: EndingSceneData): void {
     this.params = data;
     this.leaving = false;
+    this.ngArmed = false;
   }
 
   create(): void {
@@ -91,6 +103,14 @@ export class EndingScene extends Phaser.Scene {
     this.statLines.setOrigin(0.5);
 
     this.button = this.buildRoamButton();
+    this.ngButton = this.buildNgButton();
+
+    // Finishing the loop again earns its feat (03 section 24).
+    if (this.params.state.player.ngPlus > 0 && !this.params.state.feats.includes('twice_written')) {
+      this.params.state.feats.push('twice_written');
+      playSfx('unlock');
+      dom.toast('✦ Feat: Twice Written', true);
+    }
 
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (!reducedMotion) {
@@ -132,7 +152,8 @@ export class EndingScene extends Phaser.Scene {
     this.heading.setPosition(cx, h * 0.22);
     this.prologue.setPosition(cx, h * 0.33);
     this.statLines.setPosition(cx, h * 0.53);
-    this.button.setPosition(cx, h * 0.78);
+    this.button.setPosition(cx, h * 0.72);
+    this.ngButton.setPosition(cx, h * 0.84);
   };
 
   private buildRoamButton(): Phaser.GameObjects.Container {
@@ -177,6 +198,77 @@ export class EndingScene extends Phaser.Scene {
     this.buttonFace.fillStyle(color(PALETTE.gold), 1);
     this.buttonFace.fillRoundedRect(-bw / 2, -bh / 2 + pressOffset, bw, bh, 6);
     this.buttonLabel.setY(pressOffset);
+  }
+
+  /** Violet sibling of the roam button; arms before it erases. */
+  private buildNgButton(): Phaser.GameObjects.Container {
+    const bw = 142;
+    const bh = 26;
+    const shadow = this.add.graphics();
+    shadow.fillStyle(color('#46357a'), 1);
+    shadow.fillRoundedRect(-bw / 2, -bh / 2 + 3, bw, bh, 6);
+    this.ngFace = this.add.graphics();
+    this.ngLabel = this.add.text(0, 0, NG_LABEL, {
+      fontFamily: FONT_DISPLAY,
+      fontSize: '8px',
+      color: PALETTE.parch,
+    });
+    this.ngLabel.setOrigin(0.5);
+    this.drawNgFace(0);
+    const container = this.add.container(0, 0, [shadow, this.ngFace, this.ngLabel]);
+    container.setSize(bw, bh + 3);
+    container.setInteractive({ useHandCursor: true });
+    container.on(Phaser.Input.Events.POINTER_DOWN, () => {
+      this.drawNgFace(2);
+    });
+    container.on(Phaser.Input.Events.POINTER_OUT, () => {
+      this.drawNgFace(0);
+    });
+    container.on(Phaser.Input.Events.POINTER_UP, () => {
+      this.drawNgFace(0);
+      this.onNgPlus();
+    });
+    return container;
+  }
+
+  private drawNgFace(pressOffset: number): void {
+    const bw = 142;
+    const bh = 26;
+    this.ngFace.clear();
+    this.ngFace.fillStyle(color(this.ngArmed ? '#b04a5a' : PALETTE.arcane2), 1);
+    this.ngFace.fillRoundedRect(-bw / 2, -bh / 2 + pressOffset, bw, bh, 6);
+    this.ngLabel.setText(this.ngArmed ? NG_ARMED_LABEL : NG_LABEL);
+    this.ngLabel.setY(pressOffset);
+  }
+
+  /** First tap arms, second within the window begins the next cycle. */
+  private onNgPlus(): void {
+    if (this.leaving) return;
+    if (!this.ngArmed) {
+      this.ngArmed = true;
+      playSfx('select');
+      this.drawNgFace(0);
+      this.ngArmTimer?.remove();
+      this.ngArmTimer = this.time.delayedCall(NG_ARM_MS, () => {
+        this.ngArmed = false;
+        this.drawNgFace(0);
+      });
+      return;
+    }
+    this.leaving = true;
+    this.ngArmTimer?.remove();
+    playSfx('confirm');
+    const next = beginNgPlus(this.params.state);
+    try {
+      save(window.localStorage, 'auto', next);
+    } catch {
+      // Storage full: the run still starts; the next auto-save retries.
+    }
+    this.cameras.main.fadeOut(250, 13, 10, 28);
+    this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
+      dom.toast(NG_TOAST);
+      this.scene.start('World', { state: next });
+    });
   }
 
   private onRoam(): void {
