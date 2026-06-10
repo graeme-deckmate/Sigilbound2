@@ -1,0 +1,14 @@
+{
+  "northhollow_1": {
+    "speaker": "SIGNPOST",
+    "pages": ["Past here the Vale ends and the Hollow begins. Be ready, or be brief."]
+  },
+  "lore_hollow_1": {
+    "speaker": "LORE STONE",
+    "pages": ["It does not want the Vale. It wants the craft. Your craft."]
+  },
+  "lore_hollow_2": {
+    "speaker": "LORE STONE",
+    "pages": ["Whatever it attunes to, it fears. It always did."]
+  }
+}

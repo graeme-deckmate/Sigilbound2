@@ -1,0 +1,901 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <meta name="theme-color" content="#16112b" />
+    <link rel="icon" type="image/png" href="icons/icon-192.png" />
+    <link rel="apple-touch-icon" href="icons/icon-192.png" />
+    <title>Sigilbound</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --ink: #16112b;
+        --night: #241d42;
+        --night2: #2e2554;
+        --arcane: #9d7bff;
+        --gold: #ffc857;
+        --parch: #efe6d0;
+        --dim: #9c92c0;
+        --hp: #ff6b4a;
+        --mp: #5ad1ff;
+        --xp: #ffc857;
+        --rad: 10px;
+        --f-ui: 'VT323', ui-monospace, 'Courier New', monospace;
+        --f-display: 'Press Start 2P', 'VT323', ui-monospace, monospace;
+      }
+      * {
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+      }
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        overflow: hidden;
+        background: #0d0a1c;
+        font-family: var(--f-ui);
+        color: var(--parch);
+      }
+      #app {
+        position: relative;
+        height: 100dvh;
+        max-width: 760px;
+        margin: 0 auto;
+        overflow: hidden;
+        touch-action: none;
+      }
+      /* Phaser appends its canvas as a direct child of #app; nested
+         canvases (the sigil preview) must not match this rule. */
+      #app > canvas {
+        position: absolute;
+        inset: 0;
+        image-rendering: pixelated;
+        image-rendering: crisp-edges;
+      }
+
+      /* ---------- HUD ---------- */
+      #hud {
+        position: absolute;
+        top: 8px;
+        left: 8px;
+        z-index: 20;
+        background: rgba(22, 17, 43, 0.82);
+        border: 2px solid var(--night2);
+        border-radius: var(--rad);
+        padding: 7px 10px 8px;
+        min-width: 158px;
+        backdrop-filter: blur(2px);
+      }
+      #hud .row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-top: 3px;
+      }
+      #hud .name {
+        font-size: 21px;
+        letter-spacing: 1px;
+      }
+      #hud .lvtag {
+        font-size: 19px;
+        color: var(--gold);
+        letter-spacing: 1px;
+        margin-left: auto;
+      }
+      #hud .blabel {
+        font-size: 17px;
+        color: var(--dim);
+        width: 22px;
+      }
+      #hud .bar {
+        position: relative;
+        flex: 1;
+        height: 8px;
+        background: #120e24;
+        border-radius: 4px;
+        overflow: hidden;
+        min-width: 70px;
+      }
+      #hud .bar i {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        border-radius: 4px;
+        transition: width 0.25s;
+      }
+      #hud .bar.hp i {
+        background: var(--hp);
+      }
+      #hud .bar.mp i {
+        background: var(--mp);
+      }
+      #hud .bar.xp i {
+        background: var(--xp);
+      }
+      #hud .bnum {
+        font-size: 16px;
+        color: var(--dim);
+        min-width: 48px;
+        text-align: right;
+      }
+
+      /* ---------- touch controls ---------- */
+      #dpad {
+        position: absolute;
+        left: 14px;
+        bottom: 16px;
+        z-index: 25;
+        width: 150px;
+        height: 150px;
+        display: grid;
+        grid-template: repeat(3, 1fr) / repeat(3, 1fr);
+        gap: 2px;
+        transform-origin: bottom left;
+      }
+      #dpad.right {
+        left: auto;
+        right: 14px;
+        transform-origin: bottom right;
+      }
+      .dbtn {
+        background: rgba(36, 29, 66, 0.65);
+        border: 2px solid rgba(46, 37, 84, 0.8);
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 22px;
+        color: var(--dim);
+        user-select: none;
+        min-width: 44px;
+        min-height: 44px;
+      }
+      .dbtn.blank {
+        background: transparent;
+        border: none;
+      }
+      .dbtn.active {
+        background: rgba(157, 123, 255, 0.35);
+        color: var(--parch);
+      }
+      #btnA {
+        position: absolute;
+        right: 22px;
+        bottom: 44px;
+        z-index: 25;
+        width: 86px;
+        height: 86px;
+        border-radius: 50%;
+        background: rgba(255, 200, 87, 0.16);
+        border: 3px solid rgba(255, 200, 87, 0.55);
+        color: var(--gold);
+        font-size: 34px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        user-select: none;
+      }
+      #btnA.left {
+        right: auto;
+        left: 22px;
+      }
+      #btnA:active {
+        background: rgba(255, 200, 87, 0.35);
+      }
+
+      /* ---------- dialog ---------- */
+      #dialog {
+        display: none;
+        position: absolute;
+        left: 10px;
+        right: 10px;
+        bottom: 12px;
+        z-index: 40;
+        background: rgba(22, 17, 43, 0.94);
+        border: 2px solid var(--night2);
+        border-radius: 12px;
+        padding: 12px 14px 14px;
+        min-height: 72px;
+      }
+      #dialog .dname {
+        font-size: 17px;
+        color: var(--arcane);
+        letter-spacing: 2px;
+        margin-bottom: 4px;
+      }
+      #dtext {
+        font-size: 23px;
+        line-height: 1.25;
+      }
+      #dialog .dmore {
+        position: absolute;
+        right: 12px;
+        bottom: 6px;
+        color: var(--gold);
+        font-size: 18px;
+        animation: bounce 0.9s infinite;
+      }
+      @keyframes bounce {
+        0%,
+        100% {
+          transform: translateY(0);
+        }
+        50% {
+          transform: translateY(3px);
+        }
+      }
+
+      /* ---------- toasts ---------- */
+      #toasts {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        z-index: 50;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        align-items: flex-end;
+        pointer-events: none;
+      }
+      .toast {
+        background: rgba(22, 17, 43, 0.92);
+        border: 2px solid var(--night2);
+        border-radius: 10px;
+        color: var(--parch);
+        font-size: 19px;
+        padding: 7px 12px;
+        animation:
+          tin 0.25s ease-out,
+          tout 0.4s ease-in 2.6s forwards;
+      }
+      .toast.violet {
+        border-color: var(--arcane);
+        color: #d9ccff;
+      }
+      @keyframes tin {
+        from {
+          transform: translateX(20px);
+          opacity: 0;
+        }
+      }
+      @keyframes tout {
+        to {
+          transform: translateY(-8px);
+          opacity: 0;
+        }
+      }
+
+      /* ---------- iris / encounter flash ---------- */
+      #iris {
+        position: absolute;
+        inset: 0;
+        z-index: 80;
+        pointer-events: none;
+        opacity: 0;
+        background: #0d0a1c;
+      }
+      #iris.flash {
+        animation: encflash 0.42s steps(2) 2;
+      }
+      @keyframes encflash {
+        0% {
+          opacity: 0;
+          background: #fff;
+        }
+        50% {
+          opacity: 0.85;
+          background: #fff;
+        }
+        100% {
+          opacity: 0;
+        }
+      }
+      #iris.fadepulse {
+        animation: fadepulse 0.42s ease-in-out;
+      }
+      @keyframes fadepulse {
+        0% {
+          opacity: 0;
+        }
+        50% {
+          opacity: 1;
+        }
+        100% {
+          opacity: 0;
+        }
+      }
+      #iris.closein {
+        animation: irisin 0.45s ease-in forwards;
+      }
+      #iris.openout {
+        animation: irisout 0.5s ease-out forwards;
+      }
+      @keyframes irisin {
+        from {
+          opacity: 0;
+          clip-path: circle(120% at 50% 50%);
+        }
+        to {
+          opacity: 1;
+          clip-path: circle(0% at 50% 50%);
+        }
+      }
+      @keyframes irisout {
+        from {
+          opacity: 1;
+          clip-path: circle(0% at 50% 50%);
+        }
+        to {
+          opacity: 0;
+          clip-path: circle(120% at 50% 50%);
+        }
+      }
+      /* ---------- battle ---------- */
+      #battle {
+        position: absolute;
+        inset: 0;
+        z-index: 30;
+        display: none;
+        flex-direction: column;
+        justify-content: space-between;
+        pointer-events: none;
+      }
+      #ebar {
+        margin: 8px 8px 0 auto;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        min-width: 180px;
+        max-width: 52%;
+        pointer-events: auto;
+      }
+      .erow {
+        background: rgba(22, 17, 43, 0.88);
+        border: 2px solid var(--night2);
+        border-radius: 12px;
+        padding: 6px 12px 7px;
+      }
+      .erow.dead {
+        opacity: 0.35;
+      }
+      .erow.targetable {
+        border-color: var(--gold);
+        box-shadow: 0 0 10px rgba(255, 200, 87, 0.35);
+        cursor: pointer;
+      }
+      .erow .etop {
+        display: flex;
+        justify-content: space-between;
+        gap: 14px;
+        font-size: 21px;
+      }
+      .erow .elv {
+        color: var(--dim);
+        font-size: 18px;
+      }
+      .erow .ebars {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-top: 3px;
+      }
+      .erow .bar {
+        position: relative;
+        flex: 1;
+        height: 9px;
+        background: #0f0c20;
+        border-radius: 5px;
+        overflow: hidden;
+      }
+      .erow .bar i {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        background: var(--hp);
+        border-radius: 4px;
+        transition: width 0.25s;
+      }
+      .erow .eshield {
+        color: var(--arcane);
+        font-size: 16px;
+        min-width: 26px;
+        text-align: right;
+      }
+      .statusrow {
+        display: flex;
+        gap: 5px;
+        margin-top: 4px;
+        min-height: 10px;
+      }
+      .sdot {
+        width: 10px;
+        height: 10px;
+        border-radius: 3px;
+      }
+      .schip {
+        font-size: 13px;
+        line-height: 1;
+        cursor: help;
+      }
+      #bpanel {
+        pointer-events: auto;
+        background: rgba(18, 14, 36, 0.96);
+        border-top: 2px solid var(--night2);
+        padding: 8px 10px calc(10px + env(safe-area-inset-bottom));
+      }
+      #blog {
+        font-size: 22px;
+        line-height: 1.2;
+        min-height: 30px;
+        color: var(--parch);
+        padding: 2px 4px 8px;
+      }
+      #cmds {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 7px;
+      }
+      .spbtn {
+        font-family: var(--f-ui);
+        text-align: left;
+        font-size: 20px;
+        color: var(--parch);
+        background: var(--night);
+        border: 2px solid var(--night2);
+        border-radius: 10px;
+        padding: 9px 10px;
+        min-height: 52px;
+        cursor: pointer;
+        position: relative;
+      }
+      .spbtn .nm {
+        display: block;
+        line-height: 1.05;
+      }
+      .spbtn .meta {
+        display: block;
+        font-size: 16px;
+        color: var(--dim);
+        margin-top: 1px;
+      }
+      .spbtn .edot {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+      }
+      .spbtn:not(:disabled):active {
+        background: var(--night2);
+        transform: translateY(1px);
+      }
+      .spbtn:disabled {
+        opacity: 0.38;
+      }
+      .spbtn.util {
+        text-align: center;
+        min-height: 44px;
+        color: var(--dim);
+      }
+      .spbtn.cancel {
+        width: 100%;
+        margin-top: 7px;
+      }
+      .spbtn:focus-visible {
+        outline: 2px solid var(--gold);
+        outline-offset: 1px;
+      }
+      #cmds.lock .spbtn {
+        pointer-events: none;
+        opacity: 0.45;
+      }
+
+      /* ---------- top buttons ---------- */
+      #topbtns {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        z-index: 20;
+        display: flex;
+        gap: 8px;
+      }
+      .iconbtn {
+        font-family: var(--f-ui);
+        font-size: 20px;
+        line-height: 1;
+        color: var(--parch);
+        background: rgba(36, 29, 66, 0.9);
+        border: 2px solid var(--night2);
+        border-radius: var(--rad);
+        padding: 10px 12px;
+        cursor: pointer;
+        min-width: 46px;
+        min-height: 46px;
+      }
+      .iconbtn:active {
+        transform: translateY(1px);
+        background: var(--night2);
+      }
+      .iconbtn.glow {
+        border-color: var(--arcane);
+        box-shadow: 0 0 10px rgba(157, 123, 255, 0.4);
+      }
+      .iconbtn:focus-visible {
+        outline: 2px solid var(--gold);
+        outline-offset: 2px;
+      }
+
+      /* ---------- grimoire ---------- */
+      #forge {
+        position: absolute;
+        inset: 0;
+        z-index: 70;
+        display: none;
+        background: rgba(13, 10, 28, 0.94);
+        overflow-y: auto;
+      }
+      #forge .inner {
+        max-width: 560px;
+        margin: 0 auto;
+        padding: 16px 14px 30px;
+      }
+      #forge h2 {
+        font-family: var(--f-display);
+        font-size: 15px;
+        color: var(--gold);
+        letter-spacing: 1px;
+        margin: 4px 0 2px;
+        text-align: center;
+      }
+      #forge .sub {
+        text-align: center;
+        color: var(--dim);
+        font-size: 19px;
+        margin-bottom: 10px;
+      }
+      .fsec {
+        margin-top: 10px;
+      }
+      .fsec .flab {
+        font-size: 18px;
+        color: var(--arcane);
+        letter-spacing: 2px;
+        margin-bottom: 5px;
+      }
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 7px;
+      }
+      .chip {
+        font-family: var(--f-ui);
+        font-size: 20px;
+        color: var(--parch);
+        background: var(--night);
+        border: 2px solid var(--night2);
+        border-radius: 999px;
+        padding: 8px 14px;
+        cursor: pointer;
+        min-height: 44px;
+      }
+      .chip.sel {
+        border-color: var(--gold);
+        color: var(--gold);
+        background: #2e2554;
+        box-shadow: 0 0 8px rgba(255, 200, 87, 0.2);
+      }
+      .chip.lock {
+        opacity: 0.45;
+      }
+      .chip:focus-visible {
+        outline: 2px solid var(--gold);
+        outline-offset: 1px;
+      }
+      #preview {
+        margin-top: 14px;
+        background: var(--night);
+        border: 2px solid #6f4fd8;
+        border-radius: 14px;
+        padding: 12px;
+        display: flex;
+        gap: 12px;
+        align-items: center;
+      }
+      #pvcv {
+        width: 104px;
+        height: 104px;
+        flex: none;
+        background: #16112b;
+        border-radius: 10px;
+        image-rendering: pixelated;
+      }
+      #pvname {
+        font-size: 24px;
+        color: var(--gold);
+        line-height: 1.05;
+      }
+      #pvstats {
+        font-size: 19px;
+        color: var(--parch);
+        margin-top: 4px;
+        line-height: 1.3;
+      }
+      #pvstats .mut {
+        color: var(--dim);
+      }
+      #slots {
+        margin-top: 12px;
+      }
+      #slots .flab {
+        font-size: 18px;
+        color: var(--arcane);
+        letter-spacing: 2px;
+        margin-bottom: 5px;
+      }
+      .slotbtn {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+        font-family: var(--f-ui);
+        font-size: 20px;
+        color: var(--parch);
+        background: var(--night);
+        border: 2px solid var(--night2);
+        border-radius: 10px;
+        padding: 10px 12px;
+        margin-top: 6px;
+        cursor: pointer;
+        min-height: 50px;
+      }
+      .slotbtn small {
+        color: var(--dim);
+        font-size: 17px;
+      }
+      .slotbtn:active {
+        background: var(--night2);
+      }
+      #forgeclose,
+      #setclose {
+        display: block;
+        margin: 16px auto 0;
+        font-family: var(--f-ui);
+        font-size: 21px;
+        color: var(--parch);
+        background: #6f4fd8;
+        border: 2px solid var(--arcane);
+        border-radius: 10px;
+        padding: 10px 26px;
+        cursor: pointer;
+        min-height: 48px;
+      }
+
+      /* ---------- settings ---------- */
+      #settings {
+        position: absolute;
+        inset: 0;
+        z-index: 70;
+        display: none;
+        background: rgba(13, 10, 28, 0.94);
+        overflow-y: auto;
+      }
+      #settings .inner {
+        max-width: 560px;
+        margin: 0 auto;
+        padding: 16px 14px 30px;
+      }
+      #settings h2 {
+        font-family: var(--f-display);
+        font-size: 15px;
+        color: var(--gold);
+        letter-spacing: 1px;
+        margin: 4px 0 10px;
+        text-align: center;
+      }
+      .srow {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-top: 10px;
+      }
+      .srow label {
+        font-size: 19px;
+        color: var(--parch);
+        width: 86px;
+      }
+      .srow input[type='range'] {
+        flex: 1;
+        accent-color: var(--gold);
+        min-height: 44px;
+      }
+      .srow .sval {
+        font-size: 18px;
+        color: var(--dim);
+        width: 44px;
+        text-align: right;
+      }
+      #settings .btnrow {
+        display: flex;
+        gap: 8px;
+        margin-top: 8px;
+      }
+      #settings .btnrow .spbtn {
+        flex: 1;
+        text-align: center;
+      }
+      #settings .note {
+        font-size: 17px;
+        color: var(--dim);
+        margin-top: 6px;
+        text-align: center;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        #iris.flash,
+        #iris.fadepulse,
+        #iris.closein,
+        #iris.openout {
+          animation-duration: 0.01s;
+        }
+        .toast {
+          animation: none;
+        }
+      }
+      .hidden {
+        display: none !important;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <div id="hud" class="hidden">
+        <div class="row">
+          <span class="name">Wrender</span><span class="lvtag" id="hlv">Lv 1</span>
+        </div>
+        <div class="row">
+          <span class="blabel">HP</span><span class="bar hp"><i id="hhp"></i></span
+          ><span class="bnum" id="hhpn"></span>
+        </div>
+        <div class="row">
+          <span class="blabel">MP</span><span class="bar mp"><i id="hmp"></i></span
+          ><span class="bnum" id="hmpn"></span>
+        </div>
+        <div class="row">
+          <span class="blabel">XP</span><span class="bar xp"><i id="hxp"></i></span>
+        </div>
+        <div class="row" id="hshieldrow" style="display: none" title="Veil shield">
+          <span class="blabel" style="color: var(--arcane)">VL</span>
+          <span class="bar"
+            ><i id="hshield" style="background: var(--arcane); width: 100%"></i
+          ></span>
+          <span class="bnum" id="hshieldn"></span>
+        </div>
+        <div class="statusrow" id="hstatus"></div>
+      </div>
+
+      <div id="topbtns" class="hidden">
+        <button class="iconbtn glow" id="grimBtn" aria-label="Open grimoire">✦ Grimoire</button>
+        <button class="iconbtn" id="setBtn" aria-label="Settings">⚙</button>
+        <button class="iconbtn" id="helpBtn" aria-label="Help">?</button>
+      </div>
+
+      <div id="toasts"></div>
+
+      <div id="dpad" class="hidden">
+        <div class="dbtn blank"></div>
+        <div class="dbtn" data-d="up">▲</div>
+        <div class="dbtn blank"></div>
+        <div class="dbtn" data-d="left">◀</div>
+        <div class="dbtn blank"></div>
+        <div class="dbtn" data-d="right">▶</div>
+        <div class="dbtn blank"></div>
+        <div class="dbtn" data-d="down">▼</div>
+        <div class="dbtn blank"></div>
+      </div>
+      <div id="btnA" class="hidden">✦</div>
+
+      <div id="dialog">
+        <div class="dname" id="dname"></div>
+        <div id="dtext"></div>
+        <div class="dmore">▼</div>
+      </div>
+
+      <div id="battle">
+        <div id="ebar"></div>
+        <div id="bpanel">
+          <div id="blog"></div>
+          <div id="cmds"></div>
+        </div>
+      </div>
+
+      <div id="forge">
+        <div class="inner">
+          <h2>THE GRIMOIRE</h2>
+          <div class="sub">Bind an element, a form and a rune. Inscribe the spell into a slot.</div>
+          <div class="fsec">
+            <div class="flab">ELEMENT</div>
+            <div class="chips" id="chElem"></div>
+          </div>
+          <div class="fsec">
+            <div class="flab">FORM</div>
+            <div class="chips" id="chForm"></div>
+          </div>
+          <div class="fsec">
+            <div class="flab">RUNE</div>
+            <div class="chips" id="chRune"></div>
+          </div>
+          <div id="preview">
+            <canvas id="pvcv" width="52" height="52"></canvas>
+            <div id="pvinfo">
+              <div id="pvname"></div>
+              <div id="pvstats"></div>
+            </div>
+          </div>
+          <div id="slots">
+            <div class="flab">INSCRIBE TO SLOT</div>
+            <div id="slotlist"></div>
+          </div>
+          <button id="forgeclose">Close grimoire</button>
+        </div>
+      </div>
+
+      <div id="settings">
+        <div class="inner">
+          <h2>SETTINGS</h2>
+          <div class="fsec">
+            <div class="flab">VOLUME</div>
+            <div class="srow">
+              <label for="volMaster">Master</label>
+              <input id="volMaster" type="range" min="0" max="100" />
+              <span class="sval" id="volMasterV"></span>
+            </div>
+            <div class="srow">
+              <label for="volMusic">Music</label>
+              <input id="volMusic" type="range" min="0" max="100" />
+              <span class="sval" id="volMusicV"></span>
+            </div>
+            <div class="srow">
+              <label for="volSfx">Effects</label>
+              <input id="volSfx" type="range" min="0" max="100" />
+              <span class="sval" id="volSfxV"></span>
+            </div>
+          </div>
+          <div class="fsec">
+            <div class="flab">COMFORT</div>
+            <div class="chips" id="chComfort"></div>
+          </div>
+          <div class="fsec">
+            <div class="flab">TEXT SPEED</div>
+            <div class="chips" id="chTextSpeed"></div>
+          </div>
+          <div class="fsec">
+            <div class="flab">D-PAD</div>
+            <div class="chips" id="chDpad"></div>
+          </div>
+          <div class="fsec">
+            <div class="flab">SAVE</div>
+            <div class="btnrow">
+              <button class="spbtn util" id="saveManual">Save game</button>
+              <button class="spbtn util" id="loadManual">Load saved game</button>
+            </div>
+            <div class="note" id="saveNote"></div>
+          </div>
+          <button id="setclose">Close settings</button>
+        </div>
+      </div>
+
+      <div id="iris"></div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

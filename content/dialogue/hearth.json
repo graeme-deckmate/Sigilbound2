@@ -1,0 +1,52 @@
+{
+  "elder_intro": {
+    "speaker": "ELDER",
+    "pages": [
+      "You feel it too, then. The Vale holds its breath.",
+      "The Wraith bound our three Wardens with sigils of its own making. Marsh, wood, and ash.",
+      "Take the Grimoire. Craft what the Vale has never seen, and unbind them.",
+      "Start south. Even a Gloop will test a new wisp."
+    ]
+  },
+  "elder_progress": {
+    "speaker": "ELDER",
+    "pages": ["A Grand Sigil. So the old craft still answers. The others will be crueler."]
+  },
+  "elder_gate": {
+    "speaker": "ELDER",
+    "pages": [
+      "Three sigils, three Wardens freed. The northern seal is broken.",
+      "The Wraith knows you are coming. Go anyway."
+    ]
+  },
+  "elder_postgame": {
+    "speaker": "ELDER",
+    "pages": ["The Vale breathes again. Wander it. You earned the quiet."]
+  },
+  "keeper_tips": {
+    "speaker": "KEEPER",
+    "pages": [
+      "Tall grass bites. The shrine heals for free, so lean on it.",
+      "And craft often, slots are not promises."
+    ]
+  },
+  "twins_gossip_a": {
+    "speaker": "TWINS",
+    "pages": ["Slimes hate a good scorch. And a shock. Mostly they just lose."]
+  },
+  "twins_gossip_b": {
+    "speaker": "TWINS",
+    "pages": ["The turtle things out west? Crack them with Volt. Everything else just bounces."]
+  },
+  "scout_hints": {
+    "speaker": "SCOUT",
+    "pages": [
+      "Shrines glow where people stopped going.",
+      "West woods, the ash flats, and one right here in the vale, behind the rocks southwest."
+    ]
+  },
+  "dreamer_lore": {
+    "speaker": "DREAMER",
+    "pages": ["I dreamt the Wraith was a Warden once. The fourth one. Nobody likes that dream."]
+  }
+}

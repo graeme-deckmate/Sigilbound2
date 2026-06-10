@@ -1,0 +1,18 @@
+{
+  "hearthvale_1": {
+    "speaker": "SIGNPOST",
+    "pages": ["Home shrine NORTH heals you. The marsh SOUTH does not."]
+  },
+  "hearthvale_2": {
+    "speaker": "SIGNPOST",
+    "pages": ["Bogmaw sleeps southeast. When it dives, only lightning finds it."]
+  },
+  "hearthvale_3": {
+    "speaker": "SIGNPOST",
+    "pages": ["Rock maze southwest. Something old glows in there."]
+  },
+  "lore_vale": {
+    "speaker": "LORE STONE",
+    "pages": ["Four Wardens kept the Vale. Marsh, Wood, Ash... and Hollow."]
+  }
+}

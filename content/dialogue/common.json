@@ -1,0 +1,54 @@
+{
+  "spring": {
+    "speaker": "SPRING",
+    "pages": ["You drink from the silver spring.", "Fully restored."]
+  },
+  "defeat_wake": {
+    "speaker": "",
+    "pages": ["You wake by the spring, whole again.", "The Vale is patient. So are you."]
+  },
+  "shrine_fury": {
+    "speaker": "SHRINE",
+    "pages": ["The shrine flares red.", "The Rune of FURY is yours: raw power, at a steep cost."]
+  },
+  "shrine_thirst": {
+    "speaker": "SHRINE",
+    "pages": [
+      "The shrine glows warm.",
+      "The Rune of THIRST is yours: your spells now drink life back."
+    ]
+  },
+  "shrine_echo": {
+    "speaker": "SHRINE",
+    "pages": ["The shrine rings twice.", "The Rune of ECHO is yours: one casting, two strikes."]
+  },
+  "shrine_keen": {
+    "speaker": "SHRINE",
+    "pages": [
+      "The shrine glints like a drawn edge.",
+      "The Rune of KEEN is yours: your spells seek the seam."
+    ]
+  },
+  "gate_sealed": {
+    "speaker": "GATE",
+    "pages": ["The seal holds fast. It hungers for three Grand Sigils."]
+  },
+  "teleporter": {
+    "speaker": "WAYSTONE",
+    "pages": ["The spent sigil hums, holding the way home.", "It carries you back to Hearth."]
+  },
+  "shrine_used": {
+    "speaker": "SHRINE",
+    "pages": ["The shrine is quiet now. Its rune already burns in your grimoire."]
+  },
+  "help": {
+    "speaker": "HOW TO PLAY",
+    "pages": [
+      "Tall grass hides battles. Battles give XP. Levels and shrines unlock new spell parts.",
+      "Open the Grimoire to craft a spell from an ELEMENT, a FORM and a RUNE, then inscribe it into one of your four slots.",
+      "Wisps, bolts and lances strike one foe; you pick which. Nova scours them all. Veil raises a shield around you.",
+      "Enemies have weaknesses, and some of their blows linger on you. Focus restores you and cleanses the oldest mark.",
+      "Signposts gossip. Springs and shrines heal you free, and you wake by the last one you touched."
+    ]
+  }
+}

@@ -1,0 +1,1323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Sigilbound</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#16112b;
+  --night:#241d42;
+  --night2:#2e2554;
+  --arcane:#9d7bff;
+  --arcane2:#6f4fd8;
+  --gold:#ffc857;
+  --parch:#efe6d0;
+  --dim:#9c92c0;
+  --danger:#ff6b6b;
+  --hp:#ff6b4a;
+  --mp:#5ad1ff;
+  --xp:#ffc857;
+  --ember:#ff6b4a; --rime:#5ad1ff; --volt:#ffd84a; --thorn:#7dde6a;
+  --rad:10px;
+  --f-ui:'VT323', ui-monospace, 'Courier New', monospace;
+  --f-display:'Press Start 2P', 'VT323', ui-monospace, monospace;
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+html,body{margin:0;padding:0;height:100%;overflow:hidden;background:#0d0a1c;}
+body{font-family:var(--f-ui);color:var(--parch);}
+#app{height:100dvh;display:flex;flex-direction:column;max-width:760px;margin:0 auto;}
+#stage{position:relative;flex:1;overflow:hidden;background:#0d0a1c;touch-action:none;}
+canvas#cv{position:absolute;inset:0;image-rendering:pixelated;image-rendering:crisp-edges;}
+
+/* ---------- HUD ---------- */
+#hud{position:absolute;top:8px;left:8px;z-index:20;background:rgba(22,17,43,.82);
+  border:2px solid var(--night2);border-radius:var(--rad);padding:7px 10px 8px;min-width:158px;
+  backdrop-filter:blur(2px);}
+#hud .row{display:flex;align-items:center;gap:6px;margin-top:3px;}
+#hud .lvtag{font-size:19px;color:var(--gold);letter-spacing:1px;}
+#hud .name{font-size:19px;color:var(--parch);}
+.bar{flex:1;height:9px;background:#0f0c20;border-radius:5px;overflow:hidden;border:1px solid #00000055;position:relative;}
+.bar>i{display:block;height:100%;border-radius:4px;transition:width .25s ease;}
+.bar.hp>i{background:linear-gradient(90deg,#ff8a5c,var(--hp));}
+.bar.mp>i{background:linear-gradient(90deg,#8fe3ff,var(--mp));}
+.bar.xp{height:5px;}
+.bar.xp>i{background:var(--xp);}
+.blabel{width:24px;font-size:16px;color:var(--dim);}
+.bnum{font-size:15px;color:var(--dim);min-width:52px;text-align:right;}
+
+#topbtns{position:absolute;top:8px;right:8px;z-index:20;display:flex;gap:8px;}
+.iconbtn{font-family:var(--f-ui);font-size:20px;line-height:1;color:var(--parch);
+  background:rgba(36,29,66,.9);border:2px solid var(--night2);border-radius:var(--rad);
+  padding:10px 12px;cursor:pointer;min-width:46px;min-height:46px;}
+.iconbtn:active{transform:translateY(1px);background:var(--night2);}
+.iconbtn.glow{border-color:var(--arcane);box-shadow:0 0 10px #9d7bff66;}
+.iconbtn:focus-visible{outline:2px solid var(--gold);outline-offset:2px;}
+
+/* ---------- D-pad + action ---------- */
+#dpad{position:absolute;left:14px;bottom:16px;z-index:25;width:150px;height:150px;
+  display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);gap:3px;opacity:.92;}
+.dbtn{background:rgba(36,29,66,.85);border:2px solid #3a2f6b;border-radius:10px;
+  display:flex;align-items:center;justify-content:center;font-size:22px;color:var(--dim);
+  user-select:none;touch-action:none;}
+.dbtn.active{background:var(--arcane2);color:#fff;border-color:var(--arcane);}
+.dbtn.blank{background:transparent;border:none;}
+#btnA{position:absolute;right:18px;bottom:34px;z-index:25;width:78px;height:78px;border-radius:50%;
+  background:radial-gradient(circle at 35% 30%, #b497ff, var(--arcane2));border:3px solid var(--arcane);
+  color:#fff;font-family:var(--f-ui);font-size:30px;box-shadow:0 4px 0 #241d42, 0 0 16px #9d7bff44;
+  display:flex;align-items:center;justify-content:center;user-select:none;touch-action:none;}
+#btnA:active{transform:translateY(2px);box-shadow:0 2px 0 #241d42;}
+
+/* ---------- Dialog ---------- */
+#dialog{position:absolute;left:10px;right:10px;bottom:14px;z-index:40;display:none;
+  background:rgba(22,17,43,.96);border:2px solid var(--arcane2);border-radius:12px;
+  padding:14px 16px 12px;font-size:23px;line-height:1.25;box-shadow:0 6px 24px #00000088;}
+#dialog .dname{color:var(--gold);font-size:18px;letter-spacing:1px;margin-bottom:2px;}
+#dialog .dmore{position:absolute;right:14px;bottom:8px;color:var(--arcane);font-size:18px;animation:bob 1s infinite;}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(3px)}}
+
+/* ---------- Toasts ---------- */
+#toasts{position:absolute;top:70px;left:50%;transform:translateX(-50%);z-index:60;display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none;width:90%;}
+.toast{background:rgba(22,17,43,.95);border:2px solid var(--gold);color:var(--gold);
+  border-radius:10px;padding:8px 14px;font-size:20px;animation:tin .25s ease, tout .4s ease 2.6s forwards;
+  box-shadow:0 0 14px #ffc85733;text-align:center;}
+.toast.violet{border-color:var(--arcane);color:#cdbcff;box-shadow:0 0 14px #9d7bff33;}
+@keyframes tin{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+@keyframes tout{to{opacity:0;transform:translateY(-6px)}}
+
+/* ---------- Battle UI ---------- */
+#battle{position:absolute;inset:0;z-index:30;display:none;flex-direction:column;justify-content:space-between;pointer-events:none;}
+#ebar{margin:8px auto 0;background:rgba(22,17,43,.88);border:2px solid var(--night2);border-radius:12px;
+  padding:8px 14px;min-width:230px;max-width:88%;pointer-events:auto;}
+#ebar .etop{display:flex;justify-content:space-between;gap:14px;font-size:21px;}
+#ebar .ename{color:var(--parch);}
+#ebar .elv{color:var(--dim);font-size:18px;}
+#ebar .statusrow{display:flex;gap:5px;margin-top:4px;min-height:12px;}
+.sdot{width:10px;height:10px;border-radius:3px;}
+#bpanel{pointer-events:auto;background:rgba(18,14,36,.96);border-top:2px solid var(--night2);padding:8px 10px calc(10px + env(safe-area-inset-bottom));}
+#blog{font-size:22px;line-height:1.2;min-height:30px;color:var(--parch);padding:2px 4px 8px;}
+#cmds{display:grid;grid-template-columns:1fr 1fr;gap:7px;}
+.spbtn{font-family:var(--f-ui);text-align:left;font-size:20px;color:var(--parch);background:var(--night);
+  border:2px solid var(--night2);border-radius:10px;padding:9px 10px;min-height:52px;cursor:pointer;position:relative;}
+.spbtn .nm{display:block;line-height:1.05;}
+.spbtn .meta{display:block;font-size:16px;color:var(--dim);margin-top:1px;}
+.spbtn .edot{position:absolute;top:8px;right:8px;width:10px;height:10px;border-radius:50%;}
+.spbtn:not(:disabled):active{background:var(--night2);transform:translateY(1px);}
+.spbtn:disabled{opacity:.38;}
+.spbtn.util{text-align:center;min-height:44px;color:var(--dim);}
+.spbtn:focus-visible{outline:2px solid var(--gold);outline-offset:1px;}
+#cmds.lock .spbtn{pointer-events:none;opacity:.45;}
+
+/* ---------- Forge ---------- */
+#forge{position:absolute;inset:0;z-index:70;display:none;background:rgba(13,10,28,.94);overflow-y:auto;}
+#forge .inner{max-width:560px;margin:0 auto;padding:16px 14px 30px;}
+#forge h2{font-family:var(--f-display);font-size:15px;color:var(--gold);letter-spacing:1px;margin:4px 0 2px;text-align:center;}
+#forge .sub{text-align:center;color:var(--dim);font-size:19px;margin-bottom:10px;}
+.fsec{margin-top:10px;}
+.fsec .flab{font-size:18px;color:var(--arcane);letter-spacing:2px;margin-bottom:5px;}
+.chips{display:flex;flex-wrap:wrap;gap:7px;}
+.chip{font-family:var(--f-ui);font-size:20px;color:var(--parch);background:var(--night);
+  border:2px solid var(--night2);border-radius:999px;padding:8px 14px;cursor:pointer;min-height:44px;}
+.chip.sel{border-color:var(--gold);color:var(--gold);background:#2e2554;box-shadow:0 0 8px #ffc85733;}
+.chip.lock{opacity:.45;}
+.chip:focus-visible{outline:2px solid var(--gold);outline-offset:1px;}
+#preview{margin-top:14px;background:var(--night);border:2px solid var(--arcane2);border-radius:14px;
+  padding:12px;display:flex;gap:12px;align-items:center;}
+#pvcv{width:104px;height:104px;flex:none;background:#16112b;border-radius:10px;image-rendering:pixelated;}
+#pvinfo{flex:1;min-width:0;}
+#pvname{font-size:24px;color:var(--gold);line-height:1.05;}
+#pvstats{font-size:19px;color:var(--parch);margin-top:4px;line-height:1.3;}
+#pvstats .mut{color:var(--dim);}
+#slots{margin-top:12px;}
+#slots .flab{font-size:18px;color:var(--arcane);letter-spacing:2px;margin-bottom:5px;}
+.slotbtn{display:flex;justify-content:space-between;align-items:center;width:100%;font-family:var(--f-ui);
+  font-size:20px;color:var(--parch);background:var(--night);border:2px solid var(--night2);border-radius:10px;
+  padding:10px 12px;margin-top:6px;cursor:pointer;min-height:50px;}
+.slotbtn small{color:var(--dim);font-size:17px;}
+.slotbtn:active{background:var(--night2);}
+#forgeclose{display:block;margin:16px auto 0;font-family:var(--f-ui);font-size:21px;color:var(--parch);
+  background:var(--arcane2);border:2px solid var(--arcane);border-radius:10px;padding:10px 26px;cursor:pointer;min-height:48px;}
+
+/* ---------- Title / Ending ---------- */
+.cover{position:absolute;inset:0;z-index:90;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:radial-gradient(1200px 700px at 50% 20%, #2e2554 0%, #16112b 55%, #0d0a1c 100%);text-align:center;padding:20px;}
+.cover h1{font-family:var(--f-display);font-size:clamp(22px,7vw,40px);color:var(--gold);letter-spacing:2px;margin:6px 0 4px;
+  text-shadow:0 0 22px #ffc85744, 3px 3px 0 #241d42;}
+.cover .tag{color:var(--dim);font-size:22px;max-width:340px;line-height:1.3;margin-bottom:18px;}
+.cover .bigbtn{font-family:var(--f-display);font-size:14px;color:#16112b;background:var(--gold);border:none;border-radius:12px;
+  padding:16px 30px;cursor:pointer;box-shadow:0 5px 0 #a87f2f, 0 0 24px #ffc85733;min-height:52px;}
+.cover .bigbtn:active{transform:translateY(3px);box-shadow:0 2px 0 #a87f2f;}
+.cover .ctrls{margin-top:20px;color:var(--dim);font-size:18px;line-height:1.45;}
+.cover .ctrls b{color:var(--parch);}
+#ending{display:none;}
+#ending .stats{color:var(--parch);font-size:21px;line-height:1.5;margin-bottom:16px;}
+#ending .stats b{color:var(--gold);}
+#sigil{font-size:40px;animation:spin 9s linear infinite;display:inline-block;}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ---------- Iris transition ---------- */
+#iris{position:absolute;inset:0;z-index:80;pointer-events:none;opacity:0;background:#0d0a1c;}
+#iris.flash{animation:encflash .42s steps(2) 2;}
+@keyframes encflash{0%{opacity:0;background:#fff}50%{opacity:.85;background:#fff}100%{opacity:0}}
+#iris.closein{animation:irisin .45s ease-in forwards;}
+#iris.openout{animation:irisout .5s ease-out forwards;}
+@keyframes irisin{from{opacity:0;clip-path:circle(120% at 50% 50%)}to{opacity:1;clip-path:circle(0% at 50% 50%)}}
+@keyframes irisout{from{opacity:1;clip-path:circle(0% at 50% 50%)}to{opacity:0;clip-path:circle(120% at 50% 50%)}}
+@media (prefers-reduced-motion: reduce){
+  #iris.flash,#iris.closein,#iris.openout{animation-duration:.01s;}
+  .toast{animation:none;}
+  #sigil{animation:none;}
+}
+.hidden{display:none !important;}
+</style>
+</head>
+<body>
+<div id="app">
+<div id="stage">
+  <canvas id="cv"></canvas>
+
+  <div id="hud" class="hidden">
+    <div class="row"><span class="name">Wrender</span><span class="lvtag" id="hlv">Lv 1</span></div>
+    <div class="row"><span class="blabel">HP</span><span class="bar hp"><i id="hhp"></i></span><span class="bnum" id="hhpn"></span></div>
+    <div class="row"><span class="blabel">MP</span><span class="bar mp"><i id="hmp"></i></span><span class="bnum" id="hmpn"></span></div>
+    <div class="row"><span class="blabel">XP</span><span class="bar xp"><i id="hxp"></i></span></div>
+  </div>
+
+  <div id="topbtns" class="hidden">
+    <button class="iconbtn glow" id="grimBtn" aria-label="Open grimoire">✦ Grimoire</button>
+    <button class="iconbtn" id="muteBtn" aria-label="Toggle sound">♪</button>
+    <button class="iconbtn" id="helpBtn" aria-label="Help">?</button>
+  </div>
+
+  <div id="toasts"></div>
+
+  <div id="dpad" class="hidden">
+    <div class="dbtn blank"></div><div class="dbtn" data-d="up">▲</div><div class="dbtn blank"></div>
+    <div class="dbtn" data-d="left">◀</div><div class="dbtn blank"></div><div class="dbtn" data-d="right">▶</div>
+    <div class="dbtn blank"></div><div class="dbtn" data-d="down">▼</div><div class="dbtn blank"></div>
+  </div>
+  <div id="btnA" class="hidden">✦</div>
+
+  <div id="dialog">
+    <div class="dname" id="dname"></div>
+    <div id="dtext"></div>
+    <div class="dmore">▼</div>
+  </div>
+
+  <div id="battle">
+    <div id="ebar">
+      <div class="etop"><span class="ename" id="bename"></span><span class="elv" id="belv"></span></div>
+      <div class="row" style="display:flex;align-items:center;gap:6px;margin-top:4px;">
+        <span class="bar hp" style="height:10px;"><i id="behp" style="width:100%"></i></span>
+      </div>
+      <div class="statusrow" id="bestatus"></div>
+    </div>
+    <div id="bpanel">
+      <div id="blog">A wild thing appears!</div>
+      <div id="cmds"></div>
+    </div>
+  </div>
+
+  <div id="forge">
+    <div class="inner">
+      <h2>THE GRIMOIRE</h2>
+      <div class="sub">Bind an element, a form and a rune. Inscribe the spell into a slot.</div>
+      <div class="fsec"><div class="flab">ELEMENT</div><div class="chips" id="chElem"></div></div>
+      <div class="fsec"><div class="flab">FORM</div><div class="chips" id="chForm"></div></div>
+      <div class="fsec"><div class="flab">RUNE</div><div class="chips" id="chRune"></div></div>
+      <div id="preview">
+        <canvas id="pvcv" width="52" height="52"></canvas>
+        <div id="pvinfo">
+          <div id="pvname"></div>
+          <div id="pvstats"></div>
+        </div>
+      </div>
+      <div id="slots"><div class="flab">INSCRIBE TO SLOT</div><div id="slotlist"></div></div>
+      <button id="forgeclose">Close grimoire</button>
+    </div>
+  </div>
+
+  <div class="cover" id="title">
+    <div><span id="sigil">✦</span></div>
+    <h1>SIGILBOUND</h1>
+    <div class="tag">Craft your own spells. Roam the Vale. Battles strike from the tall grass.</div>
+    <button class="bigbtn" id="startBtn">BEGIN</button>
+    <div class="ctrls">
+      <b>Move</b> d-pad or WASD / arrows<br>
+      <b>Interact</b> ✦ button or E / Enter<br>
+      <b>Spellcraft</b> the Grimoire, top right
+    </div>
+  </div>
+
+  <div class="cover" id="ending">
+    <div><span id="sigil2" style="font-size:40px;">❖</span></div>
+    <h1 style="font-size:clamp(18px,5.5vw,30px);">THE VALE RESTS</h1>
+    <div class="stats" id="endstats"></div>
+    <button class="bigbtn" id="roamBtn">KEEP WANDERING</button>
+  </div>
+
+  <div id="iris"></div>
+</div>
+</div>
+
+<script>
+"use strict";
+/* =========================================================
+   SIGILBOUND
+   A top-down adventure with crafted spells and
+   instanced, turn-based combat.
+   ========================================================= */
+
+/* ---------- tiny helpers ---------- */
+const $ = s => document.querySelector(s);
+const clamp=(v,a,b)=>v<a?a:v>b?b:v;
+const rnd=(a,b)=>a+Math.random()*(b-a);
+const rndi=(a,b)=>Math.floor(rnd(a,b+1));
+const choice=a=>a[Math.floor(Math.random()*a.length)];
+const wait=ms=>new Promise(r=>setTimeout(r,ms));
+function hash2(x,y){let h=(x*374761393+y*668265263)|0;h=(h^(h>>13))*1274126177|0;return ((h^(h>>16))>>>0)/4294967295;}
+
+/* ---------- audio ---------- */
+let AC=null, muted=false;
+function ac(){ if(!AC){ try{AC=new (window.AudioContext||window.webkitAudioContext)();}catch(e){} } return AC; }
+function tone(f,dur=.08,type='square',vol=.05,delay=0,slide=0){
+  if(muted) return; const c=ac(); if(!c) return;
+  const t0=c.currentTime+delay;
+  const o=c.createOscillator(), g=c.createGain();
+  o.type=type; o.frequency.setValueAtTime(f,t0);
+  if(slide) o.frequency.exponentialRampToValueAtTime(Math.max(30,f+slide),t0+dur);
+  g.gain.setValueAtTime(vol,t0); g.gain.exponentialRampToValueAtTime(.0001,t0+dur);
+  o.connect(g).connect(c.destination); o.start(t0); o.stop(t0+dur+.02);
+}
+const SFX={
+  select(){tone(620,.05,'square',.04);},
+  confirm(){tone(520,.06,'square',.045);tone(780,.08,'square',.045,.06);},
+  deny(){tone(140,.12,'sawtooth',.05,0,-60);},
+  hit(){tone(180,.1,'sawtooth',.07,0,-120);tone(90,.12,'square',.05,.02,-40);},
+  hurt(){tone(120,.16,'sawtooth',.07,0,-70);},
+  heal(){tone(520,.09,'sine',.05);tone(660,.09,'sine',.05,.08);tone(880,.12,'sine',.05,.16);},
+  cast(){tone(300,.12,'triangle',.05,0,400);},
+  enc(){tone(220,.1,'square',.06,0,300);tone(220,.1,'square',.06,.12,300);},
+  lvl(){[392,494,587,784].forEach((f,i)=>tone(f,.12,'square',.05,i*.1));},
+  win(){[523,659,784,1046].forEach((f,i)=>tone(f,.14,'square',.05,i*.12));},
+  lose(){[300,250,200,150].forEach((f,i)=>tone(f,.2,'triangle',.06,i*.18));},
+  step(){},
+  crit(){tone(900,.06,'square',.06);tone(1200,.1,'square',.06,.05);},
+};
+
+/* ---------- spell data ---------- */
+const ELEMS={
+  ember:{id:'ember',label:'Ember',color:'#ff6b4a',status:'burn',statusName:'Burning',proc:.35,
+    desc:'sears the foe', lock:p=>true, hint:''},
+  rime:{id:'rime',label:'Rime',color:'#5ad1ff',status:'chill',statusName:'Chilled',proc:.40,
+    desc:'numbs their attacks', lock:p=>p.lv>=2, hint:'Reach Lv 2'},
+  volt:{id:'volt',label:'Volt',color:'#ffd84a',status:'stun',statusName:'Stunned',proc:.28,
+    desc:'may stop their turn', lock:p=>p.lv>=4, hint:'Reach Lv 4'},
+  thorn:{id:'thorn',label:'Thorn',color:'#7dde6a',status:'venom',statusName:'Envenomed',proc:.5,
+    desc:'venom that lingers', lock:p=>p.lv>=6, hint:'Reach Lv 6'},
+};
+const FORMS={
+  wisp:{id:'wisp',label:'Wisp',pw:.62,mp:.5, lock:p=>true, hint:''},
+  bolt:{id:'bolt',label:'Bolt',pw:1.0,mp:1.0, lock:p=>true, hint:''},
+  lance:{id:'lance',label:'Lance',pw:1.42,mp:1.55, lock:p=>p.lv>=3, hint:'Reach Lv 3'},
+};
+const RUNES={
+  none:{id:'none',label:'No rune',mp:1, lock:p=>true, hint:''},
+  amp:{id:'amp',label:'Fury',pw:1.5,mp:1.65, suffix:' of Fury', lock:p=>p.flags.shrine1, hint:'Pray at the western shrine'},
+  leech:{id:'leech',label:'Thirst',heal:.35,mp:1.35, suffix:' of Thirst', lock:p=>p.flags.shrine2, hint:'Pray at the eastern shrine'},
+  echo:{id:'echo',label:'Echo',hits:2,pwEach:.62,mp:1.45, suffix:' of Echoes', lock:p=>p.flags.shrine3, hint:'Pray at the northern shrine'},
+  hex:{id:'hex',label:'Hex',proc:.4,mp:1.3, suffix:' of Hexes', lock:p=>p.lv>=5, hint:'Reach Lv 5'},
+};
+const FORM_ROOT={wisp:'wisp',bolt:'bolt',lance:'lance'};
+const ELEM_PRE={ember:'Ember',rime:'Rime',volt:'Volt',thorn:'Thorn'};
+
+function makeSpell(eid,fid,rid){
+  const E=ELEMS[eid],F=FORMS[fid],R=RUNES[rid];
+  const name=ELEM_PRE[eid]+FORM_ROOT[fid]+(R.suffix||'');
+  const cost=Math.max(2,Math.round(6*F.mp*R.mp));
+  return {eid,fid,rid,name,cost};
+}
+function spellPower(sp,lv){ // displayed/base per-hit damage before variance
+  const F=FORMS[sp.fid],R=RUNES[sp.rid];
+  let p=13*F.pw*(R.pw||1)*(1+(lv-1)*0.22);
+  if(R.hits) p*=R.pwEach;
+  return Math.round(p);
+}
+function spellProc(sp){ return clamp(ELEMS[sp.eid].proc+(RUNES[sp.rid].proc||0),0,.95); }
+
+/* ---------- enemies ---------- */
+const ENEMIES={
+  gloop:{id:'gloop',name:'Gloop',h0:22,hpl:8,a0:5,al:1.6,xp:l=>11+3*l,
+    weak:['ember','volt'],resist:['thorn'],
+    moves:[{n:'squelches forward',m:1},{n:'spits stinging ooze',m:.85},{n:'wobbles menacingly, then slams',m:1.15}]},
+  gloomwing:{id:'gloomwing',name:'Gloomwing',h0:24,hpl:9,a0:6,al:1.8,xp:l=>14+3*l,
+    weak:['rime'],resist:['ember'],
+    moves:[{n:'rakes with hooked claws',m:1},{n:'shrieks a numbing note',m:.8},{n:'dives from the dark',m:1.2}]},
+  thornling:{id:'thornling',name:'Thornling',h0:30,hpl:10,a0:7,al:1.9,xp:l=>16+3*l,
+    weak:['ember'],resist:['volt','thorn'],
+    moves:[{n:'whips a bramble lash',m:1},{n:'flings needle seeds',m:.85},{n:'roots and surges',m:1.2}]},
+  quartzling:{id:'quartzling',name:'Quartzling',h0:34,hpl:11,a0:8,al:2.1,xp:l=>20+4*l,
+    weak:['volt'],resist:['rime','ember'],
+    moves:[{n:'snaps a crystal claw',m:1},{n:'hurls a shard volley',m:.9},{n:'refracts a cutting beam',m:1.25}]},
+  wraith:{id:'wraith',name:'Vale Wraith',h0:250,hpl:0,a0:13,al:2.0,xp:l=>0,boss:true,
+    weak:[],resist:[],
+    moves:[{n:'reaps with a crescent of shadow',m:1.15},{n:'siphons your spirit',m:.7,drain:9},{n:'howls the cold of the Vale',m:1.35}]},
+};
+
+/* ---------- world map ---------- */
+/* legend: # tree  o rock  ~ water  = bridge  . grass  , tall grass(encounters)
+   * flowers  - path  S home shrine  H spring  1/2/3 rune shrines  B boss
+   t/u/v/w signposts */
+const MAP=[
+"########################################",
+"##o..oo...,,##o,,...o##o...,,,..o#oo..##",
+"##.,,,,,..,,#o..,B,..o#...,,,,......o.##",
+"##,,,o.,,....o...-....o..,,,o.,,..3...##",
+"##.,,,,..o....o..-..o....,,,..o...-..o##",
+"##o..,,....o.....-......o..,......-...##",
+"###o....o....o...-...o.....o..-----..###",
+"#~~~~~~~~~~~~~~~~=~~~~~~~~~~~~~~~~~~~~~#",
+"#~~~~~~~~~~~~~~~~=~~~~~~~~~~~~~~~~~~~~~#",
+"##..#..#....#....-....#....#...#....####",
+"##.,,,..#.,,,.#..-..#..,,,..#.,,,,.#..##",
+"##,,,#.,,,.#,,,..-..,,,.#,,,,.#.,,,,..##",
+"##.,1...#.,,,.#..-..#.,,,.#.,,,..#2...##",
+"##,,,.#.,,,,.#,,.-..,,,.#.,,,,.#.,,,.###",
+"##.,,,,.#.,,,.#..-..#.,,,.#.,,,..#....##",
+"###.#..,,..#.....-......#....#..,,..####",
+"##u.--------------------------------.v##",
+"###..#...#....#..-...#....#....#.....###",
+"##...,,,...,,,...-....,,,....,,,,...####",
+"##.,,,,,..,,,,,..-..*.,,,,..,,,,,,....##",
+"##,,,,*,,..,,,...-...,,,*,,..,,,,.,,..##",
+"##.,,,,...,,,....-....,,,,...*.,,,,...##",
+"##..,*,,......S..-..H.....,,,,..,,....##",
+"##...,,..t.......-..........,,*,,.....##",
+"##.,,,,,...,,,..*-*...,,,..w.,,,,,,...##",
+"##,,,*,,..,,,,,..-..,,,,,,..,,,*,,,...##",
+"##..,,....,,*,....*....,,,....,,......##",
+"########################################",
+];
+const MAPH=MAP.length, MAPW=MAP[0].length, TS=16;
+const SOLID=new Set(['#','o','~','S','H','1','2','3','B','t','u','v','w']);
+let tiles=MAP.map(r=>r.split(''));
+function tileAt(x,y){ if(x<0||y<0||x>=MAPW||y>=MAPH) return '#'; return tiles[y][x]; }
+function walkable(x,y){ return !SOLID.has(tileAt(x,y)); }
+
+const SIGNS={
+  t:["Home shrine to the SOUTH heals you.","Tall grass hides creatures. Step lightly,","or do not, and grow strong."],
+  u:["WEST WOODS. Gloomwings nest here.","They hate the cold. A shrine of FURY","glimmers deep among the trees."],
+  v:["EAST THICKET. Thornlings burn easily.","A shrine of THIRST waits within."],
+  w:["NORTH, past the river: crystal things","that only a good SHOCK will crack.","Beyond them, the Wraith. Be ready."],
+};
+
+/* zones for encounters and battle backdrops */
+function zoneAt(x,y){
+  if(y<=6) return 'north';
+  if(y<=8) return 'river';
+  if(y<=17) return x<20?'west':'east';
+  return 'south';
+}
+const ZONES={
+  south:{table:[['gloop',1],['gloop',1],['gloop',2]], sky:['#1c3b4f','#27604f'], hill:'#163a31', ground:'#2c6e49', name:'meadow'},
+  west:{table:[['gloomwing',2],['gloomwing',3],['gloop',2]], sky:['#14253c','#1d4034'], hill:'#0f2c22', ground:'#23553a', name:'woods'},
+  east:{table:[['thornling',3],['thornling',4],['gloomwing',3]], sky:['#2c1f44','#473057'], hill:'#241a3a', ground:'#3e2f56', name:'thicket'},
+  north:{table:[['quartzling',4],['quartzling',5],['quartzling',6]], sky:['#181436','#2a2358'], hill:'#13102b', ground:'#34306b', name:'cliffs'},
+  boss:{table:[], sky:['#0c0918','#241d42'], hill:'#0a0714', ground:'#1d1838', name:'hollow'},
+};
+
+/* ---------- player ---------- */
+const P={
+  x:20,y:23, px:20*TS, py:23*TS, facing:'up', moving:false, mx:0,my:0, mprog:0,
+  lv:1, xp:0, hp:46, mp:22, maxhp:46, maxmp:22,
+  steps:0, grace:4, regenTick:0,
+  spells:[ makeSpell('ember','wisp','none'), makeSpell('ember','bolt','none'), null, null ],
+  flags:{shrine1:false,shrine2:false,shrine3:false,bossDown:false},
+  stats:{battles:0, inscribed:0, steps:0},
+};
+function xpNext(lv){ return 16+(lv-1)*11; }
+
+/* ---------- mode / state machine ---------- */
+let MODE='title';          // title | world | battle | end
+let dialogOpen=false, forgeOpen=false, transiting=false;
+
+/* ---------- canvas ---------- */
+const cv=$('#cv'), ctx=cv.getContext('2d');
+let SCALE=2, VW=0, VH=0;
+function resize(){
+  const r=$('#stage').getBoundingClientRect();
+  SCALE=Math.max(2,Math.floor(Math.min(r.width,r.height)/(TS*12)));
+  VW=Math.ceil(r.width/SCALE); VH=Math.ceil(r.height/SCALE);
+  cv.width=VW; cv.height=VH;
+  cv.style.width=r.width+'px'; cv.style.height=r.height+'px';
+  ctx.imageSmoothingEnabled=false;
+}
+window.addEventListener('resize',resize);
+
+/* ---------- pixel sprites ---------- */
+function spriteFromGrid(rows,pal,px=1){
+  const w=rows[0].length,h=rows.length;
+  const c=document.createElement('canvas'); c.width=w*px; c.height=h*px;
+  const g=c.getContext('2d');
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+    const ch=rows[y][x]; if(ch==='.'||!pal[ch])continue;
+    g.fillStyle=pal[ch]; g.fillRect(x*px,y*px,px,px);
+  }
+  return c;
+}
+function whiteVersion(c){
+  const w=document.createElement('canvas'); w.width=c.width; w.height=c.height;
+  const g=w.getContext('2d'); g.drawImage(c,0,0);
+  g.globalCompositeOperation='source-in'; g.fillStyle='#ffffff'; g.fillRect(0,0,w.width,w.height);
+  return w;
+}
+
+/* player sprites (12x14) */
+const PPAL={h:'#7c5cff',H:'#5a3fd0',s:'#f2c79b',e:'#16112b',r:'#4636a8',R:'#352683',b:'#ffc857',f:'#241d42',w:'#efe6d0'};
+const P_FRONT=spriteFromGrid([
+"....hhhh....",
+"...hhhhhh...",
+"..hhhhhhhh..",
+".HHHHHHHHHH.",
+"....ssss....",
+"...s.ss.s...",
+"...ssssss...",
+"..rrrrrrrr..",
+".rrrbbbbrrr.",
+".rrrrrrrrrr.",
+".RrrrrrrrrR.",
+"..RRRRRRRR..",
+"...ff..ff...",
+"...ff..ff...",
+],PPAL);
+const P_BACK=spriteFromGrid([
+"....hhhh....",
+"...hhhhhh...",
+"..hhhhhhhh..",
+".HHHHHHHHHH.",
+"...HHHHHH...",
+"...rrrrrr...",
+"..rrrrrrrr..",
+".rrrrrrrrrr.",
+".rrrbbbbrrr.",
+".rrrrrrrrrr.",
+".RrrrrrrrrR.",
+"..RRRRRRRR..",
+"...ff..ff...",
+"...ff..ff...",
+],PPAL);
+
+/* enemy battle sprites */
+const ESPRITES={};
+function defSprite(id,rows,pal){
+  const c=spriteFromGrid(rows,pal,1);
+  ESPRITES[id]={c,w:c.width,h:c.height,white:whiteVersion(c)};
+}
+defSprite('gloop',[
+"....aaaaaaaa....",
+"..aaaaaaaaaaaa..",
+".aaaaaaaaaaaaaa.",
+".aaeeaaaaaaeeaa.",
+"aaaeppaaaaeppaaa",
+"aaaaaaaaaaaaaaaa",
+"aaaammmmmmmaaaaa",
+"aaaaammmmmaaaaaa",
+".babababababab..",
+".bbbbbbbbbbbbbb.",
+"..bbbbbbbbbbbb..",
+"....bbbbbbbb....",
+],{a:'#6fd96f',b:'#3da45c',e:'#ffffff',p:'#16112b',m:'#2c7a44'});
+defSprite('gloomwing',[
+"aa....aaaa....aa",
+"aaa..aaaaaa..aaa",
+"aaaa.aaaaaa.aaaa",
+".aaaaaaaaaaaaaa.",
+"..aaabbbbbbaaa..",
+"..aabeppppebaa..",
+"...abbbbbbbba...",
+"...abbmmmmbba...",
+"....abbbbbba....",
+".....a.bb.a.....",
+"......b..b......",
+".....bb..bb.....",
+],{a:'#5e4a8f',b:'#3c2f63',e:'#ffffff',p:'#ff5d5d',m:'#efe6d0'});
+defSprite('thornling',[
+"......gg......",
+".....gggg.....",
+"..g..gggg..g..",
+".ggg..gg..ggg.",
+"..gggssssggg..",
+"....ssssss....",
+"..ssepsspess..",
+"...ssssssss...",
+"..ssmmmmmmss..",
+"...ssssssss...",
+"....tttttt....",
+"....tt..tt....",
+"...ttt..ttt...",
+"...tt....tt...",
+"..ttt....ttt..",
+"..tt......tt..",
+],{g:'#7dde6a',s:'#5cae54',e:'#ffffff',p:'#16112b',m:'#33773a',t:'#7a5a36'});
+defSprite('quartzling',[
+"....q......q....",
+"...qq..qq..qq...",
+"..qqq.qqqq.qqq..",
+".aqqqaqqqqaqqqa.",
+".aaaaaaaaaaaaaa.",
+"aaeppaaaaaaeppaa",
+"aaaaaaaaaaaaaaaa",
+".aammmmmmmmmaa..",
+"..aaaaaaaaaaaa..",
+".ba..baab..ab...",
+".bb..bbbb..bb...",
+"bb....bb....bb..",
+],{q:'#bfe8ff',a:'#7fb6d9',b:'#4d7fa3',e:'#ffffff',p:'#16112b',m:'#39627f'});
+defSprite('wraith',[
+"......kkkkkk......",
+"....kkkkkkkkkk....",
+"...kkkkkkkkkkkk...",
+"..kkkvvkkkkvvkkk..",
+"..kkkvvkkkkvvkkk..",
+"..kkkkkkkkkkkkkk..",
+"...kkkkmmmmkkkk...",
+"...kkkkkkkkkkkk...",
+"..kkkkkkkkkkkkkk..",
+".kkk.kkkkkkkk.kkk.",
+".kk..kkkkkkkk..kk.",
+".k...kkkkkkkk...k.",
+".....kkkkkkk......",
+"......kkkkkk......",
+".......kkkk.......",
+"......kk..kk......",
+".....k......k.....",
+"....k........k....",
+],{k:'#3a2f6b',v:'#c9b8ff',m:'#1a1433'});
+
+/* ---------- HUD ---------- */
+function refreshHUD(){
+  $('#hlv').textContent='Lv '+P.lv;
+  $('#hhp').style.width=(100*P.hp/P.maxhp)+'%';
+  $('#hmp').style.width=(100*P.mp/P.maxmp)+'%';
+  $('#hxp').style.width=(100*clamp(P.xp/xpNext(P.lv),0,1))+'%';
+  $('#hhpn').textContent=P.hp+'/'+P.maxhp;
+  $('#hmpn').textContent=P.mp+'/'+P.maxmp;
+}
+function toast(txt,violet){
+  const d=document.createElement('div'); d.className='toast'+(violet?' violet':''); d.textContent=txt;
+  $('#toasts').appendChild(d); setTimeout(()=>d.remove(),3100);
+}
+
+/* ---------- input ---------- */
+const held=new Set();
+const KEYDIR={ArrowUp:'up',ArrowDown:'down',ArrowLeft:'left',ArrowRight:'right',w:'up',s:'down',a:'left',d:'right',W:'up',S:'down',A:'left',D:'right'};
+document.addEventListener('keydown',e=>{
+  if(e.repeat) return;
+  const d=KEYDIR[e.key];
+  if(d){held.add(d); e.preventDefault();}
+  if(e.key==='e'||e.key==='E'||e.key==='Enter'||e.key===' '){ pressA(); e.preventDefault(); }
+});
+document.addEventListener('keyup',e=>{ const d=KEYDIR[e.key]; if(d) held.delete(d); });
+
+document.querySelectorAll('.dbtn[data-d]').forEach(b=>{
+  const d=b.dataset.d;
+  const on=ev=>{ev.preventDefault(); held.add(d); b.classList.add('active'); ac();};
+  const off=ev=>{ev.preventDefault(); held.delete(d); b.classList.remove('active');};
+  b.addEventListener('pointerdown',on);
+  b.addEventListener('pointerup',off);
+  b.addEventListener('pointercancel',off);
+  b.addEventListener('pointerleave',off);
+});
+$('#btnA').addEventListener('pointerdown',e=>{e.preventDefault(); pressA();});
+
+function pressA(){
+  ac();
+  if(MODE==='title'){ startGame(); return; }
+  if(dialogOpen){ advanceDialog(); return; }
+  if(MODE==='world' && !forgeOpen && !transiting) interact();
+}
+
+/* ---------- dialog ---------- */
+let dlgQueue=[], dlgDone=null;
+function showDialog(lines,name='',done=null){
+  dlgQueue=lines.slice(); dlgDone=done; dialogOpen=true;
+  $('#dname').textContent=name; $('#dname').style.display=name?'block':'none';
+  $('#dialog').style.display='block';
+  nextDialogLine();
+}
+function nextDialogLine(){ $('#dtext').textContent=dlgQueue.shift(); SFX.select(); }
+function advanceDialog(){
+  if(dlgQueue.length){ nextDialogLine(); }
+  else{ dialogOpen=false; $('#dialog').style.display='none'; const f=dlgDone; dlgDone=null; if(f)f(); }
+}
+$('#dialog').addEventListener('pointerdown',e=>{e.preventDefault(); advanceDialog();});
+
+/* ---------- transitions ---------- */
+const iris=$('#iris');
+function flashEnc(){ return new Promise(r=>{ iris.className='flash'; SFX.enc(); setTimeout(()=>{iris.className=''; r();},900); }); }
+function irisTo(fn){
+  return new Promise(r=>{
+    transiting=true; iris.className='closein';
+    setTimeout(()=>{ fn(); iris.className='openout';
+      setTimeout(()=>{iris.className=''; transiting=false; r();},520);
+    },470);
+  });
+}
+
+/* ---------- world logic ---------- */
+function tryStep(dir){
+  if(P.moving||dialogOpen||forgeOpen||transiting) return;
+  P.facing=dir;
+  let nx=P.x,ny=P.y;
+  if(dir==='up')ny--; if(dir==='down')ny++; if(dir==='left')nx--; if(dir==='right')nx++;
+  if(!walkable(nx,ny)) return;
+  P.moving=true; P.mx=nx; P.my=ny; P.mprog=0;
+}
+function finishStep(){
+  P.x=P.mx; P.y=P.my; P.px=P.x*TS; P.py=P.y*TS; P.moving=false;
+  P.steps++; P.stats.steps++;
+  P.regenTick++;
+  if(P.regenTick>=6){ P.regenTick=0;
+    if(P.hp<P.maxhp)P.hp=Math.min(P.maxhp,P.hp+1);
+    if(P.mp<P.maxmp)P.mp=Math.min(P.maxmp,P.mp+1);
+    refreshHUD();
+  }
+  if(P.grace>0){P.grace--; return;}
+  if(tileAt(P.x,P.y)===','){
+    if(Math.random()<0.14){
+      const z=zoneAt(P.x,P.y);
+      const [eid,lv]=choice(ZONES[z].table);
+      startBattle(eid,lv,z);
+    }
+  }
+}
+function facingTile(){
+  let x=P.x,y=P.y;
+  if(P.facing==='up')y--; if(P.facing==='down')y++;
+  if(P.facing==='left')x--; if(P.facing==='right')x++;
+  return {x,y,ch:tileAt(x,y)};
+}
+function interact(){
+  const {x,y,ch}=facingTile();
+  if(ch==='S'){
+    P.hp=P.maxhp; P.mp=P.maxmp; refreshHUD(); SFX.heal();
+    showDialog(["The home shrine hums. Your wounds knit","and your wellspring refills.",
+      "Etched below: 'Three shrines hold the lost","runes. The Wraith holds the Vale.'"],'HOME SHRINE');
+  }else if(ch==='H'){
+    P.hp=P.maxhp; P.mp=P.maxmp; refreshHUD(); SFX.heal();
+    showDialog(["You drink from the silver spring.","Fully restored."],'SPRING');
+  }else if(ch==='1'||ch==='2'||ch==='3'){
+    const key='shrine'+ch;
+    if(P.flags[key]){ showDialog(["The shrine is quiet now. Its rune","already burns in your grimoire."],'SHRINE'); return; }
+    P.flags[key]=true; SFX.lvl();
+    const runeName=ch==='1'?'FURY':ch==='2'?'THIRST':'ECHO';
+    const msg=ch==='1'?["The shrine flares red. The Rune of FURY","is yours: raw power, at a steep cost."]
+            :ch==='2'?["The shrine glows warm. The Rune of THIRST","is yours: your spells now drink life back."]
+            :["The shrine rings twice. The Rune of ECHO","is yours: one casting, two strikes."];
+    showDialog(msg,'SHRINE',()=>{ toast('✦ Rune of '+runeName+' unlocked', true); });
+  }else if(ch==='B'){
+    if(P.flags.bossDown){ showDialog(["Only cold air remains where the","Wraith once hung."],''); return; }
+    showDialog(["The Vale Wraith turns. Hollow eyes","weigh your little flame.",
+      "It attunes itself to the elements as","it fights. Watch its aura. Strike true.",
+      "There is no fleeing this."],'???',()=>{ startBattle('wraith',7,'boss'); });
+  }else if(SIGNS[ch]){
+    showDialog(SIGNS[ch],'SIGNPOST');
+  }
+}
+
+/* ---------- level / xp ---------- */
+function gainXP(n){
+  P.xp+=n; toast('+'+n+' XP');
+  while(P.xp>=xpNext(P.lv)){
+    P.xp-=xpNext(P.lv); P.lv++;
+    P.maxhp+=8; P.maxmp+=4; P.hp=P.maxhp; P.mp=P.maxmp;
+    SFX.lvl(); toast('★ Level '+P.lv+'! Fully restored.');
+    const un={2:'Element unlocked: RIME',3:'Form unlocked: LANCE',4:'Element unlocked: VOLT',5:'Rune unlocked: HEX',6:'Element unlocked: THORN'}[P.lv];
+    if(un) setTimeout(()=>toast('✦ '+un,true),650);
+  }
+  refreshHUD();
+}
+
+/* =========================================================
+   BATTLE (instanced)
+   ========================================================= */
+const B={active:false,en:null,zone:'south',busy:true,shake:0,parts:[],floats:[],ehurt:0,ebob:0,dieT:0,attune:null,attTimer:0,turn:0};
+function enemyMaxHP(def,lv){ return def.h0+def.hpl*lv; }
+
+async function startBattle(eid,lv,zone){
+  const def=ENEMIES[eid];
+  MODE='battle'; B.active=true; B.busy=true; B.zone=zone; B.turn=0;
+  B.en={def,lv,hp:enemyMaxHP(def,lv),max:enemyMaxHP(def,lv),status:{}};
+  B.parts=[]; B.floats=[]; B.ehurt=0; B.dieT=0; B.attune=null; B.attTimer=0;
+  $('#dpad').classList.add('hidden'); $('#btnA').classList.add('hidden');
+  $('#grimBtn').disabled=true; $('#grimBtn').style.opacity=.4;
+  await flashEnc();
+  $('#battle').style.display='flex';
+  $('#bename').textContent=def.name; $('#belv').textContent='Lv '+lv;
+  refreshEnemyBar(); buildCmds();
+  await say(def.boss?'The '+def.name+' rises from the hollow!':'A wild '+def.name+' lunges out!');
+  if(def.boss) await bossAttune(true);
+  playerTurn();
+}
+function refreshEnemyBar(){
+  $('#behp').style.width=(100*clamp(B.en.hp/B.en.max,0,1))+'%';
+  const sr=$('#bestatus'); sr.innerHTML='';
+  const cmap={burn:'#ff6b4a',chill:'#5ad1ff',stun:'#ffd84a',venom:'#7dde6a'};
+  for(const k in B.en.status){ if(B.en.status[k]>0){
+    const d=document.createElement('span'); d.className='sdot'; d.style.background=cmap[k]; d.title=k; sr.appendChild(d);
+  }}
+  if(B.attune){
+    const d=document.createElement('span'); d.className='sdot';
+    d.style.background=ELEMS[B.attune].color; d.style.borderRadius='50%'; d.style.boxShadow='0 0 6px '+ELEMS[B.attune].color;
+    sr.appendChild(d);
+  }
+}
+function say(txt){ $('#blog').textContent=txt; return wait(Math.max(650, 26*txt.length)); }
+function lockCmds(v){ $('#cmds').classList.toggle('lock',v); }
+
+function buildCmds(){
+  const c=$('#cmds'); c.innerHTML='';
+  P.spells.forEach((sp,i)=>{
+    const b=document.createElement('button'); b.className='spbtn';
+    if(!sp){ b.disabled=true; b.innerHTML='<span class="nm" style="color:var(--dim)">— empty slot —</span><span class="meta">craft in grimoire</span>'; }
+    else{
+      const E=ELEMS[sp.eid];
+      b.innerHTML='<span class="edot" style="background:'+E.color+'"></span><span class="nm">'+sp.name+'</span>'+
+        '<span class="meta">'+sp.cost+' MP · pow '+spellPower(sp,P.lv)+(RUNES[sp.rid].hits?' ×2':'')+'</span>';
+      if(P.mp<sp.cost) b.disabled=true;
+      b.onclick=()=>{ if(!B.busy) castSpell(i); };
+    }
+    c.appendChild(b);
+  });
+  const f=document.createElement('button'); f.className='spbtn util'; f.textContent='✧ Focus  (restore MP)';
+  f.onclick=()=>{ if(!B.busy) doFocus(); }; c.appendChild(f);
+  const r=document.createElement('button'); r.className='spbtn util'; r.textContent='↯ Flee';
+  if(B.en.def.boss){ r.disabled=true; }
+  r.onclick=()=>{ if(!B.busy) doFlee(); }; c.appendChild(r);
+}
+function playerTurn(){ B.busy=false; buildCmds(); lockCmds(false); $('#blog').textContent='Your move.'; }
+
+function elemMult(eid){
+  const d=B.en.def;
+  if(d.boss){
+    if(B.attune===eid) return 1.8;
+    return 0.85;
+  }
+  if(d.weak.includes(eid)) return 1.6;
+  if(d.resist.includes(eid)) return 0.6;
+  return 1;
+}
+
+async function castSpell(i){
+  const sp=P.spells[i]; if(!sp||P.mp<sp.cost){SFX.deny();return;}
+  B.busy=true; lockCmds(true);
+  P.mp-=sp.cost; refreshHUD();
+  const E=ELEMS[sp.eid], R=RUNES[sp.rid];
+  await say('You cast '+sp.name+'!');
+  const hits=R.hits||1;
+  let total=0, healed=0;
+  for(let h=0;h<hits;h++){
+    SFX.cast();
+    await castFX(E.color);
+    if(B.en.hp<=0) break;
+    let dmg=spellPower(sp,P.lv)*rnd(.9,1.1);
+    const mult=elemMult(sp.eid);
+    dmg*=mult;
+    let crit=Math.random()<.08;
+    if(crit) dmg*=1.5;
+    dmg=Math.max(1,Math.round(dmg));
+    total+=dmg;
+    B.en.hp-=dmg; B.ehurt=1; B.shake=mult>1.2?7:4;
+    SFX.hit(); if(crit)SFX.crit();
+    addFloat(dmg, crit?'#ffd84a':'#ffffff', crit);
+    refreshEnemyBar();
+    if(mult>1.2){ await say(crit?'Critical! It is devastating!':'It is devastating!'); }
+    else if(mult<0.9){ await say('...resisted.'); }
+    else if(crit){ await say('Critical hit!'); }
+    else await wait(420);
+    /* status proc */
+    if(B.en.hp>0 && Math.random()<spellProc(sp)){
+      const st=E.status;
+      const dur=st==='stun'?1:st==='chill'?2:3;
+      const had=B.en.status[st]>0;
+      B.en.status[st]=dur; refreshEnemyBar();
+      if(!had) await say('The '+B.en.def.name+' is '+E.statusName+'!');
+    }
+    if(h<hits-1) await wait(220);
+  }
+  if(R.heal&&total>0){ healed=Math.max(1,Math.round(total*R.heal));
+    P.hp=Math.min(P.maxhp,P.hp+healed); refreshHUD(); SFX.heal();
+    await say('The rune drinks deep. +'+healed+' HP.');
+  }
+  if(B.en.hp<=0){ await enemyDefeated(); return; }
+  await enemyTurn();
+}
+async function doFocus(){
+  B.busy=true; lockCmds(true);
+  const m=Math.round(P.maxmp*.35), h=Math.round(P.maxhp*.1);
+  P.mp=Math.min(P.maxmp,P.mp+m); P.hp=Math.min(P.maxhp,P.hp+h); refreshHUD(); SFX.heal();
+  await say('You steady your breath. +'+m+' MP, +'+h+' HP.');
+  await enemyTurn();
+}
+async function doFlee(){
+  B.busy=true; lockCmds(true);
+  if(Math.random()<.65){
+    await say('You slip away into the grass!');
+    await endBattle(false);
+  }else{
+    await say('No escape! The '+B.en.def.name+' blocks the way.');
+    await enemyTurn();
+  }
+}
+
+async function enemyTurn(){
+  if(B.en.hp<=0) return;
+  const en=B.en, d=en.def;
+  /* damage-over-time at start of enemy turn */
+  for(const [st,col,base] of [['burn','#ff6b4a',4+Math.ceil(P.lv*1.2)],['venom','#7dde6a',6+Math.ceil(P.lv*1.5)]]){
+    if(en.status[st]>0){
+      en.status[st]--; en.hp-=base; B.ehurt=1; addFloat(base,col,false);
+      refreshEnemyBar(); SFX.hit();
+      await say('The '+d.name+' suffers from '+(st==='burn'?'burns':'venom')+'.');
+      if(en.hp<=0){ await enemyDefeated(); return; }
+    }
+  }
+  if(en.status.stun>0){
+    en.status.stun--; refreshEnemyBar();
+    await say('The '+d.name+' is stunned and cannot move!');
+    B.turn++; await maybeAttune(); playerTurn(); return;
+  }
+  const mv=choice(d.moves);
+  await say('The '+d.name+' '+mv.n+'!');
+  await enemyLungeFX();
+  let dmg=(d.a0+d.al*en.lv)*mv.m*rnd(.9,1.1);
+  if(en.status.chill>0){ dmg*=.65; }
+  dmg=Math.max(1,Math.round(dmg));
+  P.hp-=dmg; B.shake=6; SFX.hurt(); refreshHUD();
+  flashPanel();
+  await say('You take '+dmg+' damage'+(en.status.chill>0?' (chilled: weakened)':'')+'.');
+  if(mv.drain){ const dr=Math.min(P.mp,mv.drain); P.mp-=dr; refreshHUD(); if(dr>0) await say('It siphons '+dr+' MP from you.'); }
+  if(en.status.chill>0) en.status.chill--;
+  refreshEnemyBar();
+  if(P.hp<=0){ await playerDefeated(); return; }
+  B.turn++; await maybeAttune();
+  playerTurn();
+}
+async function maybeAttune(){
+  if(!B.en.def.boss) return;
+  B.attTimer++;
+  if(B.attTimer>=2||!B.attune){ B.attTimer=0; await bossAttune(false); }
+}
+async function bossAttune(first){
+  const pool=['ember','rime','volt','thorn'].filter(e=>e!==B.attune);
+  B.attune=choice(pool); refreshEnemyBar();
+  const E=ELEMS[B.attune];
+  spawnRing(E.color);
+  await say((first?'The Wraith attunes to ':'The aura shifts. Now attuned to ')+E.label.toUpperCase()+'! It fears that element.');
+}
+
+async function enemyDefeated(){
+  B.dieT=1; SFX.win();
+  await say('The '+B.en.def.name+' dissolves into motes!');
+  P.stats.battles++;
+  if(B.en.def.boss){
+    P.flags.bossDown=true;
+    /* clear the boss tile */
+    for(let y=0;y<MAPH;y++)for(let x=0;x<MAPW;x++) if(tiles[y][x]==='B') tiles[y][x]='.';
+    await wait(500);
+    await endBattle(false);
+    showEnding();
+    return;
+  }
+  const xp=B.en.def.xp(B.en.lv);
+  await wait(350);
+  await endBattle(false);
+  gainXP(xp);
+}
+async function playerDefeated(){
+  SFX.lose();
+  await say('Darkness takes you...');
+  await wait(600);
+  await irisTo(()=>{
+    $('#battle').style.display='none'; B.active=false; MODE='world';
+    P.x=20;P.y=23;P.px=P.x*TS;P.py=P.y*TS;P.facing='up';P.moving=false;
+    P.hp=P.maxhp; P.mp=P.maxmp; P.grace=6; refreshHUD();
+    $('#dpad').classList.remove('hidden'); $('#btnA').classList.remove('hidden');
+    $('#grimBtn').disabled=false; $('#grimBtn').style.opacity=1;
+  });
+  showDialog(["You wake at the home shrine, whole again.","The Vale is patient. So are you."],'');
+}
+async function endBattle(){
+  await irisTo(()=>{
+    $('#battle').style.display='none'; B.active=false; MODE='world'; P.grace=4;
+    $('#dpad').classList.remove('hidden'); $('#btnA').classList.remove('hidden');
+    $('#grimBtn').disabled=false; $('#grimBtn').style.opacity=1;
+  });
+}
+function flashPanel(){
+  const p=$('#bpanel'); p.style.boxShadow='inset 0 0 0 3px var(--danger)';
+  setTimeout(()=>p.style.boxShadow='',220);
+}
+
+/* battle FX */
+function addFloat(n,color,big){
+  B.floats.push({x:VW/2+rnd(-14,14), y:VH*0.34+rnd(-6,6), txt:''+n, life:1, color, big});
+}
+function castFX(color){
+  return new Promise(res=>{
+    const sx=VW/2, sy=VH-8, tx=VW/2, ty=VH*0.36;
+    let n=0;
+    const iv=setInterval(()=>{
+      for(let k=0;k<3;k++){
+        const t=n/14;
+        B.parts.push({x:sx+rnd(-10,10)+(tx-sx)*t, y:sy+(ty-sy)*t+rnd(-6,6),
+          vx:rnd(-.3,.3), vy:rnd(-.6,-.1), life:rnd(.4,.7), color, size:rndi(1,3)});
+      }
+      n++;
+      if(n>=14){
+        clearInterval(iv);
+        for(let k=0;k<26;k++){
+          const a=rnd(0,Math.PI*2), s=rnd(.5,2.4);
+          B.parts.push({x:tx,y:ty,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:rnd(.35,.75),color,size:rndi(1,3)});
+        }
+        res();
+      }
+    },28);
+  });
+}
+function spawnRing(color){
+  const tx=VW/2,ty=VH*0.36;
+  for(let k=0;k<30;k++){
+    const a=(k/30)*Math.PI*2;
+    B.parts.push({x:tx+Math.cos(a)*30,y:ty+Math.sin(a)*22,vx:Math.cos(a)*.5,vy:Math.sin(a)*.4,life:.9,color,size:2});
+  }
+}
+function enemyLungeFX(){
+  return new Promise(res=>{ B.lunge=1; setTimeout(()=>{B.lunge=0; res();},360); });
+}
+
+/* ---------- forge UI ---------- */
+let sel={eid:'ember',fid:'bolt',rid:'none'};
+$('#grimBtn').onclick=()=>{ if(MODE!=='world'||dialogOpen||transiting)return; openForge(); };
+$('#forgeclose').onclick=()=>{ forgeOpen=false; $('#forge').style.display='none'; SFX.select(); };
+$('#helpBtn').onclick=()=>{ if(MODE!=='world'||dialogOpen)return;
+  showDialog(["Tall grass hides battles. Battles give XP.","Levels and shrines unlock new spell parts.",
+  "Open the Grimoire to craft spells from an","ELEMENT, a FORM and a RUNE, then inscribe","them into your four slots.",
+  "Enemies have weaknesses. Signposts gossip.","The home shrine and spring heal you free."],'HOW TO PLAY'); };
+$('#muteBtn').onclick=()=>{ muted=!muted; $('#muteBtn').textContent=muted?'∅':'♪'; if(!muted)SFX.confirm(); };
+
+function openForge(){
+  forgeOpen=true; held.clear();
+  $('#forge').style.display='block';
+  buildChips(); refreshPreview(); buildSlots();
+}
+function chipRow(elId,dict,kind){
+  const wrap=$(elId); wrap.innerHTML='';
+  for(const id in dict){
+    const o=dict[id];
+    const unlocked=o.lock(P);
+    const c=document.createElement('button'); c.className='chip'+(sel[kind]===id?' sel':'')+(unlocked?'':' lock');
+    c.textContent=unlocked?o.label:'🔒 '+o.label;
+    c.onclick=()=>{
+      if(!unlocked){ SFX.deny(); toast(o.hint,true); return; }
+      sel[kind]=id; SFX.select(); buildChips(); refreshPreview();
+    };
+    wrap.appendChild(c);
+  }
+}
+function buildChips(){
+  chipRow('#chElem',ELEMS,'eid');
+  chipRow('#chForm',FORMS,'fid');
+  chipRow('#chRune',RUNES,'rid');
+}
+function refreshPreview(){
+  const sp=makeSpell(sel.eid,sel.fid,sel.rid);
+  const E=ELEMS[sel.eid],R=RUNES[sel.rid];
+  $('#pvname').textContent=sp.name;
+  const pw=spellPower(sp,P.lv);
+  let fx=Math.round(spellProc(sp)*100)+'% to leave the foe '+E.statusName;
+  let extra='';
+  if(R.hits)extra=' · strikes twice';
+  if(R.heal)extra=' · heals '+Math.round(R.heal*100)+'% of damage';
+  $('#pvstats').innerHTML='Power <b style="color:'+E.color+'">'+pw+(R.hits?' ×2':'')+'</b> · Cost <b style="color:var(--mp)">'+sp.cost+' MP</b>'+
+    '<br><span class="mut">'+fx+extra+'</span>';
+}
+function buildSlots(){
+  const w=$('#slotlist'); w.innerHTML='';
+  P.spells.forEach((sp,i)=>{
+    const b=document.createElement('button'); b.className='slotbtn';
+    b.innerHTML='<span>'+(i+1)+'. '+(sp?sp.name:'<span style="color:var(--dim)">empty</span>')+'</span><small>'+(sp?sp.cost+' MP':'tap to inscribe')+'</small>';
+    b.onclick=()=>{
+      P.spells[i]=makeSpell(sel.eid,sel.fid,sel.rid);
+      P.stats.inscribed++;
+      SFX.confirm(); buildSlots();
+      toast('Inscribed: '+P.spells[i].name,true);
+    };
+    w.appendChild(b);
+  });
+}
+/* preview sigil animation */
+const pvc=$('#pvcv'), pg=pvc.getContext('2d');
+function drawPreview(t){
+  if(!forgeOpen) return;
+  pg.imageSmoothingEnabled=false;
+  pg.fillStyle='#16112b'; pg.fillRect(0,0,52,52);
+  const col=ELEMS[sel.eid].color;
+  pg.strokeStyle='#3a2f6b'; pg.lineWidth=1;
+  pg.beginPath(); pg.arc(26,26,18,0,7); pg.stroke();
+  pg.strokeStyle=col; pg.globalAlpha=.5;
+  pg.beginPath(); pg.arc(26,26,13,t*.8,t*.8+4.4); pg.stroke();
+  pg.globalAlpha=1;
+  const n=sel.fid==='wisp'?3:sel.fid==='bolt'?5:7;
+  for(let i=0;i<n;i++){
+    const a=t*1.4+i*(Math.PI*2/n);
+    const r=10+4*Math.sin(t*2+i);
+    pg.fillStyle=col;
+    pg.fillRect(26+Math.cos(a)*r-1, 26+Math.sin(a)*r-1, sel.rid==='amp'?3:2, sel.rid==='amp'?3:2);
+  }
+  pg.fillStyle=col; pg.fillRect(24,24,4,4);
+  if(sel.rid==='echo'){ pg.globalAlpha=.5; pg.fillRect(20,28,3,3); pg.fillRect(30,20,3,3); pg.globalAlpha=1; }
+}
+
+/* =========================================================
+   RENDERING
+   ========================================================= */
+let camX=0,camY=0;
+function drawWorld(t,dt){
+  /* camera */
+  const tx=clamp(P.px+TS/2-VW/2,0,Math.max(0,MAPW*TS-VW));
+  const ty=clamp(P.py+TS/2-VH/2,0,Math.max(0,MAPH*TS-VH));
+  camX+= (tx-camX)*Math.min(1,dt*10); camY+=(ty-camY)*Math.min(1,dt*10);
+  const cx=Math.round(camX), cyy=Math.round(camY);
+
+  const x0=Math.max(0,Math.floor(cx/TS)), y0=Math.max(0,Math.floor(cyy/TS));
+  const x1=Math.min(MAPW-1,Math.ceil((cx+VW)/TS)), y1=Math.min(MAPH-1,Math.ceil((cyy+VH)/TS));
+  for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){
+    drawTile(tiles[y][x],x*TS-cx,y*TS-cyy,x,y,t);
+  }
+  /* player */
+  const spr=(P.facing==='up')?P_BACK:P_FRONT;
+  const bobp=P.moving?Math.sin(P.mprog*Math.PI)*1.4:0;
+  const px=Math.round(P.px-cx+2), py=Math.round(P.py-cyy+1-bobp);
+  ctx.save();
+  if(P.facing==='left'){ ctx.translate(px+12,0); ctx.scale(-1,1); ctx.drawImage(spr,0,py); }
+  else ctx.drawImage(spr,px,py);
+  ctx.restore();
+  /* shadow */
+  ctx.fillStyle='rgba(0,0,0,.25)';
+  ctx.fillRect(Math.round(P.px-cx+3),Math.round(P.py-cyy+14),10,2);
+}
+function drawTile(ch,sx,sy,x,y,t){
+  const h=hash2(x,y);
+  /* base grass under everything except water */
+  if(ch!=='~'&&ch!=='='){
+    ctx.fillStyle = (h>.5)?'#2c6e49':'#2a6845';
+    ctx.fillRect(sx,sy,TS,TS);
+    if(h>.78){ctx.fillStyle='#36815a';ctx.fillRect(sx+(h*9|0)+2,sy+((h*13)|0)%12+2,2,1);}
+  }
+  switch(ch){
+    case ',': {
+      ctx.fillStyle='#1f5d3b';
+      const sw=Math.sin(t*2+h*9)*1;
+      for(let i=0;i<3;i++){
+        const gx=sx+3+i*4+(h*3|0)%2;
+        ctx.fillRect(gx,sy+7,2,7);
+        ctx.fillStyle='#69c98b'; ctx.fillRect(gx+sw,sy+5,2,3); ctx.fillStyle='#1f5d3b';
+      }
+      break;}
+    case '*': {
+      ctx.fillStyle=h>.5?'#ffc857':'#ff8fb3'; ctx.fillRect(sx+4,sy+5,3,3);
+      ctx.fillStyle=h>.5?'#ff8fb3':'#c9b8ff'; ctx.fillRect(sx+10,sy+9,3,3);
+      ctx.fillStyle='#69c98b'; ctx.fillRect(sx+5,sy+8,1,4); ctx.fillRect(sx+11,sy+12,1,3);
+      break;}
+    case '-': {
+      ctx.fillStyle='#b99a63'; ctx.fillRect(sx,sy,TS,TS);
+      ctx.fillStyle='#a8884f';
+      ctx.fillRect(sx+(h*10|0),sy+((h*7|0)%10)+2,3,2);
+      ctx.fillRect(sx+((h*5|0)%9)+3,sy+(h*12|0)%12,2,2);
+      break;}
+    case '~': {
+      ctx.fillStyle='#1d4e89'; ctx.fillRect(sx,sy,TS,TS);
+      const w1=Math.sin(t*2.4+x*1.3+y)*2;
+      ctx.fillStyle='#3f7fc1';
+      ctx.fillRect(sx+3+w1,sy+4,6,1); ctx.fillRect(sx+8-w1,sy+11,5,1);
+      break;}
+    case '=': {
+      ctx.fillStyle='#1d4e89'; ctx.fillRect(sx,sy,TS,TS);
+      ctx.fillStyle='#8a6a3f'; ctx.fillRect(sx,sy+2,TS,12);
+      ctx.fillStyle='#6e5330';
+      for(let i=0;i<4;i++) ctx.fillRect(sx,sy+3+i*3,TS,1);
+      ctx.fillStyle='#a8884f'; ctx.fillRect(sx,sy+2,2,12); ctx.fillRect(sx+14,sy+2,2,12);
+      break;}
+    case '#': {
+      ctx.fillStyle='#3b2a18'; ctx.fillRect(sx+6,sy+10,4,5);
+      ctx.fillStyle='#1b4d2e';
+      ctx.beginPath(); ctx.arc(sx+8,sy+6,7,0,7); ctx.fill();
+      ctx.fillStyle='#2c7a48';
+      ctx.beginPath(); ctx.arc(sx+5+(h*3|0),sy+4,3,0,7); ctx.fill();
+      break;}
+    case 'o': {
+      ctx.fillStyle='#5d5a78'; ctx.beginPath(); ctx.arc(sx+8,sy+9,6,0,7); ctx.fill();
+      ctx.fillStyle='#79759a'; ctx.fillRect(sx+5,sy+5,4,3);
+      ctx.fillStyle='#43405c'; ctx.fillRect(sx+4,sy+12,9,2);
+      break;}
+    case 'S': case '1': case '2': case '3': {
+      const cmap={S:'#ffc857','1':'#ff6b4a','2':'#7dde6a','3':'#5ad1ff'};
+      const opened = ch!=='S' && P.flags['shrine'+ch];
+      ctx.fillStyle='#5d5a78'; ctx.fillRect(sx+3,sy+9,10,6);
+      ctx.fillStyle='#79759a'; ctx.fillRect(sx+4,sy+9,8,2);
+      const glow=opened?0.25:(0.6+0.4*Math.sin(t*3+h*6));
+      ctx.fillStyle=cmap[ch]; ctx.globalAlpha=glow;
+      ctx.fillRect(sx+6,sy+2,4,8);
+      ctx.fillRect(sx+7,sy+1,2,1);
+      ctx.globalAlpha=1;
+      break;}
+    case 'H': {
+      ctx.fillStyle='#5d5a78'; ctx.beginPath(); ctx.arc(sx+8,sy+8,7,0,7); ctx.fill();
+      ctx.fillStyle='#3f9fd1'; ctx.beginPath(); ctx.arc(sx+8,sy+8,5,0,7); ctx.fill();
+      ctx.fillStyle='#bfe8ff'; const sp=Math.sin(t*4)>0?1:0;
+      ctx.fillRect(sx+6+sp,sy+6,2,1); ctx.fillRect(sx+9,sy+9+sp,1,1);
+      break;}
+    case 'B': {
+      const bob=Math.sin(t*2)*1.5;
+      ctx.fillStyle='rgba(157,123,255,.18)';
+      ctx.beginPath(); ctx.arc(sx+8,sy+8,8,0,7); ctx.fill();
+      const s=ESPRITES.wraith;
+      ctx.drawImage(s.c,0,0,s.w,s.h,sx+1,sy-2+bob,14,16);
+      break;}
+    case 't': case 'u': case 'v': case 'w': {
+      ctx.fillStyle='#6e5330'; ctx.fillRect(sx+7,sy+6,2,9);
+      ctx.fillStyle='#8a6a3f'; ctx.fillRect(sx+3,sy+3,10,6);
+      ctx.fillStyle='#3b2a18'; ctx.fillRect(sx+5,sy+5,6,1);
+      break;}
+  }
+}
+
+/* battle scene */
+function drawBattle(t,dt){
+  const Z=ZONES[B.zone];
+  /* sky */
+  const g=ctx.createLinearGradient(0,0,0,VH);
+  g.addColorStop(0,Z.sky[0]); g.addColorStop(1,Z.sky[1]);
+  ctx.fillStyle=g; ctx.fillRect(0,0,VW,VH);
+  /* stars in dark zones */
+  for(let i=0;i<14;i++){ const h=hash2(i,7);
+    ctx.fillStyle='rgba(255,255,255,'+(0.15+0.25*Math.sin(t*2+i)).toFixed(2)+')';
+    ctx.fillRect((h*VW)|0,(hash2(i,3)*VH*0.4)|0,1,1);
+  }
+  /* hills */
+  ctx.fillStyle=Z.hill;
+  ctx.beginPath(); ctx.moveTo(0,VH*0.62);
+  for(let x=0;x<=VW;x+=8) ctx.lineTo(x,VH*0.62+Math.sin(x*0.05+1)*6-6);
+  ctx.lineTo(VW,VH); ctx.lineTo(0,VH); ctx.fill();
+  /* ground */
+  ctx.fillStyle=Z.ground; ctx.fillRect(0,VH*0.7,VW,VH);
+  /* shake */
+  let ox=0,oy=0;
+  if(B.shake>0){ ox=rnd(-B.shake,B.shake); oy=rnd(-B.shake,B.shake); B.shake=Math.max(0,B.shake-dt*26); }
+  ctx.save(); ctx.translate(ox,oy);
+  /* platform */
+  ctx.fillStyle='rgba(0,0,0,.3)';
+  ctx.beginPath(); ctx.ellipse(VW/2,VH*0.48,52,12,0,0,7); ctx.fill();
+  /* enemy */
+  const e=B.en; if(e){
+    const s=ESPRITES[e.def.id];
+    const sc=e.def.boss?5:4;
+    B.ebob=Math.sin(t*2.2)*3;
+    let ex=VW/2-s.w*sc/2, ey=VH*0.46-s.h*sc+B.ebob;
+    if(B.lunge) ey+=10*Math.sin(t*30);
+    if(B.dieT>0){ B.dieT=Math.max(0,B.dieT-dt*1.2); ctx.globalAlpha=B.dieT; }
+    if(B.attune){
+      ctx.fillStyle=ELEMS[B.attune].color; ctx.globalAlpha=(B.dieT>0?B.dieT:1)*0.16+0.06*Math.sin(t*4);
+      ctx.beginPath(); ctx.ellipse(VW/2,VH*0.36,s.w*sc*0.62,s.h*sc*0.6,0,0,7); ctx.fill();
+      ctx.globalAlpha=B.dieT>0?B.dieT:1;
+    }
+    if(B.ehurt>0){ B.ehurt=Math.max(0,B.ehurt-dt*5); ctx.drawImage(s.white,ex,ey,s.w*sc,s.h*sc); }
+    else ctx.drawImage(s.c,ex,ey,s.w*sc,s.h*sc);
+    ctx.globalAlpha=1;
+  }
+  /* particles */
+  for(let i=B.parts.length-1;i>=0;i--){
+    const p=B.parts[i]; p.x+=p.vx; p.y+=p.vy; p.life-=dt;
+    if(p.life<=0){B.parts.splice(i,1);continue;}
+    ctx.globalAlpha=clamp(p.life*2,0,1); ctx.fillStyle=p.color;
+    ctx.fillRect(p.x,p.y,p.size,p.size);
+  }
+  ctx.globalAlpha=1;
+  /* float numbers */
+  for(let i=B.floats.length-1;i>=0;i--){
+    const f=B.floats[i]; f.y-=dt*22; f.life-=dt*0.9;
+    if(f.life<=0){B.floats.splice(i,1);continue;}
+    ctx.globalAlpha=clamp(f.life*1.6,0,1);
+    ctx.font=(f.big?14:10)+'px "Press Start 2P", monospace';
+    ctx.fillStyle='#16112b'; ctx.fillText(f.txt,f.x+1,f.y+1);
+    ctx.fillStyle=f.color; ctx.fillText(f.txt,f.x,f.y);
+  }
+  ctx.globalAlpha=1;
+  ctx.restore();
+}
+
+/* ---------- main loop ---------- */
+let last=performance.now();
+function loop(now){
+  const dt=Math.min(0.05,(now-last)/1000); last=now;
+  const t=now/1000;
+  /* world movement update */
+  if(MODE==='world'){
+    if(!P.moving){
+      const order=['up','down','left','right'];
+      for(const d of order){ if(held.has(d)){ tryStep(d); break; } }
+    }
+    if(P.moving){
+      P.mprog+=dt/0.16;
+      if(P.mprog>=1){ P.mprog=1; }
+      P.px=(P.x+(P.mx-P.x)*P.mprog)*TS;
+      P.py=(P.y+(P.my-P.y)*P.mprog)*TS;
+      if(P.mprog>=1) finishStep();
+    }
+  }
+  /* render */
+  ctx.clearRect(0,0,VW,VH);
+  if(MODE==='world'||MODE==='title'){ drawWorld(t,dt); }
+  else if(MODE==='battle'){ drawBattle(t,dt); }
+  if(forgeOpen) drawPreview(t);
+  requestAnimationFrame(loop);
+}
+
+/* ---------- ending ---------- */
+function showEnding(){
+  MODE='end';
+  $('#endstats').innerHTML=
+    'The Wraith is undone. Light returns to the Vale.<br><br>'+
+    'Level reached <b>'+P.lv+'</b><br>'+
+    'Battles won <b>'+P.stats.battles+'</b><br>'+
+    'Spells inscribed <b>'+P.stats.inscribed+'</b><br>'+
+    'Steps wandered <b>'+P.stats.steps+'</b>';
+  $('#ending').style.display='flex';
+  SFX.win();
+}
+$('#roamBtn').onclick=()=>{
+  $('#ending').style.display='none'; MODE='world'; SFX.confirm();
+  toast('The Vale is yours to wander.');
+};
+
+/* ---------- boot ---------- */
+function startGame(){
+  ac(); SFX.confirm();
+  $('#title').style.display='none';
+  ['#hud','#topbtns','#dpad','#btnA'].forEach(s=>$(s).classList.remove('hidden'));
+  MODE='world'; refreshHUD();
+  showDialog(["You wake by the home shrine, grimoire","in hand, two humble Ember spells inscribed.",
+    "The Vale Wraith waits beyond the river,","far to the NORTH. You are not ready. Yet.",
+    "Grow in the tall grass. Find the three","shrines. Craft something the Vale has","never seen."],'THE VALE');
+}
+$('#startBtn').onclick=startGame;
+
+resize();
+refreshHUD();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

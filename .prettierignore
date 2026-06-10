@@ -1,0 +1,12 @@
+# Prettier covers code only. Specs, progress notes, and the read-only
+# prototype are authored by hand and must not be reformatted.
+node_modules/
+dist/
+dev-dist/
+coverage/
+reference/
+docs/
+content/audio/
+package-lock.json
+*.md
+src/data/maps/

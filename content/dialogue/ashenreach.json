@@ -1,0 +1,16 @@
+{
+  "ashenreach_1": {
+    "speaker": "SIGNPOST",
+    "pages": ["ASHEN REACH. What burns here was born burning. Bring frost."]
+  },
+  "ashenreach_2": {
+    "speaker": "SIGNPOST",
+    "pages": ["Hexbinders drink your wellspring. Shock them first."]
+  },
+  "lore_ash": {
+    "speaker": "LORE STONE",
+    "pages": [
+      "It carved sigils no one taught it. The other three sealed it away, and it learned to wait."
+    ]
+  }
+}

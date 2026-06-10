@@ -1,0 +1,14 @@
+{
+  "westwood_1": {
+    "speaker": "SIGNPOST",
+    "pages": ["WESTWOOD. Gloomwings nest here. They hate the cold."]
+  },
+  "westwood_2": {
+    "speaker": "SIGNPOST",
+    "pages": ["The Warden's grove lies west. Burn a path."]
+  },
+  "lore_wood": {
+    "speaker": "LORE STONE",
+    "pages": ["The Hollow Warden asked for more than its share of the craft. The Vale said no."]
+  }
+}
