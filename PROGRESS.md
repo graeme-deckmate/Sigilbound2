@@ -4,9 +4,9 @@ Claude Code: read this first every session. Update it before you stop. Keep entr
 
 ## Status
 
-Current phase: **Phase 8 complete. Next: Phase 9 (Balance, polish, ship)**
-Last session: 2026-06-10 (Phases 0 through 8)
-Deployed URL: -
+Current phase: **Phase 9 complete (deploy push pending Grae). v1.0 candidate.**
+Last session: 2026-06-10 (Phases 0 through 9)
+Deployed URL: - (awaiting GitHub repo push + Pages enable; see Setup needed)
 
 ## Phase checklist
 
@@ -19,16 +19,17 @@ Deployed URL: -
 - [x] Phase 6: Act 2 content (Grae playtest of both Wardens pending)
 - [x] Phase 7: Act 3 + finale (Grae playtest of North Hollow + Wraith pending)
 - [x] Phase 8: Audio, settings, accessibility (Lighthouse on the deployed URL pending)
-- [ ] Phase 9: Balance, polish, ship
+- [x] Phase 9: Balance, polish, ship prep (push + Pages + phone test pending, needs Grae's GitHub)
+- [x] Owner additions (Grae, 2026-06-10): boss teleporters home; title Continue / New Game
 - [ ] Phase 10: Capacitor Android (stretch)
 
 ## Setup needed from Grae (one-time)
 
-- [ ] Create GitHub repo, push this folder, enable Pages (Actions source). Then uncomment the
-      push trigger in `.github/workflows/deploy.yml` (it is manual-dispatch only until Pages is on).
 - [x] Copy the prototype into `reference/sigilbound.html`
 - [ ] (Optional) Download CC0 music per `docs/03-CONTENT-DATA.md` section 11 into `content/audio/music/<id>.ogg` and record attribution in `content/audio/CREDITS.md`. The game ships fine on the synth without them; files are picked up automatically when present.
-- [ ] (Phase 9, after deploy) Run Lighthouse on the deployed URL and confirm the PWA installable check passes (everything it needs is in the build; it just has to be measured on a served HTTPS origin).
+- [ ] Create the GitHub repo and push (`git remote add origin <repo-url> && git push -u origin main`), enable Pages (Settings -> Pages -> Source: GitHub Actions), run the Deploy workflow, then paste the live URL into README.md and PROGRESS.md. I can do this for you if you say the word and give a repo name.
+- [ ] After deploy: run Lighthouse on the live URL (PWA installable check) and play start to finish on your phone (the Phase 9 acceptance).
+- [ ] (Optional) Upload sigilbound-itch.zip to itch.io as an HTML game.
 
 ## Decisions log
 
@@ -112,6 +113,9 @@ Deployed URL: -
 - 2026-06-10 (Phase 8): Settings is a DOM overlay (render/settingsdom.ts) + thin scene, mirroring the Grimoire pattern, opened from a new gear button. Sliders master/music/effects (live), reduced flash toggle, text speed, d-pad side + size (live), manual save and manual load (single manual slot; loading restarts World per 01). Setting changes mutate the live GameState so the next auto-save persists them.
 - 2026-06-10 (Phase 8): PWA: `npm run genicons` writes 192/512 PNGs (zero-dep encoder in scripts/genicons.ts, gold sigil on the night palette) into content/icons/. Vite publicDir now points at content/ so committed audio and icons serve from the app root (03's "loader checks content/audio" convention). Manifest carries the icons (any + maskable); workbox precaches the app shell + icons only, with CacheFirst runtime caching for any audio files. Offline play works by construction with no audio files (synth). registerSW.js is injected by the plugin.
 - 2026-06-10 (Phase 8): Reduced motion: the existing reducedFlash setting still swaps the encounter flash for a fade; prefers-reduced-motion now also gates Battle camera shakes and the Doom camera flash (sprite white-flash and the red panel pulse stay, they are static color swaps). CSS overlays already respected the media query.
+
+- 2026-06-10 (Phase 9 + owner additions): Teleporters: a defeated boss leaves a WAYSTONE on its tile (derived from world.bosses at scene build, so old saves get them with no migration). Interacting plays a two-page dialogue then warps to the Hearth spawn via the normal exit pipeline and auto-saves. New EntityAt kind 'teleporter', interaction kind 'teleport', ent_teleporter texture, dialogue id 'teleporter'; covered in worldstate.spec. Title: with any save present (auto or manual) the cover shows CONTINUE plus NEW GAME; NEW GAME arms to "ERASE + BEGIN?" for 3s and a second tap writes a fresh auto save and starts over (manual slot kept as a recovery path). Verified in browser end to end.
+- 2026-06-10 (Phase 9): Copy pass is now a test (tests/copy.spec.ts): no em dashes in dialogue JSON or the player-string modules, dialogue pages <= 130 chars. Perf review: floaters pooled (14), World.update allocation-free, sigil preview only draws while the Grimoire is open, music voices are one-shot WebAudio nodes by design. README written; `npm run zip` builds sigilbound-itch.zip (index.html at root); git repo initialized with the v1.0 commit on main.
 
 ## Questions for Grae
 
