@@ -119,7 +119,7 @@ describe('map sources', () => {
     ]);
     expect(vale?.shrines).toEqual([{ rune: 'fury', x: 4, y: 36 }]);
     expect(vale?.bosses.map((b) => b.id)).toEqual(['bogmaw']);
-    expect(vale?.signs).toHaveLength(3);
+    expect(vale?.signs).toHaveLength(4); // +1 wheel-teaching sign (v1.1 Phase 12)
     expect(vale?.lore).toHaveLength(1);
     expect(vale?.springs).toHaveLength(1);
   });

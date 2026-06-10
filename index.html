@@ -85,6 +85,15 @@
         font-size: 21px;
         letter-spacing: 1px;
       }
+      #haspect {
+        display: none;
+        width: 9px;
+        height: 9px;
+        margin-left: 6px;
+        border-radius: 2px;
+        transform: rotate(45deg);
+        border: 1px solid rgba(255, 255, 255, 0.35);
+      }
       #hud .lvtag {
         font-size: 19px;
         color: var(--gold);
@@ -450,6 +459,14 @@
         color: var(--parch);
         padding: 2px 4px 8px;
       }
+      #blog.tone-reaction {
+        color: var(--arcane);
+        text-shadow: 0 0 8px rgba(157, 123, 255, 0.35);
+      }
+      #blog.tone-surge {
+        color: #d9ccff;
+        font-style: italic;
+      }
       #cmds {
         display: grid;
         grid-template-columns: 1fr 1fr;
@@ -612,6 +629,36 @@
       }
       .slotbtn:disabled {
         opacity: 0.45;
+      }
+      .mrow {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-top: 10px;
+      }
+      .mrow .mlabel {
+        width: 64px;
+        font-size: 20px;
+      }
+      .mrow .mbar {
+        position: relative;
+        flex: 1;
+        height: 10px;
+        background: #120e24;
+        border-radius: 5px;
+        overflow: hidden;
+      }
+      .mrow .mbar i {
+        position: absolute;
+        inset: 0;
+        width: 0%;
+        border-radius: 5px;
+      }
+      .mrow .mpips {
+        font-size: 16px;
+        color: var(--dim);
+        width: 64px;
+        text-align: right;
       }
       #notesList .noteline {
         font-size: 20px;
@@ -830,7 +877,8 @@
     <div id="app">
       <div id="hud" class="hidden">
         <div class="row">
-          <span class="name">Wrender</span><span class="lvtag" id="hlv">Lv 1</span>
+          <span class="name">Wrender</span><span id="haspect"></span
+          ><span class="lvtag" id="hlv">Lv 1</span>
         </div>
         <div class="row">
           <span class="blabel">HP</span><span class="bar hp"><i id="hhp"></i></span
@@ -895,6 +943,7 @@
           <div class="ftabs">
             <button class="ftab sel" id="tabSpells">SPELLS</button>
             <button class="ftab" id="tabNotes">NOTES</button>
+            <button class="ftab" id="tabMastery">MASTERY</button>
             <span class="esschip" id="essChip"></span>
           </div>
           <div id="spellsPage">
@@ -941,6 +990,10 @@
               <div class="flab">INSCRIBE TO SLOT</div>
               <div id="slotlist"></div>
             </div>
+          </div>
+          <div id="masteryPage" style="display: none">
+            <div class="sub">Each element remembers every battle it won for you.</div>
+            <div id="masteryList"></div>
           </div>
           <div id="notesPage" style="display: none">
             <div class="sub" id="notesEmpty">

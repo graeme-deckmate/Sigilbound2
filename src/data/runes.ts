@@ -24,9 +24,35 @@ export interface RuneDef {
   crit?: { chance: number; mult: number };
   /** Veil only: the shield re-applies once after breaking (echo). */
   veilReapply?: boolean;
+  /** Every cast rolls the surge table (wyrd, 03 section 18). */
+  surges?: boolean;
+  /** Reactions from this spell keep the setup status (stormcoil). */
+  keepsReactionSetup?: boolean;
+  /** Enemy resists count as neutral for this spell (emberglass). */
+  resistAsNeutral?: boolean;
+  /** Variance floor override: no low rolls (stillwater). */
+  varianceMin?: number;
+  /** Kills refund the spell's full MP cost (hollowlight). */
+  refundOnKill?: boolean;
+  /** Potency cap extension; always stable (wraithmark, Phase 14). */
+  potencyMax?: number;
+  alwaysStable?: boolean;
 }
 
-export const RUNE_IDS: readonly RuneId[] = ['none', 'fury', 'thirst', 'echo', 'hex', 'keen'];
+export const RUNE_IDS: readonly RuneId[] = [
+  'none',
+  'fury',
+  'thirst',
+  'echo',
+  'hex',
+  'keen',
+  'wyrd',
+  'emberglass',
+  'stillwater',
+  'stormcoil',
+  'hollowlight',
+  'wraithmark',
+];
 
 export const RUNES: Record<RuneId, RuneDef> = {
   none: { id: 'none', label: 'No rune', mp: 1.0, suffix: '' },
@@ -48,5 +74,52 @@ export const RUNES: Record<RuneId, RuneDef> = {
     mp: 1.2,
     suffix: ' of Keening',
     crit: { chance: 0.26, mult: 1.75 },
+  },
+  wyrd: {
+    id: 'wyrd',
+    label: 'Wyrd',
+    mp: 1.15,
+    suffix: ' of the Wyrd',
+    pw: 1.35,
+    surges: true,
+  },
+  /* Relic runes: hidden, one rule-bend each. pw 1.0, default crit/proc.
+     Effects land with their systems (stormcoil in Phase 12's Wheel;
+     the rest in Phase 13's caches). */
+  emberglass: {
+    id: 'emberglass',
+    label: 'Emberglass',
+    mp: 1.1,
+    suffix: ' of Emberglass',
+    resistAsNeutral: true,
+  },
+  stillwater: {
+    id: 'stillwater',
+    label: 'Stillwater',
+    mp: 1.15,
+    suffix: ' of Stillwater',
+    varianceMin: 1.0,
+  },
+  stormcoil: {
+    id: 'stormcoil',
+    label: 'Stormcoil',
+    mp: 1.25,
+    suffix: ' of the Stormcoil',
+    keepsReactionSetup: true,
+  },
+  hollowlight: {
+    id: 'hollowlight',
+    label: 'Hollowlight',
+    mp: 1.0,
+    suffix: ' of Hollowlight',
+    refundOnKill: true,
+  },
+  wraithmark: {
+    id: 'wraithmark',
+    label: 'Wraithmark',
+    mp: 1.0,
+    suffix: ' of the Wraithmark',
+    potencyMax: 1.8,
+    alwaysStable: true,
   },
 };

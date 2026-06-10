@@ -14,6 +14,8 @@ import { maxHpAt, maxMpAt, unlockedIds } from '../src/systems/leveling.ts';
 import { makeSpell, elementMult, spellCost, spellPower } from '../src/systems/spellcraft.ts';
 import { eligibleFormations, weightedPick } from '../src/systems/encounters.ts';
 import { FORMS } from '../src/data/forms.ts';
+import { wheelBefore } from '../src/data/wheel.ts';
+import { ELEMENTS } from '../src/data/elements.ts';
 import {
   initBattle,
   initBossBattle,
@@ -255,6 +257,64 @@ function wraithKit(): Spell[] {
   );
   kit.push(makeSpell('gloom', 'veil', 'none'));
   return kit;
+}
+
+/**
+ * Reaction-aware (v1.1, 02): everything weakness-aware does, plus
+ * two-turn Wheel plans. If a living target bears the setup status for
+ * a castable element, detonate it; otherwise open with the setup
+ * element of the kit's wheel pair. The kit runs potency 1.25 bolts
+ * (below the greedy line: plans, not gambles).
+ */
+const reactionAware: Policy = (state) => {
+  const slots = castable(state);
+  const alive = state.enemies.filter((e) => e.hp > 0);
+
+  // Detonate first: a waiting reaction beats everything but a kill.
+  for (const slot of slots) {
+    const sp = state.player.spells[slot];
+    if (!sp || !isStrike(sp)) continue;
+    for (const e of alive) {
+      const low = spellPower(sp, state.player.lv) * multVs(state, sp, e) * 0.9;
+      if (e.hp <= low) return { type: 'cast', slot, target: e.index };
+    }
+  }
+  for (const slot of slots) {
+    const sp = state.player.spells[slot];
+    if (!sp || !isStrike(sp)) continue;
+    const setup = ELEMENTS[wheelBefore(sp.element)].status;
+    const primed = alive.find((e) => (e.statuses[setup] ?? 0) > 0);
+    if (primed) return { type: 'cast', slot, target: primed.index };
+  }
+
+  // Open the plan: cast the setup half of the pair (the element whose
+  // wheel-next is also in the kit), against the healthiest target.
+  const kitElements = new Set(
+    state.player.spells.filter((sp) => sp && isStrike(sp)).map((sp) => sp!.element),
+  );
+  for (const slot of slots) {
+    const sp = state.player.spells[slot];
+    if (!sp || !isStrike(sp)) continue;
+    const isSetupHalf = [...kitElements].some((e) => wheelBefore(e) === sp.element);
+    if (isSetupHalf && alive.length > 0) {
+      const healthiest = [...alive].sort((a, b) => b.hp - a.hp)[0];
+      if (healthiest && healthiest.hp > spellPower(sp, state.player.lv) * 1.2) {
+        return { type: 'cast', slot, target: healthiest.index };
+      }
+    }
+  }
+  // Nothing to plan: fall through to the full weakness-aware brain.
+  return weaknessAware(state);
+};
+
+/** Wheel-pair kit at potency 1.25: rime sets, volt detonates. */
+function reactionKit(): Spell[] {
+  return [
+    makeSpell('rime', 'bolt', 'none', 1.25),
+    makeSpell('volt', 'bolt', 'none', 1.25),
+    makeSpell('ember', 'nova', 'thirst'),
+    makeSpell('rime', 'veil', 'none'),
+  ];
 }
 
 /** Baseline that heals early. */
@@ -623,5 +683,41 @@ describe('v1.1: starters are fair (02 new assertions)', () => {
     const spread = Math.max(...rates) - Math.min(...rates);
     expect(spread, `rates ${rates.map((r) => r.toFixed(2)).join('/')}`).toBeLessThanOrEqual(0.08);
     for (const r of rates) expect(r).toBeGreaterThanOrEqual(0.8);
+  });
+});
+
+describe('v1.1: reactions pay (02 new assertions)', () => {
+  it('reaction-aware beats weakness-aware on Act 2 pack median turns', () => {
+    const zones: { zone: ZoneId; lv: number }[] = [
+      { zone: 'westwood.outer', lv: 7 },
+      { zone: 'westwood.deep', lv: 7 },
+      { zone: 'ashenreach.outer', lv: 8 },
+      { zone: 'ashenreach.inner', lv: 8 },
+    ];
+    let reactionTotal = 0;
+    let weaknessTotal = 0;
+    for (const [zi, { zone, lv }] of zones.entries()) {
+      const medians = (policy: Policy, kit: Spell[], seedBase: number): number => {
+        const turnCounts: number[] = [];
+        for (let run = 0; run < RUNS; run++) {
+          const rng = mulberry32(seedBase + run);
+          const table = ZONES[zone];
+          const formation = weightedPick(rng, table.formations);
+          const enemyLv = randInt(rng, table.levelMin, table.levelMax);
+          const gs = playerAt(lv, kit);
+          const result = fight(initBattle(gs, formation.members, enemyLv, zone).state, policy, rng);
+          if (result.won) turnCounts.push(result.turns);
+        }
+        turnCounts.sort((a, b) => a - b);
+        return turnCounts[Math.floor(turnCounts.length / 2)] ?? MAX_ROUNDS;
+      };
+      const regionElement = zone.startsWith('ashenreach') ? 'rime' : 'ember';
+      reactionTotal += medians(reactionAware, reactionKit(), 30_000 + zi * 7919);
+      weaknessTotal += medians(weaknessAware, kitFor(lv, regionElement), 31_000 + zi * 7919);
+    }
+    expect(
+      reactionTotal,
+      `reaction ${String(reactionTotal)} vs weakness ${String(weaknessTotal)}`,
+    ).toBeLessThan(weaknessTotal);
   });
 });

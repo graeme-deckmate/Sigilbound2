@@ -22,6 +22,17 @@ import { BOSSES, ENEMIES, type EnemyMove, type EnemySpeciesId } from '../data/en
 import { ENEMY_STATUSES, PLAYER_STATUSES } from '../data/statuses.ts';
 import { AFFIXES, ELITE, GLIMMERKIN, type AffixId } from '../data/elites.ts';
 import { ESSENCE, defeatDrop } from '../data/essence.ts';
+import {
+  ASPECT,
+  MASTERY,
+  masteryTier,
+  REACTION,
+  REACTIONS,
+  SURGE,
+  SURGE_TABLE,
+  type ReactionId,
+  type SurgeDef,
+} from '../data/wheel.ts';
 import type { ZoneId } from '../data/formations.ts';
 import {
   GRACE_AFTER_BATTLE,
@@ -31,6 +42,7 @@ import {
   FLEE_CHANCE,
 } from '../data/progression.ts';
 import {
+  castSurges,
   critProfile,
   elementMult,
   spellCost,
@@ -41,6 +53,7 @@ import {
   spellTargeting,
   veilRiderProc,
   veilShield,
+  type CastMods,
 } from './spellcraft.ts';
 import { applyXp } from './leveling.ts';
 import { weightedPick } from './encounters.ts';
@@ -63,6 +76,8 @@ export interface BattlePlayer {
   maxhp: number;
   maxmp: number;
   spells: (Spell | null)[];
+  /** Mastery points per element, snapshotted at battle start (v1.1). */
+  mastery: Record<ElementId, number>;
   /** Ordered: Focus cleanses the oldest first. No durations (PROGRESS). */
   statuses: PlayerStatusId[];
   veil: VeilState | null;
@@ -167,6 +182,10 @@ export interface BattleState {
   bossId?: BossId;
   bossState?: BossBattleState;
   zone: ZoneId | null;
+  /** Vale Aspect, snapshotted at battle start (03 section 25). */
+  aspect: ElementId | null;
+  /** Elements that landed at least one hit (mastery ticks on victory). */
+  elementsHit: Partial<Record<ElementId, boolean>>;
   player: BattlePlayer;
   enemies: BattleEnemy[];
 }
@@ -248,6 +267,8 @@ export type BattleEventBody =
   | { kind: 'fleeFail' }
   | { kind: 'fled' }
   | { kind: 'ambush' }
+  | { kind: 'reaction'; reaction: ReactionId; index: number; amount?: number; hpAfter: number }
+  | { kind: 'surge'; roll: number; id: SurgeDef['id']; severity: SurgeDef['severity'] }
   | { kind: 'sealedHit'; index: number; key: ElementId | null }
   | { kind: 'sealBreak'; index: number }
   | { kind: 'frenzy'; index: number }
@@ -331,6 +352,8 @@ export function initBattle(
     round: 1,
     boss: false,
     zone,
+    aspect: gs.world.aspect,
+    elementsHit: {},
     player: {
       lv: gs.player.lv,
       hp: gs.player.hp,
@@ -338,6 +361,7 @@ export function initBattle(
       maxhp: gs.player.maxhp,
       maxmp: gs.player.maxmp,
       spells: gs.player.spells.map((s) => (s ? { ...s } : null)),
+      mastery: { ...gs.player.mastery },
       statuses: [],
       veil: null,
     },
@@ -401,6 +425,8 @@ export function initBossBattle(gs: GameState, bossId: BossId, zone: ZoneId | nul
     bossId,
     bossState,
     zone,
+    aspect: gs.world.aspect,
+    elementsHit: {},
     player: {
       lv: gs.player.lv,
       hp: gs.player.hp,
@@ -408,6 +434,7 @@ export function initBossBattle(gs: GameState, bossId: BossId, zone: ZoneId | nul
       maxhp: gs.player.maxhp,
       maxmp: gs.player.maxmp,
       spells: gs.player.spells.map((s) => (s ? { ...s } : null)),
+      mastery: { ...gs.player.mastery },
       statuses: [],
       veil: null,
     },
@@ -497,7 +524,11 @@ function castSpell(
   const player = state.player;
   const spell = player.spells[action.slot];
   if (!spell) throw new Error(`cast: empty slot ${String(action.slot)}`);
-  const cost = spellCost(spell);
+  const mods: CastMods = {
+    mastery: player.mastery[spell.element] ?? 0,
+    aspect: state.aspect,
+  };
+  const cost = spellCost(spell, mods);
   if (player.mp < cost) throw new Error('cast: not enough MP');
   player.mp -= cost;
 
@@ -560,16 +591,33 @@ function castSpell(
         submergedOverride = special.kind === 'submerge' ? special.voltMult : null;
       }
 
+      // The Wheel (03 section 14): a hit of element E on a foe bearing
+      // the status before E reacts. Checked up front because Shatter
+      // and Kindle change this very hit.
+      const reactionDef = REACTIONS[spell.element];
+      const setupTurns = target.statuses[reactionDef.setup] ?? 0;
+      const reacts = setupTurns > 0;
+
       // Sealed elites: 0 damage until the seal breaks. Any weakness
-      // element cracks it (Wheel reactions join in Phase 12).
+      // element cracks it, and so does any Wheel reaction.
       if (target.sealed) {
-        if (def.weak.includes(spell.element)) {
+        if (def.weak.includes(spell.element) || reacts) {
           target.sealed = false;
           emit({ kind: 'sealBreak', index: target.index });
         } else {
           emit({ kind: 'sealedHit', index: target.index, key: def.weak[0] ?? null });
           continue;
         }
+      }
+
+      // The amp is read before consumption: reaction damage portions
+      // are affected by the Withered amp like any damage (03 section 14),
+      // including the Kindle hit that consumes Withered itself.
+      const witheredMult = enemyWitheredMult(target);
+
+      // Reactions consume their setup unless the Stormcoil holds it.
+      if (reacts && !RUNES[spell.rune].keepsReactionSetup) {
+        delete target.statuses[reactionDef.setup];
       }
 
       // The Wraith fears what it attunes to; everything else glances.
@@ -584,10 +632,13 @@ function castSpell(
 
       const mult =
         submergedOverride ?? attuneOverride ?? elementMult(spell.element, def.weak, def.resist);
-      let dmg = spellPower(spell, player.lv) * chilledMult * variance(rng) * mult;
+      let dmg = spellPower(spell, player.lv, mods) * chilledMult * variance(rng) * mult;
       const isCrit = rng() < crit.chance;
       if (isCrit) dmg *= crit.mult;
-      dmg *= enemyWitheredMult(target);
+      // Shatter and Kindle amplify the triggering hit itself.
+      if (reacts && reactionDef.id === 'shatter') dmg *= 1 + REACTION.shatterBonus;
+      if (reacts && reactionDef.id === 'kindle') dmg *= 1 + REACTION.kindleBonus;
+      dmg *= witheredMult;
       dmg = Math.max(COMBAT.minDamage, Math.round(dmg));
 
       let remaining = dmg;
@@ -598,6 +649,7 @@ function castSpell(
       }
       target.hp = Math.max(0, target.hp - remaining);
       totalDealt += dmg;
+      state.elementsHit[spell.element] = true;
       emit({
         kind: 'enemyHit',
         index: target.index,
@@ -607,6 +659,10 @@ function castSpell(
         hpAfter: target.hp,
         shieldAfter: target.shield,
       });
+
+      if (reacts) {
+        resolveReaction(state, target, reactionDef.id, setupTurns, emit);
+      }
 
       // The volt hit interrupts the dive: the breach is canceled, the
       // boss resurfaces, and the shock stuns it (docs/03).
@@ -625,7 +681,7 @@ function castSpell(
         emit({ kind: 'enemyDown', index: target.index });
         continue;
       }
-      if (rng() < spellProc(spell)) {
+      if (rng() < spellProc(spell, mods)) {
         const status = ELEMENTS[spell.element].status;
         if (applyEnemyStatus(target, status)) {
           emit({ kind: 'enemyStatus', index: target.index, status });
@@ -658,7 +714,181 @@ function castSpell(
   }
 
   checkVictory(state, emit);
+
+  // Unstable craft (03 section 18): the spell has fully resolved; now
+  // the wyrd collects. One roll per cast; never rolled into a won
+  // battle (no surge can end one either way).
+  if (state.phase === 'player' && castSurges(spell, mods.mastery ?? 0)) {
+    rollSurge(state, spell, targets, emit, rng);
+  }
   return true;
+}
+
+/** The non-hit halves of the five reactions (03 section 14). */
+function resolveReaction(
+  state: BattleState,
+  target: BattleEnemy,
+  reaction: ReactionId,
+  setupTurns: number,
+  emit: Emit,
+): void {
+  const lv = state.player.lv;
+  let amount: number | undefined;
+
+  if (reaction === 'scald') {
+    const burn = ENEMY_STATUSES.burning.dot;
+    const tick = (burn?.base ?? 0) + Math.ceil(lv * (burn?.perLv ?? 0));
+    amount = Math.max(1, Math.round(tick * REACTION.scaldTickMult * enemyWitheredMult(target)));
+  }
+  if (reaction === 'blight') {
+    const venom = ENEMY_STATUSES.envenomed.dot;
+    const tick = (venom?.base ?? 0) + Math.ceil(lv * (venom?.perLv ?? 0));
+    amount = Math.max(1, Math.round(tick * setupTurns * enemyWitheredMult(target)));
+  }
+  if (amount !== undefined) {
+    target.hp = Math.max(0, target.hp - amount);
+  }
+  emit({ kind: 'reaction', reaction, index: target.index, amount, hpAfter: target.hp });
+
+  if (reaction === 'snare' && target.hp > 0) {
+    target.statuses.envenomed = REACTION.snareVenomTurns;
+    emit({ kind: 'enemyStatus', index: target.index, status: 'envenomed' });
+  }
+  if (reaction === 'kindle' && target.hp > 0) {
+    if (applyEnemyStatus(target, 'burning')) {
+      emit({ kind: 'enemyStatus', index: target.index, status: 'burning' });
+    }
+  }
+  if (target.hp <= 0) {
+    emit({ kind: 'enemyDown', index: target.index });
+    checkVictory(state, emit);
+  }
+}
+
+/** One d10 on the battle stream; the table is data (03 section 18). */
+function rollSurge(
+  state: BattleState,
+  spell: Spell,
+  targets: BattleEnemy[],
+  emit: Emit,
+  rng: Rng,
+): void {
+  const roll = randInt(rng, 1, 10);
+  const def = SURGE_TABLE[roll - 1] as SurgeDef;
+  const player = state.player;
+  emit({ kind: 'surge', roll, id: def.id, severity: def.severity });
+
+  const firstAliveTarget = targets.find((t) => t.hp > 0);
+  switch (def.id) {
+    case 'afterglow':
+    case 'crow':
+      break; // cosmetic / log only
+    case 'bite': {
+      if (firstAliveTarget) {
+        const dmg = SURGE.biteDamage;
+        firstAliveTarget.hp = Math.max(0, firstAliveTarget.hp - dmg);
+        emit({
+          kind: 'enemyHit',
+          index: firstAliveTarget.index,
+          amount: dmg,
+          crit: false,
+          mult: 1,
+          hpAfter: firstAliveTarget.hp,
+          shieldAfter: firstAliveTarget.shield,
+        });
+        if (firstAliveTarget.hp <= 0) {
+          emit({ kind: 'enemyDown', index: firstAliveTarget.index });
+          checkVictory(state, emit);
+        }
+      }
+      break;
+    }
+    case 'warmth': {
+      player.hp = Math.min(player.maxhp, player.hp + SURGE.warmthHp);
+      emit({ kind: 'playerHeal', amount: SURGE.warmthHp, hpAfter: player.hp });
+      break;
+    }
+    case 'gift': {
+      player.mp = Math.min(player.maxmp, player.mp + SURGE.giftMp);
+      break;
+    }
+    case 'sureStatus': {
+      if (firstAliveTarget) {
+        const status = ELEMENTS[spell.element].status;
+        if (applyEnemyStatus(firstAliveTarget, status)) {
+          emit({ kind: 'enemyStatus', index: firstAliveTarget.index, status });
+        }
+      }
+      break;
+    }
+    case 'echoEcho': {
+      // The spell re-casts at half power, free, contained: typed hits
+      // on the original targeting, no procs, no reactions, no surge.
+      for (const t of targets) {
+        if (t.hp <= 0) continue;
+        const def2 = defOf(t);
+        const mult = elementMult(spell.element, def2.weak, def2.resist);
+        const half = spellPower(spell, player.lv) * SURGE.echoPowerFrac * variance(rng) * mult;
+        const dmg = Math.max(1, Math.round(half * enemyWitheredMult(t)));
+        let remaining = dmg;
+        if (t.shield > 0) {
+          const absorbed = Math.min(t.shield, remaining);
+          t.shield -= absorbed;
+          remaining -= absorbed;
+        }
+        t.hp = Math.max(0, t.hp - remaining);
+        emit({
+          kind: 'enemyHit',
+          index: t.index,
+          amount: dmg,
+          crit: false,
+          mult,
+          hpAfter: t.hp,
+          shieldAfter: t.shield,
+        });
+        if (t.hp <= 0) emit({ kind: 'enemyDown', index: t.index });
+      }
+      checkVictory(state, emit);
+      break;
+    }
+    case 'grasp': {
+      const alive = aliveEnemies(state);
+      const pick = alive[randInt(rng, 0, Math.max(0, alive.length - 1))];
+      if (pick) {
+        pick.statuses.withered = SURGE.graspWitherTurns;
+        emit({ kind: 'enemyStatus', index: pick.index, status: 'withered' });
+      }
+      break;
+    }
+    case 'collect': {
+      const fee = Math.round(player.maxhp * SURGE.collectFrac);
+      const before = player.hp;
+      player.hp = Math.max(1, player.hp - fee); // cannot KO
+      emit({
+        kind: 'playerHit',
+        amount: before - player.hp,
+        absorbed: 0,
+        chilled: false,
+        hpAfter: player.hp,
+      });
+      break;
+    }
+    case 'reversal': {
+      if (spell.element === 'volt') {
+        const drained = Math.min(player.mp, SURGE.reversalVoltMp);
+        if (drained > 0) {
+          player.mp -= drained;
+          emit({ kind: 'mpDrain', amount: drained, mpAfter: player.mp });
+        }
+      } else {
+        const status = ELEMENTS[spell.element].status;
+        if (status !== 'stunned' && applyPlayerStatus(player, status)) {
+          emit({ kind: 'playerStatus', status });
+        }
+      }
+      break;
+    }
+  }
 }
 
 function doFocus(state: BattleState, emit: Emit): boolean {
@@ -742,7 +972,8 @@ function tickEnemyDots(state: BattleState, enemy: BattleEnemy, emit: Emit): bool
     enemy.statuses[status] = turns - 1;
     if (turns - 1 <= 0) delete enemy.statuses[status];
     const def = ENEMY_STATUSES[status];
-    const base = (def.dot?.base ?? 0) + Math.ceil(state.player.lv * (def.dot?.perLv ?? 0));
+    let base = (def.dot?.base ?? 0) + Math.ceil(state.player.lv * (def.dot?.perLv ?? 0));
+    if (state.aspect && ELEMENTS[state.aspect].status === status) base *= ASPECT.dotMult;
     const dmg = Math.max(1, Math.round(base * enemyWitheredMult(enemy)));
     enemy.hp = Math.max(0, enemy.hp - dmg);
     emit({ kind: 'enemyDot', index: enemy.index, status, amount: dmg, hpAfter: enemy.hp });
@@ -1011,7 +1242,12 @@ function applyMoveRider(
   if (!rider) return;
   switch (rider.type) {
     case 'playerStatus': {
-      if (rng() < rider.chance && applyPlayerStatus(state.player, rider.status)) {
+      // The ascendant element favors both sides (03 section 25).
+      const aspectBonus =
+        state.aspect && ELEMENTS[state.aspect].status === rider.status
+          ? ASPECT.enemyRiderProcBonus
+          : 0;
+      if (rng() < rider.chance + aspectBonus && applyPlayerStatus(state.player, rider.status)) {
         emit({ kind: 'playerStatus', status: rider.status });
       }
       break;
@@ -1039,7 +1275,9 @@ function playerDotPhase(state: BattleState, emit: Emit): void {
   for (const status of ['burning', 'envenomed'] as const) {
     if (!player.statuses.includes(status)) continue;
     const frac = PLAYER_STATUSES[status].dotPctMaxHp ?? 0;
-    const dmg = Math.max(1, Math.round(player.maxhp * frac));
+    const aspectMult =
+      state.aspect && ELEMENTS[state.aspect].status === status ? ASPECT.dotMult : 1;
+    const dmg = Math.max(1, Math.round(player.maxhp * frac * aspectMult));
     player.hp = Math.max(0, player.hp - dmg);
     emit({ kind: 'playerDot', status, amount: dmg, hpAfter: player.hp });
     if (player.hp <= 0) {
@@ -1086,6 +1324,8 @@ export interface CommitResult {
   essenceGained: number;
   /** Essence dropped at the defeat marker. */
   essenceLost: number;
+  /** Elements that crossed a mastery tier this battle (03 section 17). */
+  masteryTierUps: { element: ElementId; tier: 1 | 2 | 3 }[];
 }
 
 /** Fold a finished battle back into the GameState (docs/02 rules). */
@@ -1118,7 +1358,14 @@ export function commitBattle(gs: GameState, battle: BattleState): CommitResult {
     next.world.y = next.world.respawn.y;
     next.world.facing = 'down';
     next.world.graceSteps = GRACE_AFTER_DEFEAT;
-    return { state: next, xpGained: 0, levelsGained: [], essenceGained: 0, essenceLost };
+    return {
+      state: next,
+      xpGained: 0,
+      levelsGained: [],
+      essenceGained: 0,
+      essenceLost,
+      masteryTierUps: [],
+    };
   }
 
   next.player.hp = battle.player.hp;
@@ -1126,13 +1373,33 @@ export function commitBattle(gs: GameState, battle: BattleState): CommitResult {
   next.world.graceSteps = GRACE_AFTER_BATTLE;
 
   if (battle.phase === 'fled') {
-    return { state: next, xpGained: 0, levelsGained: [], essenceGained: 0, essenceLost: 0 };
+    return {
+      state: next,
+      xpGained: 0,
+      levelsGained: [],
+      essenceGained: 0,
+      essenceLost: 0,
+      masteryTierUps: [],
+    };
   }
 
   next.stats.battles += 1;
   if (battle.bossId) next.world.bosses[battle.bossId] = true;
   const essence = battleEssence(battle);
   next.player.essence += essence;
+
+  // Mastery (03 section 17): +1 per element that landed a hit, cap 50.
+  const masteryTierUps: { element: ElementId; tier: 1 | 2 | 3 }[] = [];
+  for (const element of Object.keys(battle.elementsHit) as ElementId[]) {
+    if (!battle.elementsHit[element]) continue;
+    const before = next.player.mastery[element];
+    const after = Math.min(MASTERY.cap, before + 1);
+    next.player.mastery[element] = after;
+    if (masteryTier(after) > masteryTier(before)) {
+      masteryTierUps.push({ element, tier: masteryTier(after) as 1 | 2 | 3 });
+    }
+  }
+
   const xp = battleXp(battle);
   const leveled = applyXp(next.player, xp);
   next.player = leveled.player;
@@ -1142,6 +1409,7 @@ export function commitBattle(gs: GameState, battle: BattleState): CommitResult {
     levelsGained: leveled.levelsGained,
     essenceGained: essence,
     essenceLost: 0,
+    masteryTierUps,
   };
 }
 
@@ -1149,7 +1417,12 @@ export function commitBattle(gs: GameState, battle: BattleState): CommitResult {
 
 export function canCast(state: BattleState, slot: number): boolean {
   const spell = state.player.spells[slot];
-  return !!spell && state.player.mp >= spellCost(spell);
+  if (!spell) return false;
+  const mods: CastMods = {
+    mastery: state.player.mastery[spell.element] ?? 0,
+    aspect: state.aspect,
+  };
+  return state.player.mp >= spellCost(spell, mods);
 }
 
 export function randomAliveTarget(state: BattleState, rng: Rng): number {

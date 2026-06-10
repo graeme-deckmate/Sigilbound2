@@ -3,7 +3,9 @@
  * facing this tile mean" and apply the returned state changes.
  */
 import type { CompiledMap, EntityAt, ExitDef } from '../core/mapdefs.ts';
-import type { BossId, Dir, GameState, ShrineId } from '../core/state.ts';
+import type { BossId, Dir, ElementId, GameState, ShrineId } from '../core/state.ts';
+import type { Rng } from '../core/rng.ts';
+import { ELEMENT_IDS } from '../data/elements.ts';
 
 export function facingPos(x: number, y: number, facing: Dir): { x: number; y: number } {
   switch (facing) {
@@ -50,6 +52,16 @@ export function interactionFor(map: CompiledMap, entity: EntityAt | null): Inter
   }
 }
 
+/**
+ * Rotate the Vale Aspect at a shrine or spring rest (03 section 25):
+ * a seeded pick that never repeats the current element.
+ */
+export function rotateAspect(state: GameState, rng: Rng): GameState {
+  const pool = ELEMENT_IDS.filter((e) => e !== state.world.aspect);
+  const next = pool[Math.floor(rng() * pool.length)] as ElementId;
+  return { ...state, world: { ...state.world, aspect: next } };
+}
+
 /** Springs fully restore HP and MP (docs/02 Encounters). */
 export function applySpringRestore(state: GameState): GameState {
   return {
@@ -93,6 +105,8 @@ export function sigilCount(state: GameState): number {
  * sigils and the Wraith; everyone else keeps their map-given line.
  */
 export function npcDialogueId(npcId: string, fallback: string, state: GameState): string {
+  // After Act 1 the second twin teaches the Wheel (03 section 26, final).
+  if (npcId === 'twin_b' && state.world.bosses.bogmaw) return 'twins_gossip_wheel';
   if (npcId !== 'elder') return fallback;
   if (state.world.bosses.valewraith) return 'elder_postgame';
   const sigils = sigilCount(state);

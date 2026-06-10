@@ -29,6 +29,7 @@ import {
   facingPos,
   interactionFor,
   npcDialogueId,
+  rotateAspect,
   sigilCount,
 } from '../systems/worldstate.ts';
 import { starterSpells } from '../data/progression.ts';
@@ -161,6 +162,8 @@ export class WorldScene extends Phaser.Scene {
     dom.applyDpadSettings(this.state.settings.dpadSide, this.state.settings.dpadScale);
     dom.showWorldUi(true);
     this.refreshHud();
+    const aspect = this.state.world.aspect;
+    dom.setAspectGlyph(aspect, aspect ? ELEMENTS[aspect].color : null);
     this.renderEssenceMarker();
 
     // A fresh save: the Elder asks what the first page answers to
@@ -187,6 +190,15 @@ export class WorldScene extends Phaser.Scene {
         },
         slayBogmaw: (): void => {
           this.state.world.bosses.bogmaw = true;
+        },
+        grantWyrd: (): void => {
+          this.state.world.flags['rune_wyrd'] = true;
+        },
+        grantStormcoil: (): void => {
+          this.state.world.flags['rune_stormcoil'] = true;
+        },
+        addMastery: (element: ElementId, n: number): void => {
+          this.state.player.mastery[element] = Math.min(50, this.state.player.mastery[element] + n);
         },
       };
     }
@@ -259,6 +271,17 @@ export class WorldScene extends Phaser.Scene {
     playSfx('unlock');
     dom.toast(`✦ ${String(m.amount)} essence reclaimed`, true);
     this.autoSave();
+  }
+
+  /** Shrine and spring rests turn the Vale's Wheel (03 section 25). */
+  private rotateValeAspect(): void {
+    const before = this.state.world.aspect;
+    this.state = rotateAspect(this.state, this.worldRng);
+    const aspect = this.state.world.aspect;
+    if (aspect && aspect !== before) {
+      dom.toast(`The Vale leans toward ${ELEMENTS[aspect].label}.`, true);
+      dom.setAspectGlyph(aspect, ELEMENTS[aspect].color);
+    }
   }
 
   private bindTopButtons(): void {
@@ -580,6 +603,18 @@ export class WorldScene extends Phaser.Scene {
     }
     if (result.xpGained > 0) dom.toast(`+${String(result.xpGained)} XP`);
     if (result.essenceGained > 0) dom.toast(`+${String(result.essenceGained)} essence`);
+    result.masteryTierUps.forEach(({ element, tier }, i) => {
+      setTimeout(
+        () => {
+          playSfx('mastery_tier');
+          dom.toast(
+            `✦ ${ELEMENTS[element].label.toUpperCase()} mastery tier ${String(tier)}`,
+            true,
+          );
+        },
+        400 + i * 700,
+      );
+    });
     result.levelsGained.forEach((lv, i) => {
       setTimeout(
         () => {
@@ -638,6 +673,7 @@ export class WorldScene extends Phaser.Scene {
       case 'spring': {
         playSfx('heal');
         this.state = applySpringRestore(this.state);
+        this.rotateValeAspect();
         this.state.world.respawn = {
           mapId: this.state.world.mapId,
           x: this.state.world.x,
@@ -652,6 +688,7 @@ export class WorldScene extends Phaser.Scene {
       case 'shrine': {
         const { state, granted } = applyShrineGrant(this.state, action.rune);
         this.state = state;
+        this.rotateValeAspect();
         this.refreshHud();
         this.autoSave();
         if (granted) {

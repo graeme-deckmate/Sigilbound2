@@ -6,7 +6,9 @@ export type UnlockTrigger =
   | { type: 'level'; lv: number }
   | { type: 'shrine'; shrine: ShrineId; region: string }
   /** One of the three starter elements; its level depends on the pick. */
-  | { type: 'starter' };
+  | { type: 'starter' }
+  /** Granted by a world flag (peddler trades, gate caches, Sanctum). */
+  | { type: 'flag'; flag: string; hint: string };
 
 export type UnlockDef =
   | { kind: 'element'; id: ElementId; trigger: UnlockTrigger }
@@ -55,4 +57,34 @@ export const UNLOCKS: readonly UnlockDef[] = [
   { kind: 'rune', id: 'thirst', trigger: { type: 'shrine', shrine: 'thirst', region: 'Westwood' } },
   { kind: 'rune', id: 'echo', trigger: { type: 'shrine', shrine: 'echo', region: 'Ashen Reach' } },
   { kind: 'rune', id: 'keen', trigger: { type: 'shrine', shrine: 'keen', region: 'North Hollow' } },
+  {
+    kind: 'rune',
+    id: 'wyrd',
+    trigger: { type: 'flag', flag: 'rune_wyrd', hint: 'Murk trades in such things.' },
+  },
+  {
+    kind: 'rune',
+    id: 'emberglass',
+    trigger: { type: 'flag', flag: 'rune_emberglass', hint: 'Sealed behind an old gate.' },
+  },
+  {
+    kind: 'rune',
+    id: 'stillwater',
+    trigger: { type: 'flag', flag: 'rune_stillwater', hint: 'Sealed behind an old gate.' },
+  },
+  {
+    kind: 'rune',
+    id: 'stormcoil',
+    trigger: { type: 'flag', flag: 'rune_stormcoil', hint: 'Sealed behind an old gate.' },
+  },
+  {
+    kind: 'rune',
+    id: 'hollowlight',
+    trigger: { type: 'flag', flag: 'rune_hollowlight', hint: 'Sealed behind an old gate.' },
+  },
+  {
+    kind: 'rune',
+    id: 'wraithmark',
+    trigger: { type: 'flag', flag: 'rune_wraithmark', hint: 'The Sanctum remembers.' },
+  },
 ];

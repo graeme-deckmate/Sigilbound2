@@ -5,6 +5,7 @@
  */
 import type { BattleEvent } from './battle.ts';
 import { ENEMY_STATUSES, PLAYER_STATUSES } from '../data/statuses.ts';
+import { REACTIONS, SURGE_TABLE } from '../data/wheel.ts';
 import { ELEMENTS } from '../data/elements.ts';
 import type { ElementId } from '../core/state.ts';
 
@@ -105,6 +106,14 @@ export function battleLine(
       return `The veil echoes back: ${String(event.amount)}.`;
     case 'ambush':
       return 'You are set upon!';
+    case 'reaction': {
+      const def = Object.values(REACTIONS).find((r) => r.id === event.reaction);
+      return def ? def.line : null;
+    }
+    case 'surge': {
+      const def = SURGE_TABLE.find((d) => d.id === event.id);
+      return def ? def.line : null;
+    }
     case 'sealedHit':
       return event.key
         ? `The seal holds. ${elementLabel(event.key)} would crack it.`

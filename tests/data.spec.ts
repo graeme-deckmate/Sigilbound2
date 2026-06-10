@@ -16,13 +16,13 @@ import { DIALOGUE } from '../src/data/dialogue.ts';
 import { SHRINE_IDS } from '../src/data/constants.ts';
 
 describe('table completeness', () => {
-  it('has 5 elements, 5 forms, 6 runes', () => {
+  it('has 5 elements, 5 forms, 12 runes (6 + wyrd + 5 relics)', () => {
     expect(ELEMENT_IDS).toHaveLength(5);
     expect(FORM_IDS).toHaveLength(5);
-    expect(RUNE_IDS).toHaveLength(6);
+    expect(RUNE_IDS).toHaveLength(12);
     expect(Object.keys(ELEMENTS)).toHaveLength(5);
     expect(Object.keys(FORMS)).toHaveLength(5);
-    expect(Object.keys(RUNES)).toHaveLength(6);
+    expect(Object.keys(RUNES)).toHaveLength(12);
   });
 
   it('has 13 enemy species (12 + glimmerkin) and 4 bosses', () => {
@@ -32,11 +32,11 @@ describe('table completeness', () => {
     expect(Object.keys(BOSSES)).toHaveLength(4);
   });
 
-  it('covers 16 unlock entries: 5 elements + 5 forms + 6 runes', () => {
-    expect(UNLOCKS).toHaveLength(16);
+  it('covers 22 unlock entries: 5 elements + 5 forms + 12 runes', () => {
+    expect(UNLOCKS).toHaveLength(22);
     expect(UNLOCKS.filter((u) => u.kind === 'element')).toHaveLength(5);
     expect(UNLOCKS.filter((u) => u.kind === 'form')).toHaveLength(5);
-    expect(UNLOCKS.filter((u) => u.kind === 'rune')).toHaveLength(6);
+    expect(UNLOCKS.filter((u) => u.kind === 'rune')).toHaveLength(12);
   });
 });
 

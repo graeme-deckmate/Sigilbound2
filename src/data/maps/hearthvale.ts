@@ -100,6 +100,11 @@ export const hearthvale = {
       "x": 17,
       "y": 29,
       "dialogue": "hearthvale_3"
+    },
+    {
+      "x": 31,
+      "y": 5,
+      "dialogue": "hearthvale_wheel_sign"
     }
   ],
   "lore": [

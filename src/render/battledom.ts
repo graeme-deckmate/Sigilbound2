@@ -65,8 +65,11 @@ export function showBattle(visible: boolean): void {
   }
 }
 
-export function setLog(text: string): void {
-  el('blog').textContent = text;
+export function setLog(text: string, tone?: 'reaction' | 'surge'): void {
+  const log = el('blog');
+  log.textContent = text;
+  log.classList.toggle('tone-reaction', tone === 'reaction');
+  log.classList.toggle('tone-surge', tone === 'surge');
 }
 
 /* ---------- enemy rows ---------- */

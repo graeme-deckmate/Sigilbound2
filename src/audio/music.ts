@@ -84,6 +84,20 @@ export const TRACKS: Record<MusicId, TrackDef> = {
     bass: [48, N, N, N, 52, N, N, N, 55, N, N, N, 48, N, N, N],
     lead: [72, N, N, N, 71, N, 67, N, 69, N, N, N, 72, N, N, N],
   },
+  sanctum: {
+    bpm: 70,
+    bassWave: 'sine',
+    leadWave: 'triangle',
+    bass: [33, N, N, N, N, N, 36, N, 31, N, N, N, N, N, 38, N],
+    lead: [69, N, N, N, 68, N, N, N, N, N, 64, N, 66, N, N, N],
+  },
+  hollowwarden: {
+    bpm: 156,
+    bassWave: 'square',
+    leadWave: 'square',
+    bass: [31, 31, N, 31, 34, N, 31, N, 30, 30, N, 30, 31, N, 36, N],
+    lead: [67, N, 70, N, 67, N, 66, N, 67, N, 70, N, 74, N, 72, N],
+  },
 };
 
 const BASS_VOL = 0.045;

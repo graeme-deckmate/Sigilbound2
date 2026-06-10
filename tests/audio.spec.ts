@@ -21,8 +21,10 @@ describe('audio manifest coverage', () => {
       'battle',
       'boss',
       'ending',
+      'sanctum',
+      'hollowwarden',
     ]);
-    expect(SFX_IDS).toHaveLength(18);
+    expect(SFX_IDS).toHaveLength(26);
   });
 
   it('the synth covers every SFX id', () => {

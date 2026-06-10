@@ -56,5 +56,11 @@
   "elder_start_south": {
     "speaker": "ELDER",
     "pages": ["Start south. Even a Gloop will test a new wisp."]
+  },
+  "twins_gossip_wheel": {
+    "speaker": "TWIN",
+    "pages": [
+      "Burn, frost, shock, thorn, gloom. Each one cashes in the one before. Gran called it the Wheel."
+    ]
   }
 }

@@ -32,6 +32,7 @@ export interface BattleResult {
   levelsGained: number[];
   essenceGained: number;
   essenceLost: number;
+  masteryTierUps: { element: ElementId; tier: 1 | 2 | 3 }[];
   bossId?: BossId;
 }
 
@@ -349,7 +350,9 @@ export class BattleScene extends Phaser.Scene {
       this.animate(event);
       const line = battleLine(event, this.names, this.isBoss);
       if (line !== null) {
-        await this.say(line);
+        const tone =
+          event.kind === 'reaction' ? 'reaction' : event.kind === 'surge' ? 'surge' : undefined;
+        await this.say(line, tone);
       } else if (event.kind === 'enemyHit') {
         await this.wait(SILENT_BEAT_MS);
       }
@@ -558,6 +561,29 @@ export class BattleScene extends Phaser.Scene {
         playSfx('encounter');
         if (this.motionOk) this.cameras.main.shake(140, 0.006);
         break;
+      case 'reaction': {
+        playSfx('reaction');
+        const sprite = this.sprites.get(event.index);
+        if (sprite) {
+          burst(this, sprite.x, sprite.y - sprite.displayHeight / 2, '#9d7bff');
+          if (event.amount !== undefined) {
+            this.floaters.spawn(
+              sprite.x,
+              sprite.y - sprite.displayHeight,
+              String(event.amount),
+              '#b07ce8',
+              true,
+            );
+          }
+        }
+        bdom.updateEnemyRows(event.ui.enemies);
+        break;
+      }
+      case 'surge':
+        playSfx('surge');
+        if (event.severity === 'severe' && this.motionOk) this.cameras.main.shake(160, 0.006);
+        this.refreshHudFrom(event.ui);
+        break;
       case 'sealedHit':
         playSfx('deny');
         break;
@@ -584,8 +610,8 @@ export class BattleScene extends Phaser.Scene {
     }
   }
 
-  private say(text: string): Promise<void> {
-    bdom.setLog(text);
+  private say(text: string, tone?: 'reaction' | 'surge'): Promise<void> {
+    bdom.setLog(text, tone);
     const speed = TEXT_SPEED_MULT[this.params.state.settings.textSpeed] ?? 1;
     return this.wait(Math.max(SAY_MIN_MS, SAY_PER_CHAR_MS * text.length) * speed);
   }
@@ -601,10 +627,8 @@ export class BattleScene extends Phaser.Scene {
   private async finish(): Promise<void> {
     this.finishing = true;
     const phase = this.battle.phase;
-    const { state, xpGained, levelsGained, essenceGained, essenceLost } = commitBattle(
-      this.params.state,
-      this.battle,
-    );
+    const { state, xpGained, levelsGained, essenceGained, essenceLost, masteryTierUps } =
+      commitBattle(this.params.state, this.battle);
     const outcome: BattleResult['outcome'] =
       phase === 'victory' ? 'victory' : phase === 'defeat' ? 'defeat' : 'fled';
     await this.wait(350);
@@ -618,6 +642,7 @@ export class BattleScene extends Phaser.Scene {
         levelsGained,
         essenceGained,
         essenceLost,
+        masteryTierUps,
         bossId: this.params.bossId,
       });
       this.scene.wake('World');

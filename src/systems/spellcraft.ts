@@ -5,6 +5,7 @@
  */
 import type { ElementId, Spell } from '../core/state.ts';
 import { COMBAT } from '../data/constants.ts';
+import { ASPECT, MASTERY, masteryTier, SURGE } from '../data/wheel.ts';
 import { ELEMENTS } from '../data/elements.ts';
 import { FORMS, type Targeting } from '../data/forms.ts';
 import { RUNES } from '../data/runes.ts';
@@ -16,6 +17,17 @@ export function makeSpell(
   p: number = COMBAT.potencyDefault,
 ): Spell {
   return { element, form, rune, p };
+}
+
+/**
+ * Casting context for the v1.1 modifiers. Everything defaults off so
+ * v1.0 call sites and the Grimoire's bare previews stay exact.
+ */
+export interface CastMods {
+  /** Mastery points in the spell's element (tiers from data/wheel). */
+  mastery?: number;
+  /** The battle's snapshotted Vale Aspect element. */
+  aspect?: import('../core/state.ts').ElementId | null;
 }
 
 /**
@@ -56,14 +68,14 @@ export function sanitizeGivenName(raw: string): string | null {
   return t.length >= 1 ? t : null;
 }
 
-/** MP cost: max(2, round(6 * form.mp * rune.mp * potCost(p))). */
-export function spellCost(spell: Spell): number {
+/** MP cost: max(2, round(6 * form.mp * rune.mp * potCost(p))).
+ *  Mastery tier 3 takes 1 MP off the spell's element (min 2 holds). */
+export function spellCost(spell: Spell, mods: CastMods = {}): number {
   const form = FORMS[spell.form];
   const rune = RUNES[spell.rune];
-  return Math.max(
-    COMBAT.costMin,
-    Math.round(COMBAT.costBase * form.mp * rune.mp * potCost(spell.p)),
-  );
+  let cost = Math.round(COMBAT.costBase * form.mp * rune.mp * potCost(spell.p));
+  if (masteryTier(mods.mastery ?? 0) >= 3) cost += MASTERY.tier3CostDelta;
+  return Math.max(COMBAT.costMin, cost);
 }
 
 /** 1 + (lv - 1) * 0.22 */
@@ -75,11 +87,14 @@ function levelScale(lv: number): number {
  * Rounded per-hit power before variance, element multiplier, and crit.
  * This is also the number the Grimoire displays.
  */
-export function spellPower(spell: Spell, lv: number): number {
+export function spellPower(spell: Spell, lv: number, mods: CastMods = {}): number {
   const form = FORMS[spell.form];
   const rune = RUNES[spell.rune];
   let power = COMBAT.basePower * form.pw * (rune.pw ?? 1) * spell.p * levelScale(lv);
   if (rune.hits !== undefined) power *= rune.pwEach ?? 1;
+  // v1.1 modifiers: mastery tier 1 and the Vale Aspect favor the element.
+  if (masteryTier(mods.mastery ?? 0) >= 1) power *= MASTERY.tier1PowerMult;
+  if (mods.aspect && mods.aspect === spell.element) power *= ASPECT.powerMult;
   return Math.round(power);
 }
 
@@ -88,10 +103,24 @@ export function spellHits(spell: Spell): number {
   return RUNES[spell.rune].hits ?? 1;
 }
 
-/** Status proc chance: clamp(element.proc + rune bonus, 0, 0.95). */
-export function spellProc(spell: Spell): number {
-  const raw = ELEMENTS[spell.element].proc + (RUNES[spell.rune].procBonus ?? 0);
+/** Status proc chance: clamp(element.proc + rune bonus + v1.1 bonuses, 0, 0.95). */
+export function spellProc(spell: Spell, mods: CastMods = {}): number {
+  let raw = ELEMENTS[spell.element].proc + (RUNES[spell.rune].procBonus ?? 0);
+  if (masteryTier(mods.mastery ?? 0) >= 2) raw += MASTERY.tier2ProcBonus;
+  if (mods.aspect && mods.aspect === spell.element) raw += ASPECT.procBonus;
   return Math.min(COMBAT.procCap, Math.max(0, raw));
+}
+
+/**
+ * Does this cast roll the surge table (03 section 18)? Wyrd always;
+ * Greedy potency (>= 1.30) while the element sits below mastery tier 2;
+ * always-stable runes (wraithmark) never do unless they are Wyrd.
+ */
+export function castSurges(spell: Spell, masteryPoints: number): boolean {
+  const rune = RUNES[spell.rune];
+  if (rune.surges) return true;
+  if (rune.alwaysStable) return false;
+  return spell.p >= SURGE.greedyAt && masteryTier(masteryPoints) < 2;
 }
 
 /** Crit profile; keen overrides the base. Ignored for Veil casts. */

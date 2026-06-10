@@ -10,6 +10,9 @@ export const MUSIC_IDS = [
   'battle',
   'boss',
   'ending',
+  /* v1.1 (Act 4 maps land in Phase 14; tracks ship with the manifest) */
+  'sanctum',
+  'hollowwarden',
 ] as const;
 export type MusicId = (typeof MUSIC_IDS)[number];
 
@@ -32,5 +35,14 @@ export const SFX_IDS = [
   'unlock',
   'step_grass',
   'boss_telegraph',
+  /* v1.1 additions (03 section 11) */
+  'reaction',
+  'surge',
+  'gate_open',
+  'essence_pickup',
+  'scroll_cast',
+  'commission_done',
+  'summon',
+  'mastery_tier',
 ] as const;
 export type SfxId = (typeof SFX_IDS)[number];

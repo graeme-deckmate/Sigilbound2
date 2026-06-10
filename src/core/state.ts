@@ -6,7 +6,21 @@
 
 export type ElementId = 'ember' | 'rime' | 'volt' | 'thorn' | 'gloom';
 export type FormId = 'wisp' | 'bolt' | 'lance' | 'nova' | 'veil';
-export type RuneId = 'none' | 'fury' | 'thirst' | 'echo' | 'hex' | 'keen';
+export type RuneId =
+  | 'none'
+  | 'fury'
+  | 'thirst'
+  | 'echo'
+  | 'hex'
+  | 'keen'
+  /* v1.1: peddler trade */
+  | 'wyrd'
+  /* v1.1: hidden relic runes, one rule-bend each (03 section 3) */
+  | 'emberglass'
+  | 'stillwater'
+  | 'stormcoil'
+  | 'hollowlight'
+  | 'wraithmark';
 
 export type MapId = 'hearth' | 'hearthvale' | 'westwood' | 'ashenreach' | 'northhollow';
 

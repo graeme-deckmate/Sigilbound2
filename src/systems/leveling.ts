@@ -74,6 +74,7 @@ export function isUnlocked(
   lv: number,
   shrines: ShrineFlags,
   starter: ElementId | null = null,
+  flags: Record<string, boolean> = {},
 ): boolean {
   const t = def.trigger;
   switch (t.type) {
@@ -85,6 +86,8 @@ export function isUnlocked(
       return shrines[t.shrine];
     case 'starter':
       return lv >= starterLevel(def, starter);
+    case 'flag':
+      return flags[t.flag] === true;
   }
 }
 
@@ -94,8 +97,9 @@ export function unlockedIds(
   lv: number,
   shrines: ShrineFlags,
   starter: ElementId | null = null,
+  flags: Record<string, boolean> = {},
 ): string[] {
-  return UNLOCKS.filter((u) => u.kind === kind && isUnlocked(u, lv, shrines, starter)).map(
+  return UNLOCKS.filter((u) => u.kind === kind && isUnlocked(u, lv, shrines, starter, flags)).map(
     (u) => u.id,
   );
 }
@@ -138,5 +142,7 @@ export function unlockHint(def: UnlockDef, starter: ElementId | null = null): st
       return `Pray at the ${t.region} shrine.`;
     case 'starter':
       return `Reach Lv ${String(starterLevel(def, starter))}`;
+    case 'flag':
+      return t.hint;
   }
 }

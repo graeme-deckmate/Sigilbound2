@@ -14,5 +14,12 @@
   "lore_vale": {
     "speaker": "LORE STONE",
     "pages": ["Four Wardens kept the Vale. Marsh, Wood, Ash... and Hollow."]
+  },
+  "hearthvale_wheel_sign": {
+    "speaker": "SIGNPOST",
+    "pages": [
+      "Burning things fear the frost. Frosted things fear the shock.",
+      "So it goes, all the way around."
+    ]
   }
 }

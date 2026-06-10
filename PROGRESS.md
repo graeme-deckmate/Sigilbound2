@@ -4,8 +4,8 @@ Claude Code: read this first every session. Update it before you stop. Keep entr
 
 ## Status
 
-Current phase: **Phase 11 complete. Next: Phase 12 (The Vale's Wheel).**
-Last session: 2026-06-10 (Phase 11: curve, variance, economy foundations)
+Current phase: **Phase 12 complete. Next: Phase 13 (the discovery layer).**
+Last session: 2026-06-10 (Phase 12: The Vale's Wheel)
 Deployed URL: - (awaiting GitHub repo push + Pages enable; see Setup needed)
 
 ## Phase checklist
@@ -22,7 +22,7 @@ Deployed URL: - (awaiting GitHub repo push + Pages enable; see Setup needed)
 - [x] Phase 9: Balance, polish, ship prep (push + Pages + phone test pending, needs Grae's GitHub)
 - [x] Owner additions (Grae, 2026-06-10): boss teleporters home; title Continue / New Game
 - [x] Phase 11: Curve, variance, economy foundations (Grae playtest of starter feel + essence forfeiture pending)
-- [ ] Phase 12: The Vale's Wheel (v1.1)
+- [x] Phase 12: The Vale's Wheel (reactions live in Grae's running playtest; watch for the violet line)
 - [ ] Phase 13: The discovery layer (v1.1)
 - [ ] Phase 14: Act 4, twins, summons (v1.1)
 - [ ] Phase 15: NG+, polish, re-ship (v1.1)
@@ -137,6 +137,13 @@ Deployed URL: - (awaiting GitHub repo push + Pages enable; see Setup needed)
   - MP 26 + the XP reshape re-passed every v1.0 window unchanged (Wraith 84%/17%, Wardens, zone floors all green).
 - 2026-06-10 (Phase 11, Grae playtest fix): the level-up unlock toast read the wrong element on non-ember runs; World.afterBattle was the one call site still calling unlocksAtLevel without the starter (the Grimoire was always right). Fixed, and unlockToastText moved from the scene into systems/leveling so the full toast path is unit-tested per starter (a rime run toasts THORN at 2, EMBER at 6).
 - 2026-06-10 (Phase 11) sim notes: RNG-cliff asserted on hearthvale.meadow (the smoothing lever per 03 section 6; marsh is designed to sting early so it sits outside the flatness window); early kits are the literal Elder gift (starter wisp+bolt) plus backfill bolts; Bogmaw fairness uses Lv 4 weakness-aware play per starter. New elite/ambush/glimmer draw orders documented in elites.spec headers.
+
+- 2026-06-10 (Phase 12): The Wheel lives in the reducer: per-hit deterministic check (element E vs the status before E), consumes the setup unless the Stormcoil holds it, one reaction per hit, Echo hit 1 reacts and hit 2 re-applies, and a reaction cracks Sealed elites. Exact effects per 03 section 14 with the withered amp captured BEFORE consumption so Kindle still benefits from the Withered it spends (the "reaction portions are amped like any damage" clause). Final log copy; reaction events carry their own SFX, violet log tone, and burst FX. 14 reducer tests cover all five plus the exceptions.
+- 2026-06-10 (Phase 12): Surges: one d10 per qualifying cast (wyrd always; potency >= 1.30 below mastery tier 2; wraithmark always stable), rolled on the battle stream after the spell fully resolves, never into a won battle. Table is data; echo-of-the-echo recasts as contained typed hits (no procs, no reactions, no second surge: interpretation noted), the dark collects emits a visible playerHit and floors at 1 HP. Deterministic-per-seed test included.
+- 2026-06-10 (Phase 12): Mastery: battle tracks elements that landed hits; victory commits +1 each (cap 50) and reports tier-ups for toasts + mastery_tier SFX. Tier 1 +5% power, tier 2 +10% proc + greedy stability, tier 3 -1 MP (floor 2) all live in spellcraft as optional CastMods so every v1.0 call site stays exact. Grimoire gained a MASTERY tab (five element bars, tier pips); previews and the cost ledger are mastery-aware (ledger shows "mastery -1" at tier 3).
+- 2026-06-10 (Phase 12): Vale Aspects: rotateAspect (pure, seeded, never repeats) fires on shrine and spring rests; battles snapshot the aspect at init. Ascendant element: player spells x1.10 power / +0.10 proc, enemy riders of its status +0.10, and that element's DoTs tick +10% on BOTH sides (the 03 sentence scopes DoTs under the enemy clause; implemented symmetric and flagged here). HUD shows a rotated-square glyph in the element color; toast "The Vale leans toward X."
+- 2026-06-10 (Phase 12): Data: wyrd + all five relic runes shipped as data with flag-trigger unlocks and the 03 section 5 hint strings ("Murk trades in such things." / "Sealed behind an old gate." / "The Sanctum remembers."); only stormcoil's rule-bend is ACTIVE (Phase 12 acceptance); emberglass/stillwater/hollowlight/wraithmark effects land with their caches in Phase 13/14 (wraithmark's alwaysStable flag participates in the surge gate already). Audio manifest extended to the full v1.1 set (8 new SFX recipes, sanctum + hollowwarden synth loops). Teaching copy: twin_b rotates to the Wheel line post-Bogmaw; one new hearthvale signpost authored per tone rules.
+- 2026-06-10 (Phase 12): Sim: reaction-aware policy (detonate waiting setups, open wheel pairs against the healthiest target, potency 1.25 kit below the greedy line, weakness-aware fallback brain) beats weakness-aware on summed Act 2 pack median turns, per 02's "reactions pay". All prior windows re-pass untouched (261 tests).
 
 ## Questions for Grae
 

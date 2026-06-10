@@ -9,8 +9,10 @@ import {
   facingPos,
   interactionFor,
   npcDialogueId,
+  rotateAspect,
   sigilCount,
 } from '../src/systems/worldstate.ts';
+import { mulberry32 } from '../src/core/rng.ts';
 
 describe('facingPos', () => {
   it('offsets one tile in the facing direction', () => {
@@ -125,5 +127,39 @@ describe('teleporters (fallen bosses leave a way home)', () => {
     expect(next.world.mapId).toBe('hearth');
     expect(next.world.x).toBe(hearth.spawn.x);
     expect(next.world.y).toBe(hearth.spawn.y);
+  });
+});
+
+describe('Vale Aspect rotation (v1.1, 03 section 25)', () => {
+  it('rotates on a seeded roll and never repeats the current element', () => {
+    let gs = newGame();
+    const rng = mulberry32(77);
+    const seen = new Set<string>();
+    let prev = gs.world.aspect;
+    for (let i = 0; i < 200; i++) {
+      gs = rotateAspect(gs, rng);
+      expect(gs.world.aspect).not.toBeNull();
+      expect(gs.world.aspect).not.toBe(prev);
+      prev = gs.world.aspect;
+      if (gs.world.aspect) seen.add(gs.world.aspect);
+    }
+    expect(seen.size).toBe(5); // every element ascends eventually
+  });
+
+  it('is deterministic for a fixed seed', () => {
+    const a = rotateAspect(newGame(), mulberry32(5)).world.aspect;
+    const b = rotateAspect(newGame(), mulberry32(5)).world.aspect;
+    expect(a).toBe(b);
+  });
+});
+
+describe('the second twin teaches the Wheel after Act 1 (03 section 26)', () => {
+  it('twin_b keeps gossip before Bogmaw, teaches the Wheel after', () => {
+    const gs = newGame();
+    expect(npcDialogueId('twin_b', 'twins_gossip_b', gs)).toBe('twins_gossip_b');
+    gs.world.bosses.bogmaw = true;
+    expect(npcDialogueId('twin_b', 'twins_gossip_b', gs)).toBe('twins_gossip_wheel');
+    // the first twin is unaffected
+    expect(npcDialogueId('twin_a', 'twins_gossip_a', gs)).toBe('twins_gossip_a');
   });
 });

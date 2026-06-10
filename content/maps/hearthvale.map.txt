@@ -9,6 +9,7 @@
 @sign 28,4 dialogue:hearthvale_1
 @sign 33,22 dialogue:hearthvale_2
 @sign 17,29 dialogue:hearthvale_3
+@sign 31,5 dialogue:hearthvale_wheel_sign
 @lore 50,8 dialogue:lore_vale
 @spring 45,12
 @shrine fury 4,36

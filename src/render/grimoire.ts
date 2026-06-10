@@ -26,6 +26,8 @@ import {
 } from '../systems/spellcraft.ts';
 import { COMBAT } from '../data/constants.ts';
 import { ESSENCE } from '../data/essence.ts';
+import { MASTERY, masteryTier } from '../data/wheel.ts';
+import type { CastMods } from '../systems/spellcraft.ts';
 import { toast } from './dom.ts';
 import { playSfx } from '../audio/synth.ts';
 
@@ -45,7 +47,7 @@ let ctx: GrimoireCtx | null = null;
 const sel: Spell = { element: 'ember', form: 'bolt', rune: 'none', p: 1 };
 let givenName = '';
 let closeBound = false;
-let page: 'spells' | 'notes' = 'spells';
+let page: 'spells' | 'notes' | 'mastery' = 'spells';
 
 export function isGrimoireOpen(): boolean {
   return ctx !== null;
@@ -76,6 +78,11 @@ export function openGrimoire(context: GrimoireCtx): void {
       page = 'notes';
       rebuild();
     });
+    el('tabMastery').addEventListener('click', () => {
+      playSfx('select');
+      page = 'mastery';
+      rebuild();
+    });
     const slider = el<HTMLInputElement>('potency');
     slider.addEventListener('input', () => {
       sel.p = Number(slider.value) / 100;
@@ -103,10 +110,11 @@ function unlocked(): { elements: string[]; forms: string[]; runes: string[] } {
   const lv = ctx.state.player.lv;
   const shrines: ShrineFlags = ctx.state.world.shrines;
   const starter = ctx.state.player.starter;
+  const flags = ctx.state.world.flags;
   return {
-    elements: unlockedIds('element', lv, shrines, starter),
-    forms: unlockedIds('form', lv, shrines, starter),
-    runes: unlockedIds('rune', lv, shrines, starter),
+    elements: unlockedIds('element', lv, shrines, starter, flags),
+    forms: unlockedIds('form', lv, shrines, starter, flags),
+    runes: unlockedIds('rune', lv, shrines, starter, flags),
   };
 }
 
@@ -120,15 +128,51 @@ function rebuild(): void {
   el('essChip').textContent = `✦ ${String(ctx.state.player.essence)} essence`;
   el('tabSpells').classList.toggle('sel', page === 'spells');
   el('tabNotes').classList.toggle('sel', page === 'notes');
+  el('tabMastery').classList.toggle('sel', page === 'mastery');
   el('spellsPage').style.display = page === 'spells' ? 'block' : 'none';
   el('notesPage').style.display = page === 'notes' ? 'block' : 'none';
+  el('masteryPage').style.display = page === 'mastery' ? 'block' : 'none';
   if (page === 'notes') {
     buildNotes();
+    return;
+  }
+  if (page === 'mastery') {
+    buildMastery();
     return;
   }
   buildChips();
   refreshPreviewInfo();
   buildSlots();
+}
+
+/** Mastery page: five element bars with tier pips (03 section 17). */
+function buildMastery(): void {
+  if (!ctx) return;
+  const wrap = el('masteryList');
+  wrap.replaceChildren(
+    ...ELEMENT_IDS.map((id) => {
+      const points = ctx?.state.player.mastery[id] ?? 0;
+      const tier = masteryTier(points);
+      const row = document.createElement('div');
+      row.className = 'mrow';
+      const label = document.createElement('span');
+      label.className = 'mlabel';
+      label.style.color = ELEMENTS[id].color;
+      label.textContent = ELEMENTS[id].label;
+      const bar = document.createElement('span');
+      bar.className = 'mbar';
+      const fill = document.createElement('i');
+      fill.style.width = `${String(Math.round((points / MASTERY.cap) * 100))}%`;
+      fill.style.background = ELEMENTS[id].color;
+      bar.appendChild(fill);
+      const pips = document.createElement('span');
+      pips.className = 'mpips';
+      pips.textContent = `${'◆'.repeat(tier)}${'◇'.repeat(3 - tier)} ${String(points)}`;
+      pips.title = `Tier ${String(tier)} (${String(points)}/${String(MASTERY.cap)})`;
+      row.append(label, bar, pips);
+      return row;
+    }),
+  );
 }
 
 /** Notes page scaffold (v1.1): Phase 13 fills state.notes. */
@@ -215,6 +259,8 @@ function refreshPreviewInfo(): void {
   const form = FORMS[spell.form];
   const given = sanitizeGivenName(givenName);
   el('pvname').textContent = given ? `${given} (${spellName(spell)})` : spellName(spell);
+  const mods: CastMods = { mastery: ctx.state.player.mastery[spell.element] ?? 0 };
+  const tier = masteryTier(mods.mastery ?? 0);
 
   // Potency slider readout + the full cost ledger (02: the cost is a
   // conversation, never a surprise).
@@ -222,9 +268,11 @@ function refreshPreviewInfo(): void {
   el('potencyV').textContent = `x${sel.p.toFixed(2)}`;
   el('potLedger').textContent =
     `${String(COMBAT.costBase)} base · form x${String(form.mp)} · rune x${String(rune.mp)}` +
-    ` · potency x${potCost(sel.p).toFixed(2)} = ${String(spellCost(spell))} MP`;
+    ` · potency x${potCost(sel.p).toFixed(2)}` +
+    (tier >= 3 ? ' · mastery -1' : '') +
+    ` = ${String(spellCost(spell, mods))} MP`;
 
-  const cost = `Cost <b style="color:var(--mp)">${String(spellCost(spell))} MP</b>`;
+  const cost = `Cost <b style="color:var(--mp)">${String(spellCost(spell, mods))} MP</b>`;
   const statusName = ENEMY_STATUSES[element.status].label;
   let main: string;
   const notes: string[] = [];
@@ -240,8 +288,10 @@ function refreshPreviewInfo(): void {
     if (rune.crit) notes.push('Keen has no effect on a veil');
   } else {
     const hits = spellHits(spell) > 1 ? ' ×2' : '';
-    main = `Power <b style="color:${element.color}">${String(spellPower(spell, lv))}${hits}</b> · ${cost}`;
-    notes.push(`${String(Math.round(spellProc(spell) * 100))}% to leave the foe ${statusName}`);
+    main = `Power <b style="color:${element.color}">${String(spellPower(spell, lv, mods))}${hits}</b> · ${cost}`;
+    notes.push(
+      `${String(Math.round(spellProc(spell, mods) * 100))}% to leave the foe ${statusName}`,
+    );
     if (spellTargeting(spell) === 'all') notes.push('hits all enemies');
     if (rune.hits !== undefined) notes.push('strikes twice');
     if (rune.healFrac !== undefined)

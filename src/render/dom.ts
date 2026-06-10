@@ -86,6 +86,19 @@ export function showTouchControls(visible: boolean): void {
   }
 }
 
+/** Small ascendant-element glyph in the HUD (03 section 25). */
+export function setAspectGlyph(element: string | null, color: string | null): void {
+  const glyph = document.getElementById('haspect');
+  if (!glyph) return;
+  if (!element || !color) {
+    glyph.style.display = 'none';
+    return;
+  }
+  glyph.style.display = 'inline-block';
+  glyph.style.background = color;
+  glyph.title = `The Vale leans toward ${element[0]?.toUpperCase() ?? ''}${element.slice(1)}`;
+}
+
 /** Brief red flash on the battle panel when the player is hit. */
 export function flashPanel(): void {
   const p = el('bpanel');
