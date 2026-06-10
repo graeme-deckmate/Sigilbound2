@@ -15,12 +15,10 @@ import { MAPS } from '../data/maps/index.ts';
 import { TILE } from '../data/constants.ts';
 import { DIALOGUE } from '../data/dialogue.ts';
 import { ELEMENTS } from '../data/elements.ts';
-import { FORMS } from '../data/forms.ts';
 import { RUNES } from '../data/runes.ts';
 import { BOSSES } from '../data/enemies.ts';
 import { SCRIPTED_BATTLES } from '../data/triggers.ts';
-import { maxHpAt, maxMpAt, unlocksAtLevel, xpNext } from '../systems/leveling.ts';
-import type { UnlockDef } from '../data/unlocks.ts';
+import { maxHpAt, maxMpAt, unlockToastText, unlocksAtLevel, xpNext } from '../systems/leveling.ts';
 import type { BattleResult } from './Battle.ts';
 import { resolveStep, type EncounterRoll } from '../systems/encounters.ts';
 import {
@@ -47,17 +45,6 @@ import type { MusicId } from '../data/audio.ts';
 
 const STEP_MS = 160;
 const ANIM_MS = 380;
-
-function unlockToastText(unlock: UnlockDef): string {
-  switch (unlock.kind) {
-    case 'element':
-      return `Element unlocked: ${ELEMENTS[unlock.id].label.toUpperCase()}`;
-    case 'form':
-      return `Form unlocked: ${FORMS[unlock.id].label.toUpperCase()}`;
-    case 'rune':
-      return `Rune unlocked: ${RUNES[unlock.id].label.toUpperCase()}`;
-  }
-}
 
 /** One session-stable seed stream for overworld rolls; battles derive
  *  their own seeds from it via the battle counter. */
@@ -598,7 +585,7 @@ export class WorldScene extends Phaser.Scene {
         () => {
           playSfx('levelup');
           dom.toast(`★ Level ${String(lv)}! Fully restored.`);
-          for (const unlock of unlocksAtLevel(lv)) {
+          for (const unlock of unlocksAtLevel(lv, this.state.player.starter)) {
             setTimeout(() => {
               playSfx('unlock');
               dom.toast(`✦ ${unlockToastText(unlock)}`, true);

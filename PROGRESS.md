@@ -135,12 +135,13 @@ Deployed URL: - (awaiting GitHub repo push + Pages enable; see Setup needed)
   - gloop resist ['thorn'] -> []: the thorn starter's meadow cliff (gloop dominates early rolls; resisted starts sat 11.5 points under the Lv 3-4 rate vs the 10-point window). Gloop keeps weak ember+volt.
   - bogmaw weak ['ember'] -> ['ember','thorn']: starter fairness (rime starters are the only path without ember by Lv 4; spread was 10.5 points vs the 8-point window). With thorn added, every starter path holds a Bogmaw weakness by Lv 4 (rime gets thorn at Lv 2). Spread now within window, all starters >= 80%.
   - MP 26 + the XP reshape re-passed every v1.0 window unchanged (Wraith 84%/17%, Wardens, zone floors all green).
+- 2026-06-10 (Phase 11, Grae playtest fix): the level-up unlock toast read the wrong element on non-ember runs; World.afterBattle was the one call site still calling unlocksAtLevel without the starter (the Grimoire was always right). Fixed, and unlockToastText moved from the scene into systems/leveling so the full toast path is unit-tested per starter (a rime run toasts THORN at 2, EMBER at 6).
 - 2026-06-10 (Phase 11) sim notes: RNG-cliff asserted on hearthvale.meadow (the smoothing lever per 03 section 6; marsh is designed to sting early so it sits outside the flatness window); early kits are the literal Elder gift (starter wisp+bolt) plus backfill bolts; Bogmaw fairness uses Lv 4 weakness-aware play per starter. New elite/ambush/glimmer draw orders documented in elites.spec headers.
 
 ## Questions for Grae
 
 - **Q2 interpretation check (v1.1):** your answer "should remove the 2 old statuses" was read as: a Wheel reaction CONSUMES its setup status (and in Snare/Kindle the old status is gone, replaced by the new one). Spec'd that way in 03 section 14. If you meant something else (e.g. removing two of the five v1.0 statuses from the game entirely), flag it before Phase 12 builds the reducer.
-- **Essence forfeiture (v1.1):** IMPLEMENTED AS SPEC'D and live in your build: one marker, second death forfeits the older drop. Please feel it out in the playtest (die in the marsh twice without recovering); say the word if it should stack or persist instead.
+- **Essence forfeiture (v1.1):** implemented as spec'd; Grae's playtest verdict 2026-06-10: "Essence drop on death is fun." Keeping one-marker forfeiture as written; revisit only if the second-death forfeit ever stings in a way the fun does not cover.
 - **Phase 11 tuning to bless into 03:** gloop lost its thorn resist and Bogmaw gained a thorn weakness (full rationale in the tuning log). Both are starter-fairness fixes the 02 assertions forced; fold them into 03's tables or tell me to find different levers.
 - **Summon unlock placement (v1.1):** Call is granted at the FIRST trial cleared, any order, so the rest of the Sanctum gets to use it. If you would rather it be a Hollow Warden reward, say so before Phase 14.
 

@@ -14,6 +14,9 @@ import {
   XP_SCALE,
 } from '../data/progression.ts';
 import { isStarterElement, starterElementLevel, UNLOCKS, type UnlockDef } from '../data/unlocks.ts';
+import { ELEMENTS } from '../data/elements.ts';
+import { FORMS } from '../data/forms.ts';
+import { RUNES } from '../data/runes.ts';
 
 export type PlayerState = GameState['player'];
 export type ShrineFlags = Record<ShrineId, boolean>;
@@ -109,6 +112,18 @@ export function unlocksAtLevel(lv: number, starter: ElementId | null = null): Un
 /** Parts granted by this shrine (shrine toasts). */
 export function unlocksAtShrine(shrine: ShrineId): UnlockDef[] {
   return UNLOCKS.filter((u) => u.trigger.type === 'shrine' && u.trigger.shrine === shrine);
+}
+
+/** Level-up toast copy for an unlock (used by the World scene). */
+export function unlockToastText(unlock: UnlockDef): string {
+  switch (unlock.kind) {
+    case 'element':
+      return `Element unlocked: ${ELEMENTS[unlock.id].label.toUpperCase()}`;
+    case 'form':
+      return `Form unlocked: ${FORMS[unlock.id].label.toUpperCase()}`;
+    case 'rune':
+      return `Rune unlocked: ${RUNES[unlock.id].label.toUpperCase()}`;
+  }
 }
 
 /** Locked-chip hint text (docs/03-CONTENT-DATA section 5). */

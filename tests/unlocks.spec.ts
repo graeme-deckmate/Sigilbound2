@@ -4,6 +4,7 @@ import {
   applyXp,
   unlockedIds,
   unlockHint,
+  unlockToastText,
   unlocksAtLevel,
   unlocksAtShrine,
   type ShrineFlags,
@@ -177,5 +178,25 @@ describe('starter element backfill (v1.1, 03 section 5)', () => {
     const thornDef = UNLOCKS.find((u) => u.kind === 'element' && u.id === 'thorn');
     expect(thornDef && unlockHint(thornDef, 'ember')).toBe('Reach Lv 6');
     expect(thornDef && unlockHint(thornDef, 'rime')).toBe('Reach Lv 2');
+  });
+});
+
+describe('level-up toast copy follows the starter (Grae bug, 2026-06-10)', () => {
+  it('a rime run toasts THORN at Lv 2 and EMBER at Lv 6, never RIME', () => {
+    const at2 = unlocksAtLevel(2, 'rime').map(unlockToastText);
+    expect(at2).toContain('Element unlocked: THORN');
+    expect(at2.join(' ')).not.toContain('RIME');
+    const at6 = unlocksAtLevel(6, 'rime').map(unlockToastText);
+    expect(at6).toContain('Element unlocked: EMBER');
+  });
+
+  it('an ember run toasts RIME at Lv 2; a thorn run toasts EMBER at Lv 2', () => {
+    expect(unlocksAtLevel(2, 'ember').map(unlockToastText)).toContain('Element unlocked: RIME');
+    expect(unlocksAtLevel(2, 'thorn').map(unlockToastText)).toContain('Element unlocked: EMBER');
+  });
+
+  it('the no-starter default never invents element toasts beyond ember order', () => {
+    // Defensive: a null starter reads as ember (pre-choice safety).
+    expect(unlocksAtLevel(2, null).map(unlockToastText)).toContain('Element unlocked: RIME');
   });
 });
