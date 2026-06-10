@@ -50,5 +50,16 @@
       "Enemies have weaknesses, and some of their blows linger on you. Focus restores you and cleanses the oldest mark.",
       "Signposts gossip. Springs and shrines heal you free, and you wake by the last one you touched."
     ]
+  },
+  "gate_shed_sign": {
+    "speaker": "SIGN",
+    "pages": [
+      "Old doors all over the Vale answer to plain spellcraft.",
+      "Name the element they fear, and cast it."
+    ]
+  },
+  "gate_briarfall_lore": {
+    "speaker": "LORE STONE",
+    "pages": ["Glass born in ember reads every resistance as an invitation."]
   }
 }

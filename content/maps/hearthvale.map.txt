@@ -14,6 +14,9 @@
 @spring 45,12
 @shrine fury 4,36
 @boss bogmaw 52,35
+@egate briarfall 50,32
+@egate mirepool 3,30
+@npc fisher 2,20 dialogue:fisher_base
 ---
 ##############################-#############################
 #.............................-............................#

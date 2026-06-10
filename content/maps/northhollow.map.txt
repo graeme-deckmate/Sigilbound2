@@ -11,6 +11,8 @@
 @sign 26,35 dialogue:northhollow_1
 @lore 10,29 dialogue:lore_hollow_1
 @lore 10,11 dialogue:lore_hollow_2
+@egate frozenfall 42,30
+@egate hungrydark 9,6
 ---
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

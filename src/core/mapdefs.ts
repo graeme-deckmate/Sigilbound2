@@ -102,6 +102,8 @@ export interface CompiledMap {
   lore: readonly LoreDef[];
   springs: readonly SpringDef[];
   shrines: readonly RuneShrineDef[];
+  /** Element gates (v1.1, 03 section 19): id keys into data/discovery. */
+  egates: readonly { id: string; x: number; y: number }[];
   bosses: readonly BossMarkerDef[];
   gates: readonly GateDef[];
   triggers: readonly TriggerDef[];
@@ -109,7 +111,7 @@ export interface CompiledMap {
 
 /** Solid interactable entity positions (block walking, face to use). */
 export interface EntityAt {
-  kind: 'npc' | 'sign' | 'lore' | 'spring' | 'shrine' | 'boss' | 'gate' | 'teleporter';
+  kind: 'npc' | 'sign' | 'lore' | 'spring' | 'shrine' | 'boss' | 'gate' | 'teleporter' | 'egate';
   x: number;
   y: number;
   /** dialogue id, npc id, shrine rune, or boss id depending on kind. */
@@ -131,6 +133,7 @@ export function entities(map: CompiledMap): EntityAt[] {
     ...map.shrines.map<EntityAt>((s) => ({ kind: 'shrine', x: s.x, y: s.y, ref: s.rune })),
     ...map.bosses.map<EntityAt>((b) => ({ kind: 'boss', x: b.x, y: b.y, ref: b.id })),
     ...map.gates.map<EntityAt>((g) => ({ kind: 'gate', x: g.x, y: g.y, ref: g.id })),
+    ...map.egates.map<EntityAt>((g) => ({ kind: 'egate', x: g.x, y: g.y, ref: g.id })),
   ];
 }
 

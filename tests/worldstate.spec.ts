@@ -106,7 +106,7 @@ describe('teleporters (fallen bosses leave a way home)', () => {
     expect(map).toBeDefined();
     if (!map) return;
     const entity = { kind: 'teleporter', x: 5, y: 5, ref: 'bogmaw' } as const;
-    expect(interactionFor(map, entity)).toEqual({ kind: 'teleport' });
+    expect(interactionFor(map, entity)).toEqual({ kind: 'teleport', bossId: 'bogmaw' });
   });
 
   it('the synthetic exit lands on the Hearth spawn tile', () => {

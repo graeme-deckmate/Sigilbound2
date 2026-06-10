@@ -5,7 +5,10 @@
 import type { CompiledMap, EntityAt, ExitDef } from '../core/mapdefs.ts';
 import type { BossId, Dir, ElementId, GameState, ShrineId } from '../core/state.ts';
 import type { Rng } from '../core/rng.ts';
+import type { Spell } from '../core/state.ts';
 import { ELEMENT_IDS } from '../data/elements.ts';
+import { spellTargeting } from './spellcraft.ts';
+import { GATES, gateFlag, type GateDef } from '../data/discovery.ts';
 
 export function facingPos(x: number, y: number, facing: Dir): { x: number; y: number } {
   switch (facing) {
@@ -26,13 +29,16 @@ export type Interaction =
   | { kind: 'shrine'; rune: ShrineId }
   | { kind: 'boss'; id: BossId }
   | { kind: 'gate'; id: string }
-  | { kind: 'teleport' };
+  | { kind: 'teleport'; bossId: string }
+  | { kind: 'egate'; id: string }
+  | { kind: 'murk' };
 
 /** What interacting with the faced tile means, if anything. */
 export function interactionFor(map: CompiledMap, entity: EntityAt | null): Interaction | null {
   if (!entity) return null;
   switch (entity.kind) {
     case 'npc': {
+      if (entity.ref === 'murk') return { kind: 'murk' };
       const npc = map.npcs.find((n) => n.id === entity.ref);
       return npc ? { kind: 'dialogue', id: npc.dialogue, npcId: npc.id } : null;
     }
@@ -48,7 +54,9 @@ export function interactionFor(map: CompiledMap, entity: EntityAt | null): Inter
     case 'gate':
       return { kind: 'gate', id: entity.ref };
     case 'teleporter':
-      return { kind: 'teleport' };
+      return { kind: 'teleport', bossId: entity.ref };
+    case 'egate':
+      return { kind: 'egate', id: entity.ref };
   }
 }
 
@@ -140,6 +148,52 @@ export function applySlotPurchase(
     slot,
     price,
   };
+}
+
+/** Inscribed spells that can open this gate (any matching element,
+ *  damaging forms only; 'any' gates take any damaging element). */
+export function gateOpeners(state: GameState, gate: GateDef): { slot: number; spell: Spell }[] {
+  const out: { slot: number; spell: Spell }[] = [];
+  state.player.spells.forEach((spell, slot) => {
+    if (!spell) return;
+    if (spellTargeting(spell) === 'self') return; // veils clear nothing
+    if (gate.element !== 'any' && spell.element !== gate.element) return;
+    out.push({ slot, spell });
+  });
+  return out;
+}
+
+export function gateById(id: string): GateDef | null {
+  return GATES.find((g) => g.id === id) ?? null;
+}
+
+/** Open a gate: pay the spell's MP, set the flag. Caller grants the cache. */
+export function applyGateOpen(state: GameState, gate: GateDef, cost: number): GameState | null {
+  if (state.world.flags[gateFlag(gate.id)]) return null;
+  if (state.player.mp < cost) return null;
+  return {
+    ...state,
+    player: { ...state.player, mp: state.player.mp - cost },
+    world: { ...state.world, flags: { ...state.world.flags, [gateFlag(gate.id)]: true } },
+  };
+}
+
+/** Commission predicates (03 section 21) against INSCRIBED spells. */
+export function commissionSatisfied(state: GameState, id: string): boolean {
+  const spells = state.player.spells.filter((s): s is Spell => s !== null);
+  switch (id) {
+    case 'fisher':
+      return spells.some((s) => s.element === 'ember' && s.form === 'veil');
+    case 'scout':
+      return spells.some((s) => s.element === 'volt' && s.form === 'lance' && s.p >= 1.2);
+    case 'dreamer':
+      return spells.some((s) => s.element === 'gloom' && s.form === 'nova');
+    case 'keeper':
+      // any twin-element spell (Phase 14 adds e2; absent until then)
+      return spells.some((s) => 'e2' in s && (s as { e2?: string }).e2 !== undefined);
+    default:
+      return false;
+  }
 }
 
 /** Apply a map exit: land on the target map at the target tile. */

@@ -20,8 +20,9 @@ import { ELEMENTS } from '../data/elements.ts';
 import { RUNES } from '../data/runes.ts';
 import { BOSSES, ENEMIES, type EnemyMove, type EnemySpeciesId } from '../data/enemies.ts';
 import { ENEMY_STATUSES, PLAYER_STATUSES } from '../data/statuses.ts';
-import { AFFIXES, ELITE, GLIMMERKIN, type AffixId } from '../data/elites.ts';
+import { AFFIXES, AFFIX_IDS, ELITE, GLIMMERKIN, type AffixId } from '../data/elites.ts';
 import { ESSENCE, defeatDrop } from '../data/essence.ts';
+import { CHARM, SCROLL } from '../data/discovery.ts';
 import {
   ASPECT,
   MASTERY,
@@ -78,6 +79,10 @@ export interface BattlePlayer {
   spells: (Spell | null)[];
   /** Mastery points per element, snapshotted at battle start (v1.1). */
   mastery: Record<ElementId, number>;
+  /** Equipped charm ids, snapshotted at battle start (Phase 13). */
+  charms: string[];
+  /** Carried scrolls; casting consumes one (Phase 13). */
+  scrolls: Spell[];
   /** Ordered: Focus cleanses the oldest first. No durations (PROGRESS). */
   statuses: PlayerStatusId[];
   veil: VeilState | null;
@@ -186,12 +191,20 @@ export interface BattleState {
   aspect: ElementId | null;
   /** Elements that landed at least one hit (mastery ticks on victory). */
   elementsHit: Partial<Record<ElementId, boolean>>;
+  /** Feat + bestiary tracking (Phase 13). */
+  reactionsFired: ReactionId[];
+  formsCast: string[];
+  playerTookHit: boolean;
+  severeSurges: number;
+  /** Per-species discovery captured this battle. */
+  seen: Record<string, { weak: ElementId[]; statuses: string[]; reactions: string[] }>;
   player: BattlePlayer;
   enemies: BattleEnemy[];
 }
 
 export type BattleAction =
   | { type: 'cast'; slot: number; target?: number }
+  | { type: 'scroll'; index: number; target?: number }
   | { type: 'focus' }
   | { type: 'flee' };
 
@@ -354,6 +367,11 @@ export function initBattle(
     zone,
     aspect: gs.world.aspect,
     elementsHit: {},
+    reactionsFired: [],
+    formsCast: [],
+    playerTookHit: false,
+    severeSurges: 0,
+    seen: {},
     player: {
       lv: gs.player.lv,
       hp: gs.player.hp,
@@ -362,8 +380,10 @@ export function initBattle(
       maxmp: gs.player.maxmp,
       spells: gs.player.spells.map((s) => (s ? { ...s } : null)),
       mastery: { ...gs.player.mastery },
+      charms: gs.player.charms.equipped.filter((c): c is string => c !== null),
+      scrolls: gs.player.scrolls.map((sc) => ({ ...sc })),
       statuses: [],
-      veil: null,
+      veil: emberknotVeil(gs),
     },
     enemies,
   };
@@ -381,15 +401,29 @@ export function initBattle(
   return { state, events };
 }
 
+/** Rematch adds, one elite per (03 section 16): a fitting local add. */
+const REMATCH_ADDS: Record<BossId, { species: EnemySpeciesId; count: number }> = {
+  bogmaw: { species: 'pondscale', count: 1 },
+  thornveil: { species: 'thornling', count: 1 },
+  ashenwarden: { species: 'ashling', count: 1 },
+  valewraith: { species: 'hollowshade', count: 2 },
+};
+
 /** Boss battles: flat hp, fixed level, special state machine (docs/03). */
-export function initBossBattle(gs: GameState, bossId: BossId, zone: ZoneId | null): ReduceResult {
+export function initBossBattle(
+  gs: GameState,
+  bossId: BossId,
+  zone: ZoneId | null,
+  rematch?: { lvBonus: number; rng: Rng },
+): ReduceResult {
   const def = BOSSES[bossId];
+  const lvBonus = rematch?.lvBonus ?? 0;
   const enemy: BattleEnemy = {
     index: 0,
     kind: 'boss',
     species: bossId,
     displayName: def.name,
-    lv: def.lv,
+    lv: def.lv + lvBonus,
     hp: def.hp,
     maxhp: def.hp,
     shield: 0,
@@ -427,6 +461,11 @@ export function initBossBattle(gs: GameState, bossId: BossId, zone: ZoneId | nul
     zone,
     aspect: gs.world.aspect,
     elementsHit: {},
+    reactionsFired: [],
+    formsCast: [],
+    playerTookHit: false,
+    severeSurges: 0,
+    seen: {},
     player: {
       lv: gs.player.lv,
       hp: gs.player.hp,
@@ -435,18 +474,77 @@ export function initBossBattle(gs: GameState, bossId: BossId, zone: ZoneId | nul
       maxmp: gs.player.maxmp,
       spells: gs.player.spells.map((s) => (s ? { ...s } : null)),
       mastery: { ...gs.player.mastery },
+      charms: gs.player.charms.equipped.filter((c): c is string => c !== null),
+      scrolls: gs.player.scrolls.map((sc) => ({ ...sc })),
       statuses: [],
-      veil: null,
+      veil: emberknotVeil(gs),
     },
     enemies: [enemy],
   };
+  // Rematches field elite adds beside the boss (03 section 16).
+  if (rematch) {
+    const add = REMATCH_ADDS[bossId];
+    const addDef = ENEMIES[add.species];
+    for (let i = 0; i < add.count; i++) {
+      const index = state.enemies.length;
+      const lv = def.lv + lvBonus - 2;
+      const maxhp = addDef.h0 + addDef.hpl * lv;
+      const affix = AFFIX_IDS[
+        Math.min(AFFIX_IDS.length - 1, Math.floor(rematch.rng() * AFFIX_IDS.length))
+      ] as AffixId;
+      const elite: BattleEnemy = {
+        index,
+        kind: 'minion',
+        species: add.species,
+        displayName: `${AFFIXES[affix].prefix} ${addDef.name}`,
+        lv,
+        hp: maxhp,
+        maxhp,
+        shield: affix === 'veiled' ? ELITE.veiledShieldBase + ELITE.veiledShieldPerLv * lv : 0,
+        statuses: {},
+        stunImmunity: 0,
+        affix,
+      };
+      if (affix === 'sealed') elite.sealed = true;
+      state.enemies.push(elite);
+    }
+  }
   return { state, events: [{ kind: 'bossIntro', text: def.intro, ui: snapshotOf(state) }] };
 }
 
 /* ---------- helpers ---------- */
 
-function variance(rng: Rng): number {
-  return COMBAT.varianceMin + rng() * (COMBAT.varianceMax - COMBAT.varianceMin);
+function variance(rng: Rng, spell?: Spell): number {
+  // Stillwater relic: no low rolls (variance floor 1.0).
+  const min = spell ? (RUNES[spell.rune].varianceMin ?? COMBAT.varianceMin) : COMBAT.varianceMin;
+  return min + rng() * (COMBAT.varianceMax - min);
+}
+
+function seenRow(
+  state: BattleState,
+  species: string,
+): { weak: ElementId[]; statuses: string[]; reactions: string[] } {
+  let row = state.seen[species];
+  if (!row) {
+    row = { weak: [], statuses: [], reactions: [] };
+    state.seen[species] = row;
+  }
+  return row;
+}
+
+function hasCharm(player: BattlePlayer, charm: string): boolean {
+  return player.charms.includes(charm);
+}
+
+/** Emberknot charm: battles start with a 10-point shield (Phase 13). */
+function emberknotVeil(gs: GameState): VeilState | null {
+  if (!gs.player.charms.equipped.includes('emberknot')) return null;
+  return {
+    spell: { element: 'ember', form: 'veil', rune: 'none', p: 1 },
+    shield: CHARM.emberknotShield,
+    absorbed: 0,
+    reapplied: true, // a knot, not an echo: it never re-forms
+  };
 }
 
 function aliveEnemies(state: BattleState): BattleEnemy[] {
@@ -508,11 +606,31 @@ function applyPlayerAction(
   switch (action.type) {
     case 'cast':
       return castSpell(state, action, emit, rng);
+    case 'scroll':
+      return castScroll(state, action, emit, rng);
     case 'focus':
       return doFocus(state, emit);
     case 'flee':
       return doFlee(state, emit, rng);
   }
+}
+
+/**
+ * Scroll cast (03 section 24): the held composition fires once at
+ * fixed potency 2.5 for 0 MP, then the scroll is spent. It rides the
+ * normal cast pipeline (reactions, surges below tier 2, the lot).
+ */
+function castScroll(
+  state: BattleState,
+  action: { index: number; target?: number },
+  emit: Emit,
+  rng: Rng,
+): boolean {
+  const held = state.player.scrolls[action.index];
+  if (!held) throw new Error(`scroll: none held at ${String(action.index)}`);
+  state.player.scrolls.splice(action.index, 1);
+  const overcharged: Spell = { ...held, p: SCROLL.potency };
+  return performCast(state, overcharged, 0, action.target, emit, rng);
 }
 
 function castSpell(
@@ -530,7 +648,24 @@ function castSpell(
   };
   const cost = spellCost(spell, mods);
   if (player.mp < cost) throw new Error('cast: not enough MP');
+  return performCast(state, spell, cost, action.target, emit, rng);
+}
+
+function performCast(
+  state: BattleState,
+  spell: Spell,
+  cost: number,
+  targetIndex: number | undefined,
+  emit: Emit,
+  rng: Rng,
+): boolean {
+  const player = state.player;
+  const mods: CastMods = {
+    mastery: player.mastery[spell.element] ?? 0,
+    aspect: state.aspect,
+  };
   player.mp -= cost;
+  if (!state.formsCast.includes(spell.form)) state.formsCast.push(spell.form);
 
   const targeting = spellTargeting(spell);
   if (targeting === 'self') {
@@ -551,7 +686,7 @@ function castSpell(
   if (targeting === 'all') {
     targets = aliveEnemies(state);
   } else {
-    const target = state.enemies[action.target ?? -1];
+    const target = state.enemies[targetIndex ?? -1];
     if (!target || target.hp <= 0) throw new Error('cast: invalid target');
     targets = [target];
   }
@@ -565,6 +700,7 @@ function castSpell(
 
   const hits = spellHits(spell);
   const crit = critProfile(spell);
+  let refunded = false;
   const chilledMult = player.statuses.includes('chilled')
     ? (PLAYER_STATUSES.chilled.spellPowerMult ?? 1)
     : 1;
@@ -630,14 +766,19 @@ function castSpell(
         }
       }
 
-      const mult =
-        submergedOverride ?? attuneOverride ?? elementMult(spell.element, def.weak, def.resist);
-      let dmg = spellPower(spell, player.lv, mods) * chilledMult * variance(rng) * mult;
+      let baseMult = elementMult(spell.element, def.weak, def.resist);
+      // Emberglass relic: enemy resists count as neutral for this spell.
+      if (RUNES[spell.rune].resistAsNeutral && baseMult === COMBAT.resistMult) baseMult = 1;
+      const mult = submergedOverride ?? attuneOverride ?? baseMult;
+      let dmg = spellPower(spell, player.lv, mods) * chilledMult * variance(rng, spell) * mult;
       const isCrit = rng() < crit.chance;
       if (isCrit) dmg *= crit.mult;
       // Shatter and Kindle amplify the triggering hit itself.
-      if (reacts && reactionDef.id === 'shatter') dmg *= 1 + REACTION.shatterBonus;
-      if (reacts && reactionDef.id === 'kindle') dmg *= 1 + REACTION.kindleBonus;
+      const wheelwrightHit = hasCharm(player, 'wheelwright') ? CHARM.wheelwrightMult : 1;
+      if (reacts && reactionDef.id === 'shatter') {
+        dmg *= 1 + REACTION.shatterBonus * wheelwrightHit;
+      }
+      if (reacts && reactionDef.id === 'kindle') dmg *= 1 + REACTION.kindleBonus * wheelwrightHit;
       dmg *= witheredMult;
       dmg = Math.max(COMBAT.minDamage, Math.round(dmg));
 
@@ -650,6 +791,11 @@ function castSpell(
       target.hp = Math.max(0, target.hp - remaining);
       totalDealt += dmg;
       state.elementsHit[spell.element] = true;
+      // Bestiary: a hit above neutral reveals the weakness (03 s24).
+      if (mult > 1 && target.kind === 'minion') {
+        const row = seenRow(state, target.species);
+        if (!row.weak.includes(spell.element)) row.weak.push(spell.element);
+      }
       emit({
         kind: 'enemyHit',
         index: target.index,
@@ -661,6 +807,11 @@ function castSpell(
       });
 
       if (reacts) {
+        state.reactionsFired.push(reactionDef.id);
+        if (target.kind === 'minion') {
+          const row = seenRow(state, target.species);
+          if (!row.reactions.includes(reactionDef.id)) row.reactions.push(reactionDef.id);
+        }
         resolveReaction(state, target, reactionDef.id, setupTurns, emit);
       }
 
@@ -679,11 +830,24 @@ function castSpell(
 
       if (target.hp <= 0) {
         emit({ kind: 'enemyDown', index: target.index });
+        // Hollowlight relic: a kill refunds the spell's full cost.
+        if (RUNES[spell.rune].refundOnKill && !refunded) {
+          refunded = true;
+          player.mp = Math.min(player.maxmp, player.mp + cost);
+        }
         continue;
       }
       if (rng() < spellProc(spell, mods)) {
         const status = ELEMENTS[spell.element].status;
         if (applyEnemyStatus(target, status)) {
+          // Longbrand charm: marks you leave last one turn longer.
+          if (hasCharm(player, 'longbrand') && status !== 'stunned') {
+            target.statuses[status] = (target.statuses[status] ?? 0) + CHARM.longbrandBonusTurns;
+          }
+          if (target.kind === 'minion') {
+            const row = seenRow(state, target.species);
+            if (!row.statuses.includes(status)) row.statuses.push(status);
+          }
           emit({ kind: 'enemyStatus', index: target.index, status });
         }
       }
@@ -735,15 +899,19 @@ function resolveReaction(
   const lv = state.player.lv;
   let amount: number | undefined;
 
+  const wheelwright = hasCharm(state.player, 'wheelwright') ? CHARM.wheelwrightMult : 1;
   if (reaction === 'scald') {
     const burn = ENEMY_STATUSES.burning.dot;
     const tick = (burn?.base ?? 0) + Math.ceil(lv * (burn?.perLv ?? 0));
-    amount = Math.max(1, Math.round(tick * REACTION.scaldTickMult * enemyWitheredMult(target)));
+    amount = Math.max(
+      1,
+      Math.round(tick * REACTION.scaldTickMult * wheelwright * enemyWitheredMult(target)),
+    );
   }
   if (reaction === 'blight') {
     const venom = ENEMY_STATUSES.envenomed.dot;
     const tick = (venom?.base ?? 0) + Math.ceil(lv * (venom?.perLv ?? 0));
-    amount = Math.max(1, Math.round(tick * setupTurns * enemyWitheredMult(target)));
+    amount = Math.max(1, Math.round(tick * setupTurns * wheelwright * enemyWitheredMult(target)));
   }
   if (amount !== undefined) {
     target.hp = Math.max(0, target.hp - amount);
@@ -776,6 +944,7 @@ function rollSurge(
   const roll = randInt(rng, 1, 10);
   const def = SURGE_TABLE[roll - 1] as SurgeDef;
   const player = state.player;
+  if (def.severity === 'severe') state.severeSurges += 1;
   emit({ kind: 'surge', roll, id: def.id, severity: def.severity });
 
   const firstAliveTarget = targets.find((t) => t.hp > 0);
@@ -828,7 +997,8 @@ function rollSurge(
         if (t.hp <= 0) continue;
         const def2 = defOf(t);
         const mult = elementMult(spell.element, def2.weak, def2.resist);
-        const half = spellPower(spell, player.lv) * SURGE.echoPowerFrac * variance(rng) * mult;
+        const half =
+          spellPower(spell, player.lv) * SURGE.echoPowerFrac * variance(rng, spell) * mult;
         const dmg = Math.max(1, Math.round(half * enemyWitheredMult(t)));
         let remaining = dmg;
         if (t.shield > 0) {
@@ -898,6 +1068,14 @@ function doFocus(state: BattleState, emit: Emit): boolean {
   p.mp = Math.min(p.maxmp, p.mp + mp);
   p.hp = Math.min(p.maxhp, p.hp + hp);
   emit({ kind: 'focus', mp, hp });
+  if (hasCharm(p, 'stillmind')) {
+    // Stillmind charm: Focus cleanses everything at once.
+    while (p.statuses.length > 0) {
+      const cleansed = p.statuses.shift();
+      if (cleansed) emit({ kind: 'playerCleanse', status: cleansed });
+    }
+    return true;
+  }
   const cleansed = p.statuses.shift();
   if (cleansed) emit({ kind: 'playerCleanse', status: cleansed });
   return true;
@@ -1195,6 +1373,7 @@ function dealDamageToPlayer(
     veil.absorbed += absorbed;
   }
   const through = dmg - absorbed;
+  if (through > 0) state.playerTookHit = true;
   player.hp = Math.max(0, player.hp - through);
   emit({ kind: 'playerHit', amount: dmg, absorbed, hpAfter: player.hp, chilled });
 
@@ -1299,6 +1478,7 @@ function battleXp(state: BattleState): number {
 /** Essence earned by a won battle (03 section 16). */
 export function battleEssence(state: BattleState): number {
   let total = ESSENCE.victory;
+  if (hasCharm(state.player, 'graverobber')) total += CHARM.graverobberEssence;
   for (const e of state.enemies) {
     if (e.escaped) continue;
     if (e.affix) total += ESSENCE.elite;
@@ -1326,6 +1506,8 @@ export interface CommitResult {
   essenceLost: number;
   /** Elements that crossed a mastery tier this battle (03 section 17). */
   masteryTierUps: { element: ElementId; tier: 1 | 2 | 3 }[];
+  /** Feats earned by this battle (Phase 13). */
+  featsEarned: string[];
 }
 
 /** Fold a finished battle back into the GameState (docs/02 rules). */
@@ -1333,6 +1515,8 @@ export function commitBattle(gs: GameState, battle: BattleState): CommitResult {
   if (battle.phase === 'player') throw new Error('commit: battle still running');
   const next = structuredClone(gs);
   next.player.statuses = {};
+  // Spent scrolls stay spent, win or lose (03 section 24).
+  next.player.scrolls = battle.player.scrolls.map((sc) => ({ ...sc }));
 
   if (battle.phase === 'defeat') {
     next.stats.defeats += 1;
@@ -1365,6 +1549,7 @@ export function commitBattle(gs: GameState, battle: BattleState): CommitResult {
       essenceGained: 0,
       essenceLost,
       masteryTierUps: [],
+      featsEarned: [],
     };
   }
 
@@ -1380,6 +1565,7 @@ export function commitBattle(gs: GameState, battle: BattleState): CommitResult {
       essenceGained: 0,
       essenceLost: 0,
       masteryTierUps: [],
+      featsEarned: [],
     };
   }
 
@@ -1387,6 +1573,34 @@ export function commitBattle(gs: GameState, battle: BattleState): CommitResult {
   if (battle.bossId) next.world.bosses[battle.bossId] = true;
   const essence = battleEssence(battle);
   next.player.essence += essence;
+
+  // Feat counters and bestiary fill (Phase 13, 03 section 24).
+  next.stats.severeSurges += battle.severeSurges;
+  for (const e of battle.enemies) {
+    if (e.escaped || e.hp > 0) continue;
+    if (e.glimmer) next.stats.glimmersCaught += 1;
+    if (e.affix) next.stats.elitesFelled += 1;
+    if (e.kind === 'minion') {
+      const row = (next.bestiary[e.species] ??= {
+        kills: 0,
+        weak: [],
+        statuses: [],
+        reactions: [],
+      });
+      row.kills += 1;
+    }
+  }
+  for (const [species, found] of Object.entries(battle.seen)) {
+    const row = (next.bestiary[species] ??= { kills: 0, weak: [], statuses: [], reactions: [] });
+    for (const w of found.weak) if (!row.weak.includes(w)) row.weak.push(w);
+    for (const st2 of found.statuses) if (!row.statuses.includes(st2)) row.statuses.push(st2);
+    for (const rx of found.reactions) if (!row.reactions.includes(rx)) row.reactions.push(rx);
+  }
+  for (const rx of battle.reactionsFired) {
+    next.world.flags[`reaction_seen_${rx}`] = true;
+  }
+  const featsEarned = evaluateBattleFeats(next, battle);
+  next.feats.push(...featsEarned);
 
   // Mastery (03 section 17): +1 per element that landed a hit, cap 50.
   const masteryTierUps: { element: ElementId; tier: 1 | 2 | 3 }[] = [];
@@ -1410,7 +1624,33 @@ export function commitBattle(gs: GameState, battle: BattleState): CommitResult {
     essenceGained: essence,
     essenceLost: 0,
     masteryTierUps,
+    featsEarned,
   };
+}
+
+/** Battle-driven feats (03 section 24); world-driven ones live in scenes. */
+function evaluateBattleFeats(gs: GameState, battle: BattleState): string[] {
+  const out: string[] = [];
+  const earn = (id: string): void => {
+    if (!gs.feats.includes(id) && !out.includes(id)) out.push(id);
+  };
+  const reactions = ['scald', 'shatter', 'snare', 'blight', 'kindle'];
+  if (reactions.every((r) => gs.world.flags[`reaction_seen_${r}`])) earn('wheel_turns');
+  if (battle.reactionsFired.length >= 3) earn('shatterstorm');
+  if (battle.formsCast.length > 0 && battle.formsCast.every((f) => f === 'wisp')) {
+    earn('quiet_hands');
+  }
+  if (!battle.playerTookHit) earn('patient_author');
+  if (
+    (battle.bossId === 'thornveil' || battle.bossId === 'ashenwarden') &&
+    battle.player.spells.every((sp) => !sp || sp.p <= 1.0)
+  ) {
+    earn('thrift');
+  }
+  if (gs.stats.severeSurges >= 5) earn('surge_rider');
+  if (gs.stats.glimmersCaught >= 3) earn('glimmer_catcher');
+  if (gs.stats.elitesFelled >= 10) earn('elite_hunter');
+  return out;
 }
 
 /* ---------- helpers for UI ---------- */

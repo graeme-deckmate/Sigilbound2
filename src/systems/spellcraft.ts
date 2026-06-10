@@ -27,7 +27,7 @@ export interface CastMods {
   /** Mastery points in the spell's element (tiers from data/wheel). */
   mastery?: number;
   /** The battle's snapshotted Vale Aspect element. */
-  aspect?: import('../core/state.ts').ElementId | null;
+  aspect?: ElementId | null;
 }
 
 /**

@@ -44,6 +44,7 @@ export function newGame(): GameState {
       essence: 0,
       mastery: { ember: 0, rime: 0, volt: 0, thorn: 0, gloom: 0 },
       charms: { owned: [], equipped: [null, null] },
+      scrolls: [],
       statuses: {},
     },
     world: {
@@ -60,6 +61,8 @@ export function newGame(): GameState {
       essenceMarker: null,
     },
     notes: [],
+    feats: [],
+    bestiary: {},
     settings: {
       master: 1,
       sfx: 1,
@@ -69,7 +72,16 @@ export function newGame(): GameState {
       dpadSide: 'left',
       dpadScale: 1,
     },
-    stats: { battles: 0, inscribed: 0, steps: 0, defeats: 0, playMs: 0 },
+    stats: {
+      battles: 0,
+      inscribed: 0,
+      steps: 0,
+      defeats: 0,
+      playMs: 0,
+      severeSurges: 0,
+      glimmersCaught: 0,
+      elitesFelled: 0,
+    },
   };
 }
 
@@ -182,6 +194,9 @@ export function migrate(raw: unknown): GameState {
         owned: ownedRaw.filter((c): c is string => typeof c === 'string'),
         equipped: [asCharm(equippedRaw[0]), asCharm(equippedRaw[1])],
       },
+      scrolls: (Array.isArray(p['scrolls']) ? p['scrolls'] : [])
+        .map(asSpell)
+        .filter((sp): sp is Spell => sp !== null),
       statuses: {}, // battle-only, never restored from disk
     },
     world: {
@@ -227,6 +242,30 @@ export function migrate(raw: unknown): GameState {
     notes: (Array.isArray(raw['notes']) ? raw['notes'] : []).filter(
       (n): n is string => typeof n === 'string',
     ),
+    feats: (Array.isArray(raw['feats']) ? raw['feats'] : []).filter(
+      (n): n is string => typeof n === 'string',
+    ),
+    bestiary: ((): GameState['bestiary'] => {
+      const out: GameState['bestiary'] = {};
+      const raw2 = isObj(raw['bestiary']) ? raw['bestiary'] : {};
+      for (const [k, v] of Object.entries(raw2)) {
+        if (!isObj(v)) continue;
+        out[k] = {
+          kills: Math.max(0, num(v['kills'], 0)),
+          weak: (Array.isArray(v['weak']) ? v['weak'] : []).filter(
+            (e): e is ElementId =>
+              typeof e === 'string' && (ELEMENT_IDS as readonly string[]).includes(e),
+          ),
+          statuses: (Array.isArray(v['statuses']) ? v['statuses'] : []).filter(
+            (e): e is string => typeof e === 'string',
+          ),
+          reactions: (Array.isArray(v['reactions']) ? v['reactions'] : []).filter(
+            (e): e is string => typeof e === 'string',
+          ),
+        };
+      }
+      return out;
+    })(),
     settings: {
       master: Math.min(1, Math.max(0, num(s['master'], 1))),
       sfx: Math.min(1, Math.max(0, num(s['sfx'], 1))),
@@ -242,6 +281,9 @@ export function migrate(raw: unknown): GameState {
       steps: Math.max(0, num(st['steps'], 0)),
       defeats: Math.max(0, num(st['defeats'], 0)),
       playMs: Math.max(0, num(st['playMs'], 0)),
+      severeSurges: Math.max(0, num(st['severeSurges'], 0)),
+      glimmersCaught: Math.max(0, num(st['glimmersCaught'], 0)),
+      elitesFelled: Math.max(0, num(st['elitesFelled'], 0)),
     },
   };
 }

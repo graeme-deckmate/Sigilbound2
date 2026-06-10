@@ -11,6 +11,8 @@
 @sign 3,19 dialogue:ashenreach_1
 @sign 33,21 dialogue:ashenreach_2
 @lore 20,25 dialogue:lore_ash
+@egate circuit 52,7
+@egate scalded 18,26
 ---
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

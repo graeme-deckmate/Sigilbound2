@@ -9,6 +9,8 @@ import type { GameState } from '../core/state.ts';
 import { applyAudioSettings } from '../audio/music.ts';
 import { playSfx } from '../audio/synth.ts';
 import { applyDpadSettings, toast } from './dom.ts';
+import { importCode } from '../systems/spellcodes.ts';
+import { displayName } from '../systems/spellcraft.ts';
 
 export interface SettingsCtx {
   state: GameState;
@@ -170,6 +172,32 @@ export function openSettings(c: SettingsCtx): void {
     closeSettings();
     toast('Save loaded.');
     apply(loaded);
+  };
+  el('codeImport').onclick = () => {
+    if (!ctx) return;
+    const raw = el<HTMLInputElement>('codeField').value;
+    const result = importCode(raw, ctx.state);
+    const note = el('codeNote');
+    if (!result.ok) {
+      playSfx('deny');
+      note.textContent =
+        result.reason === 'malformed'
+          ? 'That code does not read as spellcraft.'
+          : `You are missing: ${result.parts.join(', ')}. Nothing granted.`;
+      return;
+    }
+    const slots = ctx.state.player.slotsUnlocked;
+    const free = ctx.state.player.spells.findIndex((sp, i) => sp === null && i < slots);
+    if (free < 0) {
+      playSfx('deny');
+      note.textContent = 'Every page is full. Clear a slot first.';
+      return;
+    }
+    ctx.state.player.spells[free] = result.spell;
+    ctx.state.stats.inscribed += 1;
+    playSfx('confirm');
+    note.textContent = `Inscribed ${displayName(result.spell)} into slot ${String(free + 1)}.`;
+    el<HTMLInputElement>('codeField').value = '';
   };
   el('setclose').onclick = () => {
     playSfx('select');

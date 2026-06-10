@@ -34,6 +34,28 @@ import {
 } from '../systems/worldstate.ts';
 import { starterSpells } from '../data/progression.ts';
 import { ESSENCE } from '../data/essence.ts';
+import {
+  CHARM,
+  CHARMS,
+  COMMISSIONS,
+  GATES,
+  MURK,
+  SCROLL,
+  commissionFlag,
+  commissionHeardFlag,
+  gateFlag,
+  murkLocation,
+  type CacheReward,
+  type CharmId,
+} from '../data/discovery.ts';
+import {
+  applyGateOpen,
+  commissionSatisfied,
+  gateById,
+  gateOpeners,
+} from '../systems/worldstate.ts';
+import { spellCost, displayName } from '../systems/spellcraft.ts';
+import { deriveSeed as derive2 } from '../core/rng.ts';
 import type { ElementId } from '../core/state.ts';
 import { isGrimoireOpen } from '../render/grimoire.ts';
 import { isSettingsOpen } from '../render/settingsdom.ts';
@@ -45,6 +67,10 @@ import { playSfx } from '../audio/synth.ts';
 import type { MusicId } from '../data/audio.ts';
 
 const STEP_MS = 160;
+
+function capitalize(s: string): string {
+  return s.length > 0 ? s[0]!.toUpperCase() + s.slice(1) : s;
+}
 const ANIM_MS = 380;
 
 /** One session-stable seed stream for overworld rolls; battles derive
@@ -72,6 +98,8 @@ export class WorldScene extends Phaser.Scene {
   private progress = 0;
   private busy = false;
   private markerSprite: Phaser.GameObjects.Image | null = null;
+  private murkSpot: { x: number; y: number } | null = null;
+  private rematchBoss: BossId | null = null;
 
   constructor() {
     super({ key: 'World' });
@@ -103,6 +131,29 @@ export class WorldScene extends Phaser.Scene {
     // The north gate dissolves once three Grand Sigils are held.
     if (sigilCount(this.state) >= 3) {
       for (const g of map.gates) index.delete(`${String(g.x)},${String(g.y)}`);
+    }
+    // Opened element gates stay open (world flags, 03 section 19).
+    for (const g of map.egates) {
+      if (this.state.world.flags[gateFlag(g.id)]) {
+        index.delete(`${String(g.x)},${String(g.y)}`);
+      }
+    }
+    // Murk sets up shop by progress (03 section 20).
+    const murkSpot = murkLocation(
+      this.state.world.bosses.bogmaw,
+      sigilCount(this.state),
+      this.state.world.bosses.valewraith,
+    );
+    if (murkSpot && murkSpot.map === map.id) {
+      index.set(`${String(murkSpot.x)},${String(murkSpot.y)}`, {
+        kind: 'npc',
+        x: murkSpot.x,
+        y: murkSpot.y,
+        ref: 'murk',
+      });
+      this.murkSpot = murkSpot;
+    } else {
+      this.murkSpot = null;
     }
     this.index = index;
     this.moving = false;
@@ -284,6 +335,253 @@ export class WorldScene extends Phaser.Scene {
     }
   }
 
+  /** Gate copy states the element in plain text (03 section 19). */
+  private gateLine(element: string): string {
+    switch (element) {
+      case 'ember':
+        return 'A strong flame would clear it.';
+      case 'rime':
+        return 'A hard frost would still it.';
+      case 'volt':
+        return 'A sharp shock would break it.';
+      case 'thorn':
+        return 'A living thorn would part it.';
+      case 'gloom':
+        return 'Only the dark may pass.';
+      default:
+        return 'Any honest blast would do.';
+    }
+  }
+
+  /** Pay out a cache (03 section 19) with the right fanfare. */
+  private grantCache(reward: CacheReward): void {
+    const grantCharm = (charm: CharmId): void => {
+      if (!this.state.player.charms.owned.includes(charm)) {
+        this.state.player.charms.owned.push(charm);
+        const free = this.state.player.charms.equipped.indexOf(null);
+        if (free >= 0) this.state.player.charms.equipped[free] = charm;
+        dom.toast(`✦ Charm found: ${CHARMS[charm].label}`, true);
+      }
+    };
+    const grantRelic = (rune: string): void => {
+      this.state.world.flags[`rune_${rune}`] = true;
+      dom.toast(`✦ Relic rune: ${rune.toUpperCase()}`, true);
+      this.checkRelicRoad();
+    };
+    switch (reward.kind) {
+      case 'relic':
+        grantRelic(reward.rune);
+        break;
+      case 'charm':
+        grantCharm(reward.charm);
+        break;
+      case 'essence':
+        this.state.player.essence += reward.amount;
+        dom.toast(`+${String(reward.amount)} essence`);
+        break;
+      case 'essenceAndCharm':
+        this.state.player.essence += reward.amount;
+        dom.toast(`+${String(reward.amount)} essence`);
+        grantCharm(reward.charm);
+        break;
+      case 'essenceAndSign': {
+        this.state.player.essence += reward.amount;
+        dom.toast(`+${String(reward.amount)} essence`);
+        const entry = DIALOGUE[reward.dialogue];
+        if (entry) dom.openDialog(entry);
+        break;
+      }
+      case 'relicAndLore': {
+        grantRelic(reward.rune);
+        const entry = DIALOGUE[reward.dialogue];
+        if (entry) dom.openDialog(entry);
+        break;
+      }
+    }
+  }
+
+  private grantFeat(id: string, label: string): void {
+    if (this.state.feats.includes(id)) return;
+    this.state.feats.push(id);
+    playSfx('unlock');
+    dom.toast(`✦ Feat: ${label}`, true);
+  }
+
+  private checkRelicRoad(): void {
+    const relics = ['emberglass', 'stillwater', 'stormcoil', 'hollowlight', 'wraithmark'];
+    if (relics.every((r) => this.state.world.flags[`rune_${r}`])) {
+      this.grantFeat('relic_road', 'Relic Road');
+    }
+  }
+
+  private openEgate(id: string): void {
+    const def = gateById(id);
+    if (!def) return;
+    const openers = gateOpeners(this.state, def);
+    const line = this.gateLine(def.element);
+    if (openers.length === 0) {
+      dom.openDialog({ speaker: 'GATE', pages: [`${capitalize(def.label)} bars the way.`, line] });
+      return;
+    }
+    const affordable = openers.filter(
+      (o) => this.state.player.mp >= spellCost(o.spell, { mastery: 0 }),
+    );
+    if (affordable.length === 0) {
+      dom.openDialog({
+        speaker: 'GATE',
+        pages: [line, 'Your ink runs too thin to cast just now.'],
+      });
+      return;
+    }
+    dom.openChoice(
+      'GATE',
+      `${capitalize(def.label)} bars the way. ${line}`,
+      [
+        ...affordable.map((o) => `Cast ${displayName(o.spell)} (${String(spellCost(o.spell))} MP)`),
+        'Leave it',
+      ],
+      (i) => {
+        const pick = affordable[i];
+        if (!pick) return;
+        const cost = spellCost(pick.spell);
+        const opened = applyGateOpen(this.state, def, cost);
+        if (!opened) return;
+        this.state = opened;
+        playSfx('gate_open');
+        dom.toast(`${capitalize(def.label)} opens`, true);
+        this.grantCache(def.reward);
+        if (GATES.every((g) => this.state.world.flags[gateFlag(g.id)])) {
+          this.grantFeat('gatewright', 'Gatewright');
+        }
+        this.refreshHud();
+        this.autoSave();
+        this.scene.restart({ state: this.state });
+      },
+    );
+  }
+
+  /** Murk's shop (03 section 20): essence only, stock rotates by visit. */
+  private talkToMurk(): void {
+    const introFlag = 'murk_met';
+    const openShop = (): void => {
+      const stockSeed = derive2(this.state.stats.battles, sigilCount(this.state) + 7);
+      const rng = mulberry32(stockSeed);
+      const pool = MURK.stockPool.filter((c) => !this.state.player.charms.owned.includes(c));
+      const stock: CharmId[] = [];
+      const bag = [...pool];
+      while (stock.length < MURK.stockSize && bag.length > 0) {
+        const pick = bag.splice(Math.floor(rng() * bag.length), 1)[0];
+        if (pick) stock.push(pick);
+      }
+      const options: string[] = [];
+      const acts: (() => void)[] = [];
+      if (!this.state.world.flags['rune_wyrd']) {
+        options.push(`The Wyrd rune (${String(MURK.wyrdPrice)} essence)`);
+        acts.push(() => {
+          if (this.state.player.essence < MURK.wyrdPrice) return this.murkBroke();
+          this.state.player.essence -= MURK.wyrdPrice;
+          this.state.world.flags['rune_wyrd'] = true;
+          playSfx('unlock');
+          dom.toast('✦ Rune of the WYRD unlocked', true);
+          this.autoSave();
+        });
+      }
+      options.push(`A relic hint (${String(MURK.hintPrice)} essence)`);
+      acts.push(() => {
+        if (this.state.player.essence < MURK.hintPrice) return this.murkBroke();
+        this.state.player.essence -= MURK.hintPrice;
+        const unfound = GATES.filter(
+          (g) =>
+            (g.reward.kind === 'relic' || g.reward.kind === 'relicAndLore') &&
+            !this.state.world.flags[gateFlag(g.id)],
+        );
+        const target = unfound[0];
+        const hintText = target
+          ? `Something glints behind ${target.label}, in ${target.map}. Bring ${
+              target.element === 'any' ? 'anything loud' : target.element
+            }.`
+          : 'Nothing left to find. Annoying, is it not.';
+        dom.openDialog({ speaker: 'MURK', pages: [hintText] });
+        if (target) this.state.notes.push(`Murk: ${hintText}`);
+        this.autoSave();
+      });
+      for (const charm of stock) {
+        options.push(`${CHARMS[charm].label} charm (${String(MURK.charmPrice)} essence)`);
+        acts.push(() => {
+          if (this.state.player.essence < MURK.charmPrice) return this.murkBroke();
+          this.state.player.essence -= MURK.charmPrice;
+          this.state.player.charms.owned.push(charm);
+          const free = this.state.player.charms.equipped.indexOf(null);
+          if (free >= 0) this.state.player.charms.equipped[free] = charm;
+          playSfx('confirm');
+          dom.toast(`✦ Charm bought: ${CHARMS[charm].label}`, true);
+          this.autoSave();
+        });
+      }
+      options.push('Walk away');
+      acts.push(() => undefined);
+      dom.openChoice('MURK', 'Murk squints at your essence pouch.', options, (i) => {
+        acts[i]?.();
+      });
+    };
+    if (!this.state.world.flags[introFlag]) {
+      this.state.world.flags[introFlag] = true;
+      dom.openDialog({ speaker: 'MURK', pages: [MURK.intro] }, openShop);
+    } else {
+      openShop();
+    }
+  }
+
+  private murkBroke(): void {
+    dom.openDialog({ speaker: 'MURK', pages: ['Come back heavier.'] });
+  }
+
+  /** Commission flow (03 section 21): ask, check, pay out. */
+  private tryCommission(npcId: string): boolean {
+    const comm = COMMISSIONS.find((c) => c.npcId === npcId);
+    if (!comm) return false;
+    if (comm.id === 'keeper' && !this.state.world.flags['trials_complete']) return false;
+    if (this.state.world.flags[commissionFlag(comm.id)]) return false;
+    if (commissionSatisfied(this.state, comm.id)) {
+      this.state.world.flags[commissionFlag(comm.id)] = true;
+      playSfx('commission_done');
+      dom.openDialog(
+        { speaker: npcId.toUpperCase(), pages: ['It works exactly as asked. I owe you.'] },
+        () => {
+          if (comm.reward.essence) {
+            this.state.player.essence += comm.reward.essence;
+            dom.toast(`+${String(comm.reward.essence)} essence`);
+          }
+          if (comm.reward.charm) {
+            if (!this.state.player.charms.owned.includes(comm.reward.charm)) {
+              this.state.player.charms.owned.push(comm.reward.charm);
+              const free = this.state.player.charms.equipped.indexOf(null);
+              if (free >= 0) this.state.player.charms.equipped[free] = comm.reward.charm;
+            }
+            dom.toast(`✦ Charm given: ${CHARMS[comm.reward.charm].label}`, true);
+          }
+          if (comm.reward.hint) {
+            this.state.notes.push('The scout owes me a pointer to something hidden.');
+          }
+          if (COMMISSIONS.every((c) => this.state.world.flags[commissionFlag(c.id)])) {
+            this.grantFeat('commissioned', 'Commissioned');
+          }
+          this.autoSave();
+        },
+      );
+      return true;
+    }
+    dom.openDialog({ speaker: npcId.toUpperCase(), pages: [comm.ask] }, () => {
+      if (!this.state.world.flags[commissionHeardFlag(comm.id)]) {
+        this.state.world.flags[commissionHeardFlag(comm.id)] = true;
+        this.state.notes.push(comm.noteLine);
+        dom.toast('Noted in the grimoire', true);
+        this.autoSave();
+      }
+    });
+    return true;
+  }
+
   private bindTopButtons(): void {
     const grimBtn = document.getElementById('grimBtn');
     const setBtn = document.getElementById('setBtn');
@@ -303,6 +601,9 @@ export class WorldScene extends Phaser.Scene {
         onInscribe: (slot: number, spell: NonNullable<GameState['player']['spells'][number]>) => {
           this.state.player.spells[slot] = spell;
           this.state.stats.inscribed += 1;
+          this.grantFeat('first_page', 'First Page');
+          if (spell.given) this.grantFeat('wordsmith', 'Wordsmith');
+          if (spell.p >= 1.5) this.grantFeat('greedy_ink', 'Greedy Ink');
         },
       });
     };
@@ -350,6 +651,19 @@ export class WorldScene extends Phaser.Scene {
       px: x * TILE,
       py: y * TILE,
     });
+    for (const g of this.map.egates) {
+      if (this.state.world.flags[gateFlag(g.id)]) continue;
+      const def = gateById(g.id);
+      const { px, py } = at(g.x, g.y);
+      const img = this.add.image(px, py, 'ent_egate').setOrigin(0, 0).setDepth(5);
+      if (def && def.element !== 'any') {
+        img.setTint(Phaser.Display.Color.HexStringToColor(ELEMENTS[def.element].color).color);
+      }
+    }
+    if (this.murkSpot) {
+      const { px, py } = at(this.murkSpot.x, this.murkSpot.y);
+      this.add.image(px, py, npcTextureKey(this, 'murk')).setOrigin(0, 0).setDepth(6);
+    }
     for (const s of this.map.signs) {
       const { px, py } = at(s.x, s.y);
       this.add.image(px, py, 'ent_sign').setOrigin(0, 0).setDepth(5);
@@ -504,6 +818,9 @@ export class WorldScene extends Phaser.Scene {
         stepCount: this.state.stats.steps,
         playerLv: this.state.player.lv,
         eliteEligible: this.state.world.bosses.bogmaw,
+        regenEvery: this.state.player.charms.equipped.includes('springstep')
+          ? CHARM.springstepRegen
+          : undefined,
       },
       this.worldRng,
     );
@@ -542,18 +859,20 @@ export class WorldScene extends Phaser.Scene {
     });
   }
 
-  private startBossBattle(bossId: BossId): void {
+  private startBossBattle(bossId: BossId, rematch = false): void {
     this.busy = true;
     playSfx('encounter');
     const seed = deriveSeed(sessionSeed, this.state.stats.battles + this.state.stats.defeats + 1);
     const marker = this.map.bosses.find((b) => b.id === bossId);
     const zone = marker ? (zoneAt(this.map, marker.x, marker.y)?.table ?? null) : null;
+    if (!rematch) this.rematchBoss = null;
     void dom.encounterFlash(this.state.settings.reducedFlash).then(() => {
       let result: BattleResult | null = null;
       this.scene.launch('Battle', {
         state: this.state,
         bossId,
         zone,
+        rematch,
         seed,
         onDone: (r: BattleResult) => {
           result = r;
@@ -588,6 +907,20 @@ export class WorldScene extends Phaser.Scene {
       }
       return;
     }
+    if (this.rematchBoss && result.bossId === this.rematchBoss) {
+      const flag = `rematch_${this.rematchBoss}`;
+      if (result.outcome === 'victory' && !this.state.world.flags[flag]) {
+        this.state.world.flags[flag] = true;
+        this.state.player.essence += ESSENCE.rematchFirstClear;
+        dom.toast(`✦ First rematch clear: +${String(ESSENCE.rematchFirstClear)} essence`, true);
+      }
+      this.rematchBoss = null;
+      this.autoSave();
+      this.refreshHud();
+      if (result.xpGained > 0) dom.toast(`+${String(result.xpGained)} XP`);
+      this.scene.restart({ state: this.state });
+      return;
+    }
     if (result.bossId === 'valewraith' && result.outcome === 'victory') {
       // The finale: the Ending cover takes over, then restarts the world
       // for post-game free roam.
@@ -603,6 +936,15 @@ export class WorldScene extends Phaser.Scene {
     }
     if (result.xpGained > 0) dom.toast(`+${String(result.xpGained)} XP`);
     if (result.essenceGained > 0) dom.toast(`+${String(result.essenceGained)} essence`);
+    result.featsEarned.forEach((id, i) => {
+      setTimeout(
+        () => {
+          playSfx('unlock');
+          dom.toast(`✦ Feat: ${id.replace(/_/g, ' ')}`, true);
+        },
+        300 + i * 700,
+      );
+    });
     result.masteryTierUps.forEach(({ element, tier }, i) => {
       setTimeout(
         () => {
@@ -637,25 +979,63 @@ export class WorldScene extends Phaser.Scene {
    * when the next slot is affordable, so shrines never nag.
    */
   private offerSlotPurchase(): void {
+    const options: string[] = [];
+    const acts: (() => void)[] = [];
     const unlocked = this.state.player.slotsUnlocked;
-    if (unlocked >= 6) return;
-    const slot = unlocked === 4 ? 5 : 6;
-    const price = slot === 5 ? ESSENCE.slot5 : ESSENCE.slot6;
-    if (this.state.player.essence < price) return;
-    dom.openChoice(
-      'SHRINE',
-      `The shrine hums over your grimoire. A ${String(slot)}th page, for ${String(price)} essence?`,
-      [`Pay ${String(price)} essence`, 'Not now'],
-      (i) => {
-        if (i !== 0) return;
-        const bought = applySlotPurchase(this.state, ESSENCE);
-        if (!bought) return;
-        this.state = bought.state;
-        playSfx('unlock');
-        dom.toast(`✦ Grimoire slot ${String(bought.slot)} unbound`, true);
-        this.autoSave();
-      },
-    );
+    if (unlocked < 6) {
+      const slot = unlocked === 4 ? 5 : 6;
+      const price = slot === 5 ? ESSENCE.slot5 : ESSENCE.slot6;
+      if (this.state.player.essence >= price) {
+        options.push(`Unbind page ${String(slot)} (${String(price)} essence)`);
+        acts.push(() => {
+          const bought = applySlotPurchase(this.state, ESSENCE);
+          if (!bought) return;
+          this.state = bought.state;
+          playSfx('unlock');
+          dom.toast(`✦ Grimoire slot ${String(bought.slot)} unbound`, true);
+          this.autoSave();
+        });
+      }
+    }
+    // Scribe a scroll of any inscribed spell (03 section 24; the
+    // grimoire's inscribed pages are the craftable compositions).
+    const cap = this.state.player.charms.equipped.includes('scrollsash')
+      ? CHARM.scrollsashCap
+      : SCROLL.cap;
+    if (
+      this.state.player.scrolls.length < cap &&
+      this.state.player.essence >= SCROLL.essencePrice
+    ) {
+      const inscribed = this.state.player.spells.filter((sp) => sp !== null);
+      if (inscribed.length > 0) {
+        options.push(`Scribe a scroll (${String(SCROLL.essencePrice)} essence)`);
+        acts.push(() => {
+          const spells = this.state.player.spells
+            .map((sp, i) => ({ sp, i }))
+            .filter((x): x is { sp: NonNullable<typeof x.sp>; i: number } => x.sp !== null);
+          dom.openChoice(
+            'SHRINE',
+            'Which page should the scroll carry, overcharged and once?',
+            [...spells.map((x) => displayName(x.sp)), 'None'],
+            (j) => {
+              const pick = spells[j];
+              if (!pick) return;
+              this.state.player.essence -= SCROLL.essencePrice;
+              this.state.player.scrolls.push({ ...pick.sp });
+              playSfx('confirm');
+              dom.toast(`✦ Scroll scribed: ${displayName(pick.sp)}`, true);
+              this.autoSave();
+            },
+          );
+        });
+      }
+    }
+    if (options.length === 0) return;
+    options.push('Not now');
+    acts.push(() => undefined);
+    dom.openChoice('SHRINE', 'The shrine hums over your grimoire.', options, (i) => {
+      acts[i]?.();
+    });
   }
 
   private interact(): void {
@@ -665,11 +1045,19 @@ export class WorldScene extends Phaser.Scene {
     if (!action) return;
     switch (action.kind) {
       case 'dialogue': {
+        // Commission NPCs intercept their base gossip (03 section 21).
+        if (action.npcId && this.tryCommission(action.npcId)) break;
         const id = action.npcId ? npcDialogueId(action.npcId, action.id, this.state) : action.id;
         const entry = DIALOGUE[id];
         if (entry) dom.openDialog(entry);
         break;
       }
+      case 'egate':
+        this.openEgate(action.id);
+        break;
+      case 'murk':
+        this.talkToMurk();
+        break;
       case 'spring': {
         playSfx('heal');
         this.state = applySpringRestore(this.state);
@@ -720,24 +1108,37 @@ export class WorldScene extends Phaser.Scene {
         break;
       }
       case 'teleport': {
-        const entry = DIALOGUE['teleporter'];
-        if (!entry) break;
-        dom.openDialog(entry, () => {
-          const hearth = MAPS.hearth;
-          if (!hearth) return;
-          this.busy = true;
-          playSfx('cast');
-          this.state = applyExit(this.state, {
-            x: this.state.world.x,
-            y: this.state.world.y,
-            to: hearth.id,
-            tx: hearth.spawn.x,
-            ty: hearth.spawn.y,
-          });
-          this.autoSave();
-          void dom.irisTransition(() => {
-            this.scene.restart({ state: this.state });
-          });
+        const bossId = action.bossId as BossId;
+        const bossName = BOSSES[bossId].name;
+        const canPay = this.state.player.essence >= ESSENCE.rematchEntry;
+        const options = ['Travel to Hearth'];
+        if (canPay) options.push(`Rematch ${bossName} (${String(ESSENCE.rematchEntry)} essence)`);
+        options.push('Not now');
+        dom.openChoice('WAYSTONE', 'The spent sigil hums, holding two roads.', options, (i) => {
+          if (i === 0) {
+            const hearth = MAPS.hearth;
+            if (!hearth) return;
+            this.busy = true;
+            playSfx('cast');
+            this.state = applyExit(this.state, {
+              x: this.state.world.x,
+              y: this.state.world.y,
+              to: hearth.id,
+              tx: hearth.spawn.x,
+              ty: hearth.spawn.y,
+            });
+            this.autoSave();
+            void dom.irisTransition(() => {
+              this.scene.restart({ state: this.state });
+            });
+            return;
+          }
+          if (canPay && i === 1) {
+            this.state.player.essence -= ESSENCE.rematchEntry;
+            this.rematchBoss = bossId;
+            this.refreshHud();
+            this.startBossBattle(bossId, true);
+          }
         });
         break;
       }

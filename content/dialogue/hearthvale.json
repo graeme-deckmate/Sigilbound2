@@ -21,5 +21,9 @@
       "Burning things fear the frost. Frosted things fear the shock.",
       "So it goes, all the way around."
     ]
+  },
+  "fisher_base": {
+    "speaker": "FISHER",
+    "pages": ["The marsh bites, but the fish are honest."]
   }
 }

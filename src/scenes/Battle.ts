@@ -33,6 +33,7 @@ export interface BattleResult {
   essenceGained: number;
   essenceLost: number;
   masteryTierUps: { element: ElementId; tier: 1 | 2 | 3 }[];
+  featsEarned: string[];
   bossId?: BossId;
 }
 
@@ -45,6 +46,8 @@ interface BattleSceneData {
   /** Boss fights (takes precedence). */
   bossId?: BossId;
   zone?: ZoneId | null;
+  /** Waystone rematch: boss at +2 levels with elite adds (03 s16). */
+  rematch?: boolean;
 }
 
 const FLASH_MS = 120;
@@ -83,7 +86,12 @@ export class BattleScene extends Phaser.Scene {
     this.rng = mulberry32(this.params.seed);
     let setup;
     if (this.params.bossId) {
-      setup = initBossBattle(this.params.state, this.params.bossId, this.params.zone ?? null);
+      setup = initBossBattle(
+        this.params.state,
+        this.params.bossId,
+        this.params.zone ?? null,
+        this.params.rematch ? { lvBonus: 2, rng: this.rng } : undefined,
+      );
     } else {
       if (!this.params.encounter) throw new Error('Battle needs an encounter or a bossId');
       const enc = this.params.encounter;
@@ -301,6 +309,29 @@ export class BattleScene extends Phaser.Scene {
       },
       onFlee: () => {
         this.submit({ type: 'flee' });
+      },
+      onScroll: (index) => {
+        const held = this.battle.player.scrolls[index];
+        if (!held) return;
+        playSfx('scroll_cast');
+        if (spellTargeting(held) !== 'single') {
+          this.submit({ type: 'scroll', index });
+          return;
+        }
+        const alive = this.battle.enemies.filter((e) => e.hp > 0);
+        if (alive.length === 1 && alive[0]) {
+          this.submit({ type: 'scroll', index, target: alive[0].index });
+          return;
+        }
+        bdom.enterTargetMode(
+          this.battle,
+          (t) => {
+            this.submit({ type: 'scroll', index, target: t });
+          },
+          () => {
+            this.playerTurn();
+          },
+        );
       },
     });
     bdom.lockCommands(false);
@@ -627,8 +658,15 @@ export class BattleScene extends Phaser.Scene {
   private async finish(): Promise<void> {
     this.finishing = true;
     const phase = this.battle.phase;
-    const { state, xpGained, levelsGained, essenceGained, essenceLost, masteryTierUps } =
-      commitBattle(this.params.state, this.battle);
+    const {
+      state,
+      xpGained,
+      levelsGained,
+      essenceGained,
+      essenceLost,
+      masteryTierUps,
+      featsEarned,
+    } = commitBattle(this.params.state, this.battle);
     const outcome: BattleResult['outcome'] =
       phase === 'victory' ? 'victory' : phase === 'defeat' ? 'defeat' : 'fled';
     await this.wait(350);
@@ -643,6 +681,7 @@ export class BattleScene extends Phaser.Scene {
         essenceGained,
         essenceLost,
         masteryTierUps,
+        featsEarned,
         bossId: this.params.bossId,
       });
       this.scene.wake('World');

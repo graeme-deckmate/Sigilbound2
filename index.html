@@ -583,6 +583,9 @@
         gap: 8px;
         margin: 6px 0 4px;
       }
+      .ftabs {
+        flex-wrap: wrap;
+      }
       .ftab {
         font-family: var(--f-ui);
         font-size: 18px;
@@ -608,6 +611,16 @@
         font-size: 17px;
         color: var(--dim);
         margin-top: 4px;
+      }
+      #codeField {
+        font-family: var(--f-ui);
+        font-size: 19px;
+        color: var(--parch);
+        background: var(--night);
+        border: 2px solid var(--night2);
+        border-radius: 10px;
+        padding: 9px 12px;
+        min-height: 46px;
       }
       #renameField {
         width: 100%;
@@ -944,6 +957,9 @@
             <button class="ftab sel" id="tabSpells">SPELLS</button>
             <button class="ftab" id="tabNotes">NOTES</button>
             <button class="ftab" id="tabMastery">MASTERY</button>
+            <button class="ftab" id="tabCharms">CHARMS</button>
+            <button class="ftab" id="tabFeats">FEATS</button>
+            <button class="ftab" id="tabBeasts">BESTIARY</button>
             <span class="esschip" id="essChip"></span>
           </div>
           <div id="spellsPage">
@@ -995,6 +1011,20 @@
             <div class="sub">Each element remembers every battle it won for you.</div>
             <div id="masteryList"></div>
           </div>
+          <div id="charmsPage" style="display: none">
+            <div class="sub">Two knots on one cord. Swap them anywhere but mid-battle.</div>
+            <div id="charmSlots" class="chips"></div>
+            <div class="flab" style="margin-top: 10px">OWNED</div>
+            <div id="charmList"></div>
+          </div>
+          <div id="featsPage" style="display: none">
+            <div class="sub" id="featsEmpty">No feats yet. The Vale keeps score anyway.</div>
+            <div id="featsList"></div>
+          </div>
+          <div id="beastsPage" style="display: none">
+            <div class="sub" id="beastsEmpty">Nothing studied yet. Hit things; take notes.</div>
+            <div id="beastsList"></div>
+          </div>
           <div id="notesPage" style="display: none">
             <div class="sub" id="notesEmpty">
               No notes yet. The Vale will give you reasons to write.
@@ -1037,6 +1067,20 @@
           <div class="fsec">
             <div class="flab">D-PAD</div>
             <div class="chips" id="chDpad"></div>
+          </div>
+          <div class="fsec">
+            <div class="flab">SPELL CODE</div>
+            <div class="btnrow">
+              <input
+                id="codeField"
+                type="text"
+                placeholder="sb1:..."
+                autocomplete="off"
+                style="flex: 2"
+              />
+              <button class="spbtn util" id="codeImport" style="flex: 1">Import</button>
+            </div>
+            <div class="note" id="codeNote"></div>
           </div>
           <div class="fsec">
             <div class="flab">SAVE</div>

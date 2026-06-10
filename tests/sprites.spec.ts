@@ -40,11 +40,12 @@ describe('pixel grids', () => {
     }
   });
 
-  it('all six villagers have palettes', () => {
+  it('all villagers (and Murk, v1.1) have palettes', () => {
     expect(Object.keys(VILLAGER_PALS).sort()).toEqual([
       'dreamer',
       'elder',
       'keeper',
+      'murk',
       'scout',
       'twin_a',
       'twin_b',

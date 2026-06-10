@@ -65,6 +65,7 @@ export const VILLAGER_PALS: Readonly<Record<string, Palette>> = {
   twin_a: { ...PLAYER_PAL, h: '#ff8fb3', H: '#d96a8e', r: '#8e4661', R: '#6e3349' },
   twin_b: { ...PLAYER_PAL, h: '#ffd84a', H: '#d9ad2a', r: '#8e7430', R: '#6e5a22' },
   scout: { ...PLAYER_PAL, h: '#b99a63', H: '#8a6a3f', r: '#6e5330', R: '#52452f' },
+  murk: { ...PLAYER_PAL, h: '#43405c', H: '#2e2554', r: '#52452f', R: '#3b3322', b: '#9d7bff' },
 };
 
 /* ---------- battle sprites (docs/03 section 12) ---------- */

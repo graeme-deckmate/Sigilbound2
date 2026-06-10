@@ -76,6 +76,7 @@ export function parseMapSource(text: string, sourceName: string): ParseResult {
   const lore: CompiledMap['lore'][number][] = [];
   const springs: CompiledMap['springs'][number][] = [];
   const shrines: CompiledMap['shrines'][number][] = [];
+  const egates: { id: string; x: number; y: number }[] = [];
   const bosses: CompiledMap['bosses'][number][] = [];
   const gates: CompiledMap['gates'][number][] = [];
   const triggers: CompiledMap['triggers'][number][] = [];
@@ -177,6 +178,12 @@ export function parseMapSource(text: string, sourceName: string): ParseResult {
         else bosses.push({ id: bossId as CompiledMap['bosses'][number]['id'], ...xy });
         break;
       }
+      case '@egate': {
+        const [egateId, exy] = [parts[1], parseXY(parts[2] ?? '')];
+        if (!egateId || !exy) err(`@egate needs: id x,y`);
+        else egates.push({ id: egateId, ...exy });
+        break;
+      }
       case '@gate': {
         const gateId = args[0] ?? '';
         const xy = parseXY(args[1] ?? '');
@@ -234,6 +241,7 @@ export function parseMapSource(text: string, sourceName: string): ParseResult {
       lore,
       springs,
       shrines,
+      egates,
       bosses,
       gates,
       triggers,
@@ -244,7 +252,10 @@ export function parseMapSource(text: string, sourceName: string): ParseResult {
 
 /** Flood fill walkable tiles from the spawn point. Keys are "x,y". */
 export function reachableTiles(map: CompiledMap): Set<string> {
-  const index = entityIndex(map);
+  // Element gates open in play (any matching spell), so the validator
+  // treats them as passable, like boss gates on exits (docs/04 P13).
+  const index = new Map(entityIndex(map));
+  for (const g of map.egates) index.delete(`${String(g.x)},${String(g.y)}`);
   const seen = new Set<string>();
   const queue: [number, number][] = [[map.spawn.x, map.spawn.y]];
   while (queue.length > 0) {

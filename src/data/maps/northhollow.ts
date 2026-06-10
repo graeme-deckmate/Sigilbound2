@@ -117,6 +117,18 @@ export const northhollow = {
       "y": 23
     }
   ],
+  "egates": [
+    {
+      "id": "frozenfall",
+      "x": 42,
+      "y": 30
+    },
+    {
+      "id": "hungrydark",
+      "x": 9,
+      "y": 6
+    }
+  ],
   "bosses": [
     {
       "id": "valewraith",

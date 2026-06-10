@@ -21,6 +21,8 @@ export interface StepArgs {
   playerLv: number;
   /** Elites can roll once Bogmaw has fallen (world.bosses.bogmaw). */
   eliteEligible: boolean;
+  /** Regen cadence in steps (6 base; 4 with Springstep). */
+  regenEvery?: number;
 }
 
 export interface EncounterRoll {
@@ -90,7 +92,8 @@ function promote(memberCount: number, all: boolean, rng: Rng): (AffixId | null)[
 
 /** Resolve one completed step: grace decay, regen tick, encounter roll. */
 export function resolveStep(args: StepArgs, rng: Rng): StepResult {
-  const regen = args.stepCount > 0 && args.stepCount % REGEN_STEPS === 0;
+  const every = args.regenEvery ?? REGEN_STEPS;
+  const regen = args.stepCount > 0 && args.stepCount % every === 0;
   if (args.graceSteps > 0) {
     return { graceSteps: args.graceSteps - 1, regen, encounter: null };
   }

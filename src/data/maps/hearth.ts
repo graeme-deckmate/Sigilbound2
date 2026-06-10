@@ -111,6 +111,13 @@ export const hearth = {
     }
   ],
   "shrines": [],
+  "egates": [
+    {
+      "id": "shed",
+      "x": 4,
+      "y": 16
+    }
+  ],
   "bosses": [],
   "gates": [
     {

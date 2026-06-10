@@ -272,6 +272,18 @@ export function createEntityTextures(scene: Phaser.Scene): void {
     ctx.fillRect(5, 10, 2, 1);
     ctx.fillRect(10, 11, 2, 1);
   });
+  makeEntityTexture(scene, 'ent_egate', (ctx) => {
+    ctx.fillStyle = '#43405c';
+    ctx.fillRect(2, 3, 12, 12);
+    ctx.fillStyle = '#5d5a78';
+    ctx.fillRect(2, 3, 12, 2);
+    ctx.fillRect(2, 3, 2, 12);
+    ctx.fillRect(12, 3, 2, 12);
+    ctx.fillStyle = '#efe6d0';
+    ctx.fillRect(7, 6, 2, 2);
+    ctx.fillRect(6, 9, 4, 1);
+    ctx.fillRect(7, 11, 2, 2);
+  });
   makeEntityTexture(scene, 'ent_essence', (ctx) => {
     ctx.fillStyle = '#6f4fd8';
     ctx.beginPath();

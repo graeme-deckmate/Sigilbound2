@@ -112,6 +112,18 @@ export const westwood = {
       "y": 4
     }
   ],
+  "egates": [
+    {
+      "id": "lightless",
+      "x": 5,
+      "y": 4
+    },
+    {
+      "id": "trellis",
+      "x": 55,
+      "y": 19
+    }
+  ],
   "bosses": [
     {
       "id": "thornveil",

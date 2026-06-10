@@ -84,7 +84,14 @@ export const hearthvale = {
       "ty": 18
     }
   ],
-  "npcs": [],
+  "npcs": [
+    {
+      "id": "fisher",
+      "x": 2,
+      "y": 20,
+      "dialogue": "fisher_base"
+    }
+  ],
   "signs": [
     {
       "x": 28,
@@ -125,6 +132,18 @@ export const hearthvale = {
       "rune": "fury",
       "x": 4,
       "y": 36
+    }
+  ],
+  "egates": [
+    {
+      "id": "briarfall",
+      "x": 50,
+      "y": 32
+    },
+    {
+      "id": "mirepool",
+      "x": 3,
+      "y": 30
     }
   ],
   "bosses": [

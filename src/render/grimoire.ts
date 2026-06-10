@@ -27,6 +27,9 @@ import {
 import { COMBAT } from '../data/constants.ts';
 import { ESSENCE } from '../data/essence.ts';
 import { MASTERY, masteryTier } from '../data/wheel.ts';
+import { CHARMS, CHARM_IDS, FEATS, type CharmId } from '../data/discovery.ts';
+import { ENEMIES, type EnemySpeciesId } from '../data/enemies.ts';
+import { exportCode } from '../systems/spellcodes.ts';
 import type { CastMods } from '../systems/spellcraft.ts';
 import { toast } from './dom.ts';
 import { playSfx } from '../audio/synth.ts';
@@ -47,7 +50,7 @@ let ctx: GrimoireCtx | null = null;
 const sel: Spell = { element: 'ember', form: 'bolt', rune: 'none', p: 1 };
 let givenName = '';
 let closeBound = false;
-let page: 'spells' | 'notes' | 'mastery' = 'spells';
+let page: 'spells' | 'notes' | 'mastery' | 'charms' | 'feats' | 'beasts' = 'spells';
 
 export function isGrimoireOpen(): boolean {
   return ctx !== null;
@@ -81,6 +84,21 @@ export function openGrimoire(context: GrimoireCtx): void {
     el('tabMastery').addEventListener('click', () => {
       playSfx('select');
       page = 'mastery';
+      rebuild();
+    });
+    el('tabCharms').addEventListener('click', () => {
+      playSfx('select');
+      page = 'charms';
+      rebuild();
+    });
+    el('tabFeats').addEventListener('click', () => {
+      playSfx('select');
+      page = 'feats';
+      rebuild();
+    });
+    el('tabBeasts').addEventListener('click', () => {
+      playSfx('select');
+      page = 'beasts';
       rebuild();
     });
     const slider = el<HTMLInputElement>('potency');
@@ -129,9 +147,15 @@ function rebuild(): void {
   el('tabSpells').classList.toggle('sel', page === 'spells');
   el('tabNotes').classList.toggle('sel', page === 'notes');
   el('tabMastery').classList.toggle('sel', page === 'mastery');
+  el('tabCharms').classList.toggle('sel', page === 'charms');
+  el('tabFeats').classList.toggle('sel', page === 'feats');
+  el('tabBeasts').classList.toggle('sel', page === 'beasts');
   el('spellsPage').style.display = page === 'spells' ? 'block' : 'none';
   el('notesPage').style.display = page === 'notes' ? 'block' : 'none';
   el('masteryPage').style.display = page === 'mastery' ? 'block' : 'none';
+  el('charmsPage').style.display = page === 'charms' ? 'block' : 'none';
+  el('featsPage').style.display = page === 'feats' ? 'block' : 'none';
+  el('beastsPage').style.display = page === 'beasts' ? 'block' : 'none';
   if (page === 'notes') {
     buildNotes();
     return;
@@ -140,9 +164,109 @@ function rebuild(): void {
     buildMastery();
     return;
   }
+  if (page === 'charms') {
+    buildCharms();
+    return;
+  }
+  if (page === 'feats') {
+    buildFeats();
+    return;
+  }
+  if (page === 'beasts') {
+    buildBeasts();
+    return;
+  }
   buildChips();
   refreshPreviewInfo();
   buildSlots();
+}
+
+/** Charm page: two equip slots, swap from the owned list (03 s20). */
+function buildCharms(): void {
+  if (!ctx) return;
+  const charms = ctx.state.player.charms;
+  const slots = el('charmSlots');
+  slots.replaceChildren(
+    ...charms.equipped.map((cid, i) => {
+      const b = document.createElement('button');
+      b.className = `chip${cid ? ' sel' : ''}`;
+      b.textContent = cid
+        ? `${String(i + 1)}: ${CHARMS[cid as CharmId].label}`
+        : `${String(i + 1)}: (empty)`;
+      b.title = cid ? CHARMS[cid as CharmId].blurb : 'Pick a charm below.';
+      b.onclick = () => {
+        if (!ctx || !cid) return;
+        playSfx('select');
+        charms.equipped[i] = null;
+        buildCharms();
+      };
+      return b;
+    }),
+  );
+  const list = el('charmList');
+  const owned = CHARM_IDS.filter((c) => charms.owned.includes(c));
+  list.replaceChildren(
+    ...owned.map((cid) => {
+      const equipped = charms.equipped.includes(cid);
+      const row = document.createElement('button');
+      row.className = 'slotbtn';
+      row.innerHTML = `<span></span><small></small>`;
+      row.querySelector('span')!.textContent = `${CHARMS[cid].label}${equipped ? ' (worn)' : ''}`;
+      row.querySelector('small')!.textContent = CHARMS[cid].blurb;
+      row.disabled = equipped;
+      row.onclick = () => {
+        if (!ctx) return;
+        const free = charms.equipped.indexOf(null);
+        if (free < 0) {
+          toast('Both cords are tied. Unclip one first.', true);
+          return;
+        }
+        playSfx('confirm');
+        charms.equipped[free] = cid;
+        buildCharms();
+      };
+      return row;
+    }),
+  );
+  if (owned.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'noteline';
+    empty.textContent = 'No charms yet. Gates and Murk carry them.';
+    list.appendChild(empty);
+  }
+}
+
+function buildFeats(): void {
+  if (!ctx) return;
+  const earned = ctx.state.feats;
+  el('featsEmpty').style.display = earned.length === 0 ? 'block' : 'none';
+  el('featsList').replaceChildren(
+    ...FEATS.filter((f) => earned.includes(f.id)).map((f) => {
+      const div = document.createElement('div');
+      div.className = 'noteline';
+      div.textContent = `✦ ${f.label}: ${f.blurb}`;
+      return div;
+    }),
+  );
+}
+
+function buildBeasts(): void {
+  if (!ctx) return;
+  const entries = Object.entries(ctx.state.bestiary);
+  el('beastsEmpty').style.display = entries.length === 0 ? 'block' : 'none';
+  el('beastsList').replaceChildren(
+    ...entries.map(([species, row]) => {
+      const div = document.createElement('div');
+      div.className = 'noteline';
+      const name = ENEMIES[species as EnemySpeciesId]?.name ?? species;
+      const weak = row.weak.length > 0 ? row.weak.join(', ') : 'unknown';
+      const parts = [`fells ${String(row.kills)}`, `weak: ${weak}`];
+      if (row.statuses.length > 0) parts.push(`marked: ${row.statuses.join(', ')}`);
+      if (row.reactions.length > 0) parts.push(`reacted: ${row.reactions.join(', ')}`);
+      div.textContent = `${name}. ${parts.join(' · ')}`;
+      return div;
+    }),
+  );
 }
 
 /** Mastery page: five element bars with tier pips (03 section 17). */
@@ -342,6 +466,20 @@ function buildSlots(): void {
     } else {
       if (label) label.textContent = `${String(i + 1)}. empty`;
       if (meta) meta.textContent = 'tap to inscribe';
+    }
+    if (spell) {
+      const codeBtn = document.createElement('small');
+      codeBtn.textContent = ' ⎘';
+      codeBtn.title = 'Share code';
+      codeBtn.style.cursor = 'pointer';
+      codeBtn.onclick = (ev) => {
+        ev.stopPropagation();
+        playSfx('select');
+        const code = exportCode(spell);
+        el<HTMLInputElement>('renameField').value = code;
+        toast('Code placed in the name field. Copy it out.', true);
+      };
+      b.querySelector('span')?.appendChild(codeBtn);
     }
     b.onclick = () => {
       if (!ctx) return;

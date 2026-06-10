@@ -117,6 +117,18 @@ export const ashenreach = {
       "y": 17
     }
   ],
+  "egates": [
+    {
+      "id": "circuit",
+      "x": 52,
+      "y": 7
+    },
+    {
+      "id": "scalded",
+      "x": 18,
+      "y": 26
+    }
+  ],
   "bosses": [
     {
       "id": "ashenwarden",

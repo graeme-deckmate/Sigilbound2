@@ -73,6 +73,8 @@ export interface GameState {
     mastery: Record<ElementId, number>;
     /** Charms owned and the two equip slots (Phase 13 fills these). */
     charms: { owned: string[]; equipped: [string | null, string | null] };
+    /** Carried scrolls: compositions cast once at potency 2.5 for 0 MP. */
+    scrolls: Spell[];
     /** Battle-only, cleared on save. */
     statuses: StatusMap;
   };
@@ -107,6 +109,16 @@ export interface GameState {
   };
   /** Grimoire Notes page lines, player voice (Phase 13 fills). v1.1. */
   notes: string[];
+  /** Feat ids earned (03 section 24). v1.1. */
+  feats: string[];
+  /**
+   * Bestiary, filled by play only (03 section 24): kills, weaknesses
+   * actually discovered, statuses landed, reactions triggered.
+   */
+  bestiary: Record<
+    string,
+    { kills: number; weak: ElementId[]; statuses: string[]; reactions: string[] }
+  >;
   settings: {
     master: number;
     sfx: number;
@@ -122,5 +134,9 @@ export interface GameState {
     steps: number;
     defeats: number;
     playMs: number;
+    /** v1.1 feat counters (03 section 24). */
+    severeSurges: number;
+    glimmersCaught: number;
+    elitesFelled: number;
   };
 }

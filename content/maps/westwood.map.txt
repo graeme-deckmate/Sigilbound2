@@ -10,6 +10,8 @@
 @sign 54,19 dialogue:westwood_1
 @sign 30,21 dialogue:westwood_2
 @lore 20,33 dialogue:lore_wood
+@egate lightless 5,4
+@egate trellis 55,19
 ---
 ############################################################
 ############################################################

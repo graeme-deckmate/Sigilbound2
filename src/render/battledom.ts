@@ -13,6 +13,7 @@ import {
   spellTargeting,
 } from '../systems/spellcraft.ts';
 import { ELEMENTS } from '../data/elements.ts';
+import { ENEMIES, type EnemySpeciesId } from '../data/enemies.ts';
 import type { EnemyStatusId, PlayerStatusId } from '../core/state.ts';
 
 function el<T extends HTMLElement = HTMLElement>(id: string): T {
@@ -81,8 +82,15 @@ export function buildEnemyRows(state: BattleState): void {
     const row = document.createElement('div');
     row.className = 'erow';
     row.dataset['i'] = String(enemy.index);
+    // Sigilglass charm: weaknesses shown in plain sight (03 s20).
+    const glass = state.player.charms.includes('sigilglass') && enemy.kind === 'minion';
+    const weakNote = glass
+      ? `<span class="eweak">${ENEMIES[enemy.species as EnemySpeciesId].weak
+          .map((w) => `<i style="color:${ELEMENTS[w].color}">${ELEMENTS[w].label[0] ?? ''}</i>`)
+          .join('')}</span>`
+      : '';
     row.innerHTML =
-      `<div class="etop"><span class="ename"></span><span class="elv"></span></div>` +
+      `<div class="etop"><span class="ename"></span>${weakNote}<span class="elv"></span></div>` +
       `<div class="ebars"><span class="bar ehp"><i></i></span><span class="eshield"></span></div>` +
       `<div class="statusrow"></div>`;
     row.querySelector('.ename')!.textContent = enemy.displayName;
@@ -138,6 +146,7 @@ export interface CommandHandlers {
   onCast: (slot: number) => void;
   onFocus: () => void;
   onFlee: () => void;
+  onScroll?: (index: number) => void;
 }
 
 export function buildCommands(state: BattleState, handlers: CommandHandlers): void {
@@ -175,6 +184,17 @@ export function buildCommands(state: BattleState, handlers: CommandHandlers): vo
     : 'Focus (restore)';
   focus.onclick = handlers.onFocus;
   c.appendChild(focus);
+  // SCROLL: appears only when scrolls are held (03 section 24).
+  if (state.player.scrolls.length > 0 && handlers.onScroll) {
+    const scroll = document.createElement('button');
+    scroll.className = 'spbtn util';
+    const first = state.player.scrolls[0];
+    scroll.textContent = `Scroll: ${first ? displayName(first) : ''} (${String(
+      state.player.scrolls.length,
+    )})`;
+    scroll.onclick = () => handlers.onScroll?.(0);
+    c.appendChild(scroll);
+  }
   const flee = document.createElement('button');
   flee.className = 'spbtn util';
   flee.textContent = 'Flee';
