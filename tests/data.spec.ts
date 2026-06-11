@@ -25,6 +25,14 @@ describe('table completeness', () => {
     expect(Object.keys(RUNES)).toHaveLength(12);
   });
 
+  it('every rune carries a player-facing blurb (tooltip copy)', () => {
+    for (const id of RUNE_IDS) {
+      const blurb = RUNES[id].blurb;
+      expect(blurb.length, id).toBeGreaterThan(10);
+      expect(blurb.length, id).toBeLessThanOrEqual(70);
+    }
+  });
+
   it('has 14 enemy species (12 + glimmerkin + trial guardian) and 5 bosses', () => {
     expect(ENEMY_IDS).toHaveLength(14);
     expect(Object.keys(ENEMIES)).toHaveLength(14);

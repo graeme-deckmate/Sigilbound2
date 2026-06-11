@@ -328,6 +328,7 @@ function chipRow(
   labels: Record<string, string>,
   kind: 'element' | 'form' | 'rune',
   unlockedList: string[],
+  tips?: Record<string, string>,
 ): void {
   const wrap = el(containerId);
   wrap.innerHTML = '';
@@ -341,6 +342,7 @@ function chipRow(
     chip.className = `chip${selected ? ' sel' : ''}${isUnlocked ? '' : ' lock'}`;
     chip.textContent = isUnlocked ? (labels[id] ?? id) : `🔒 ${labels[id] ?? id}`;
     if (!isUnlocked) chip.title = hintFor(kind, id);
+    else if (tips?.[id]) chip.title = tips[id];
     chip.onclick = () => {
       if (!isUnlocked) {
         playSfx('deny');
@@ -380,6 +382,7 @@ function buildChips(): void {
     Object.fromEntries(RUNE_IDS.map((id) => [id, RUNES[id].label])),
     'rune',
     u.runes,
+    Object.fromEntries(RUNE_IDS.map((id) => [id, RUNES[id].blurb])),
   );
 }
 
@@ -458,6 +461,16 @@ function refreshPreviewInfo(): void {
   const statusName = ENEMY_STATUSES[element.status].label;
   let main: string;
   const notes: string[] = [];
+  // Rule-bending runes state their bend in plain text; the plainer
+  // runes are already legible from the numbers above.
+  const bendsARule =
+    rune.surges === true ||
+    rune.alwaysStable === true ||
+    rune.resistAsNeutral === true ||
+    rune.keepsReactionSetup === true ||
+    rune.refundOnKill === true ||
+    rune.varianceMin !== undefined;
+  if (bendsARule) notes.push(rune.blurb);
 
   if (spellTargeting(spell) === 'self') {
     main = `Shield <b style="color:${element.color}">${String(veilShield(spell, lv))}</b> · ${cost}`;
