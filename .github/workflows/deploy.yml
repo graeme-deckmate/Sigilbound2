@@ -1,13 +1,10 @@
-# GitHub Pages deploy. Run manually from the Actions tab for now.
-# To deploy automatically on every push to main:
-#   1. Repo Settings -> Pages -> Source: GitHub Actions
-#   2. Uncomment the push trigger below.
+# GitHub Pages deploy: every push to main, or manually from Actions.
 name: Deploy to GitHub Pages
 
 on:
   workflow_dispatch:
-  # push:
-  #   branches: [main]
+  push:
+    branches: [main]
 
 permissions:
   contents: read
