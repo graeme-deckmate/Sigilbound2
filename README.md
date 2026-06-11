@@ -10,7 +10,7 @@ a fourth act under the mountain (the Call familiar, twin-element
 spells, an optional superboss) and NG+.
 Built with TypeScript, Vite and Phaser 3; ships as an installable PWA.
 
-**Play:** (deploy pending; GitHub Pages link lands here)
+**Play:** https://graeme-deckmate.github.io/Sigilnbound/
 
 ## Controls
 

@@ -6,7 +6,7 @@ Claude Code: read this first every session. Update it before you stop. Keep entr
 
 Current phase: **v1.1 COMPLETE (Phases 0-15). Phase 16 (Capacitor Android) is stretch and needs Grae's hardware.**
 Last session: 2026-06-11 (Phases 14 + 15: Act 4 and NG+, v1.1 ships)
-Deployed URL: - (awaiting GitHub repo push + Pages enable; see Setup needed)
+Deployed URL: https://graeme-deckmate.github.io/Sigilnbound/ (Pages, deploys on every push to main)
 
 ## Phase checklist
 
@@ -25,7 +25,7 @@ Deployed URL: - (awaiting GitHub repo push + Pages enable; see Setup needed)
 - [x] Phase 12: The Vale's Wheel (reactions live in Grae's running playtest; watch for the violet line)
 - [x] Phase 13: The discovery layer (v1.1)
 - [x] Phase 14: Act 4, twins, summons (Grae playtest of the Sanctum + Hollow Warden pending)
-- [x] Phase 15: NG+, polish, re-ship (Pages deploy + phone test pending, needs Grae's GitHub)
+- [x] Phase 15: NG+, polish, re-ship (DEPLOYED 2026-06-11; Grae's phone test + Lighthouse remain)
 - [ ] Phase 16: Capacitor Android (stretch)
 
 ## Setup needed from Grae (one-time)
