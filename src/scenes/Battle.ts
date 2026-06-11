@@ -19,7 +19,7 @@ import { SAY_MIN_MS, SAY_PER_CHAR_MS, TEXT_SPEED_MULT, ZONE_BACKDROPS } from '..
 import { ELEMENTS } from '../data/elements.ts';
 import { BATTLE_SPRITES } from '../render/grids.ts';
 import { textureFromGrid } from '../render/sprites.ts';
-import { FloaterPool, burst } from '../render/fx.ts';
+import { FloaterPool, burst, stamp } from '../render/fx.ts';
 import * as dom from '../render/dom.ts';
 import * as bdom from '../render/battledom.ts';
 import { playMusic } from '../audio/music.ts';
@@ -470,10 +470,22 @@ export class BattleScene extends Phaser.Scene {
         }
         break;
       }
-      case 'enemyStatus':
+      case 'enemyStatus': {
         playSfx('status_apply');
+        const sprite = this.sprites.get(event.index);
+        if (sprite) {
+          const badge = bdom.statusBadge(event.status);
+          this.floaters.spawn(
+            sprite.x,
+            sprite.y - sprite.displayHeight - 10,
+            badge.text,
+            badge.color,
+            false,
+          );
+        }
         bdom.updateEnemyRows(event.ui.enemies);
         break;
+      }
       case 'enemyShield':
         playSfx('shield_up');
         bdom.updateEnemyRows(event.ui.enemies);
@@ -595,6 +607,7 @@ export class BattleScene extends Phaser.Scene {
         break;
       case 'reaction': {
         playSfx('reaction');
+        stamp(this, `${event.reaction.toUpperCase()}!`, '#b07ce8', this.motionOk);
         const sprite = this.sprites.get(event.index);
         if (sprite) {
           burst(this, sprite.x, sprite.y - sprite.displayHeight / 2, '#9d7bff');
@@ -613,6 +626,7 @@ export class BattleScene extends Phaser.Scene {
       }
       case 'surge':
         playSfx('surge');
+        stamp(this, 'SURGE!', '#ffd84a', this.motionOk);
         if (event.severity === 'severe' && this.motionOk) this.cameras.main.shake(160, 0.006);
         this.refreshHudFrom(event.ui);
         break;

@@ -59,6 +59,7 @@ function statusChip(status: EnemyStatusId | PlayerStatusId): HTMLElement {
 
 export function showBattle(visible: boolean): void {
   el('battle').style.display = visible ? 'flex' : 'none';
+  if (visible) logHistory.length = 0;
   if (!visible) {
     exitTargetMode();
     updateHudShield(0);
@@ -66,11 +67,44 @@ export function showBattle(visible: boolean): void {
   }
 }
 
+/**
+ * Rolling battle log: the newest beat lands bright at the bottom and
+ * the last two stay readable above it, dimming with age, so a busy
+ * round can be re-read instead of flashing past.
+ */
+const LOG_KEEP = 3;
+const logHistory: { text: string; tone?: 'reaction' | 'surge' }[] = [];
+
 export function setLog(text: string, tone?: 'reaction' | 'surge'): void {
+  const newest = logHistory[logHistory.length - 1];
+  // Prompts like "Your move." replace themselves instead of stacking.
+  if (newest && newest.text === text) newest.tone = tone;
+  else logHistory.push({ text, tone });
+  while (logHistory.length > LOG_KEEP) logHistory.shift();
+
   const log = el('blog');
-  log.textContent = text;
-  log.classList.toggle('tone-reaction', tone === 'reaction');
-  log.classList.toggle('tone-surge', tone === 'surge');
+  log.replaceChildren(
+    ...logHistory.map((line, i) => {
+      const div = document.createElement('div');
+      const age = logHistory.length - 1 - i;
+      div.className = `blogline${age > 0 ? ` old${String(age)}` : ''}${
+        line.tone ? ` tone-${line.tone}` : ''
+      }`;
+      div.textContent = line.text;
+      return div;
+    }),
+  );
+}
+
+/** Floater copy for a freshly landed mark, in its element color. */
+export function statusBadge(status: EnemyStatusId | PlayerStatusId): {
+  text: string;
+  color: string;
+} {
+  return {
+    text: (STATUS_TIPS[status].split(':')[0] ?? status).toUpperCase(),
+    color: STATUS_COLORS[status],
+  };
 }
 
 /* ---------- enemy rows ---------- */

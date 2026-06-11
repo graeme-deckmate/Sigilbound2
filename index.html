@@ -453,17 +453,31 @@
         padding: 8px 10px calc(10px + env(safe-area-inset-bottom));
       }
       #blog {
+        min-height: 30px;
+        padding: 2px 4px 8px;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+      }
+      .blogline {
         font-size: 22px;
         line-height: 1.2;
-        min-height: 30px;
         color: var(--parch);
-        padding: 2px 4px 8px;
       }
-      #blog.tone-reaction {
+      /* The last few beats stay readable, dimming with age. */
+      .blogline.old1 {
+        font-size: 17px;
+        opacity: 0.55;
+      }
+      .blogline.old2 {
+        font-size: 15px;
+        opacity: 0.32;
+      }
+      .blogline.tone-reaction {
         color: var(--arcane);
         text-shadow: 0 0 8px rgba(157, 123, 255, 0.35);
       }
-      #blog.tone-surge {
+      .blogline.tone-surge {
         color: #d9ccff;
         font-style: italic;
       }

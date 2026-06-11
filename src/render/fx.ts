@@ -46,6 +46,47 @@ export class FloaterPool {
   }
 }
 
+/**
+ * Center-screen stamp for marquee beats (reactions, surges): a short
+ * pop of display text that holds, then fades. Reduced motion keeps
+ * the text and drops the bounce.
+ */
+export function stamp(scene: Phaser.Scene, text: string, color: string, motionOk: boolean): void {
+  const { width, height } = scene.scale;
+  const t = scene.add
+    .text(width / 2, height * 0.3, text, {
+      fontFamily: FONT_DISPLAY,
+      fontSize: '16px',
+      color,
+    })
+    .setOrigin(0.5)
+    .setDepth(60)
+    .setAlpha(0);
+  t.setShadow(2, 2, '#16112b', 0, false, true);
+  if (motionOk) {
+    t.setScale(0.5);
+    scene.tweens.add({
+      targets: t,
+      alpha: 1,
+      scale: 1,
+      duration: 140,
+      ease: 'Back.easeOut',
+    });
+  } else {
+    scene.tweens.add({ targets: t, alpha: 1, duration: 140 });
+  }
+  scene.tweens.add({
+    targets: t,
+    alpha: 0,
+    y: t.y - (motionOk ? 10 : 0),
+    delay: 620,
+    duration: 260,
+    onComplete: () => {
+      t.destroy();
+    },
+  });
+}
+
 /** Ensure the shared 2x2 particle texture exists. */
 export function ensureParticleTexture(scene: Phaser.Scene): void {
   if (scene.textures.exists('px')) return;
