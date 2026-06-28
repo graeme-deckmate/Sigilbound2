@@ -58,7 +58,7 @@ describe('save/load round trip', () => {
   });
 
   it('uses the documented localStorage key for the auto slot', () => {
-    expect(SAVE_KEYS.auto).toBe('sigilbound.save.v1');
+    expect(SAVE_KEYS.auto).toBe('sigilbound2.save.v1');
   });
 
   it('keeps auto and manual slots independent', () => {

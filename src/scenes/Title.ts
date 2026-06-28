@@ -55,7 +55,7 @@ export class TitleScene extends Phaser.Scene {
     });
     this.sigil.setOrigin(0.5);
 
-    this.wordmark = this.add.text(0, 0, 'SIGILBOUND', {
+    this.wordmark = this.add.text(0, 0, 'SIGILBOUND II', {
       fontFamily: FONT_DISPLAY,
       color: PALETTE.gold,
     });
@@ -75,7 +75,7 @@ export class TitleScene extends Phaser.Scene {
     // NG+ pips: one mark per finished cycle (03 section 25).
     if (saved && saved.player.ngPlus > 0) {
       const pips = '✦'.repeat(Math.min(saved.player.ngPlus, 7));
-      this.wordmark.setText(`SIGILBOUND ${pips}`);
+      this.wordmark.setText(`SIGILBOUND II ${pips}`);
       this.wordmark.setColor(PALETTE.arcane);
     }
     if (saved) {

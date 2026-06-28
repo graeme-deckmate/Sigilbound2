@@ -1,5 +1,5 @@
 {
-  "name": "sigilbound",
+  "name": "sigilbound2",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -13,7 +13,7 @@
     "format": "prettier --write .",
     "genmaps": "node --experimental-strip-types --no-warnings scripts/genmaps.ts",
     "genicons": "node --experimental-strip-types --no-warnings scripts/genicons.ts",
-    "zip": "npm run build && cd dist && zip -rq ../sigilbound-itch.zip ."
+    "zip": "npm run build && cd dist && zip -rq ../sigilbound2-itch.zip ."
   },
   "dependencies": {
     "phaser": "^3.90.0"

@@ -12,8 +12,8 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       manifest: {
-        name: 'Sigilbound',
-        short_name: 'Sigilbound',
+        name: 'Sigilbound II',
+        short_name: 'Sigilbound II',
         description: 'Craft your own spells. Roam the Vale. Battles strike from the tall grass.',
         display: 'standalone',
         orientation: 'portrait',
@@ -34,7 +34,7 @@ export default defineConfig({
           {
             urlPattern: /audio\/.*\.ogg$/,
             handler: 'CacheFirst',
-            options: { cacheName: 'audio', expiration: { maxEntries: 40 } },
+            options: { cacheName: 'sb2-audio', expiration: { maxEntries: 40 } },
           },
         ],
       },

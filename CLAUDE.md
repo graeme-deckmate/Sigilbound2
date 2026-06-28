@@ -1,6 +1,6 @@
-# SIGILBOUND
+# SIGILBOUND II
 
-A top-down pixel adventure with player-crafted spells and instanced, turn-based combat (Pokemon / Dragon Quest style). Web game: TypeScript + Vite + Phaser 3, deployed as a PWA.
+The standalone v2 fork of Sigilbound (v1 stays deployed and untouched). A top-down pixel adventure with player-crafted spells and instanced, turn-based combat (Pokemon / Dragon Quest style). Web game: TypeScript + Vite + Phaser 3, deployed as a PWA. v2 adds a larger less-linear world, towns/shops, gold + gear, optional retryable dungeons, more enemies/bosses, and deeper character customisation. The phased v2 plan lives in `PROGRESS.md`.
 
 A playable single-file prototype lives at `reference/sigilbound.html`. Treat it as spec-by-example for feel, palette, and the validated combat math. The production game expands it per the docs below.
 

@@ -21,8 +21,8 @@ export type SaveSlot = 'auto' | 'manual';
 
 /** The documented key (01) is the auto slot; manual gets a suffix. */
 export const SAVE_KEYS: Record<SaveSlot, string> = {
-  auto: 'sigilbound.save.v1',
-  manual: 'sigilbound.save.v1.manual',
+  auto: 'sigilbound2.save.v1',
+  manual: 'sigilbound2.save.v1.manual',
 };
 
 export class SaveError extends Error {}

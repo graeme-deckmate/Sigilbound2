@@ -1,4 +1,10 @@
-# SIGILBOUND
+# SIGILBOUND II
+
+The v2 of Sigilbound: a larger, less-linear Vale with towns, shops, gold and
+gear, optional retryable dungeons (suggested level, puzzles, complete-or-fail),
+more enemies and bosses, and deeper character customisation (classes,
+backgrounds, talents). It is a standalone fork; v1 stays deployed and untouched.
+Build state and the phase plan live in `PROGRESS.md`.
 
 A 3 to 5 hour top-down pixel adventure where you craft your own spells.
 Roam the Vale, bind an element, a form and a rune in the Grimoire, tune
@@ -10,7 +16,7 @@ a fourth act under the mountain (the Call familiar, twin-element
 spells, an optional superboss) and NG+.
 Built with TypeScript, Vite and Phaser 3; ships as an installable PWA.
 
-**Play:** https://graeme-deckmate.github.io/Sigilnbound/
+**Play:** https://graeme-deckmate.github.io/Sigilbound2/
 
 ## Controls
 
@@ -29,7 +35,7 @@ npm run lint       # eslint + prettier
 npm run build      # production build (PWA)
 npm run genmaps    # recompile ASCII maps from content/maps/
 npm run genicons   # regenerate PWA icons
-npm run zip        # build + sigilbound-itch.zip for itch.io
+npm run zip        # build + sigilbound2-itch.zip for itch.io
 ```
 
 The design docs live in `docs/` and the playable single-file prototype
@@ -43,5 +49,5 @@ the synth music per track (see `content/audio/CREDITS.md`).
 - GitHub Pages: the `Deploy to GitHub Pages` workflow builds and
   publishes `dist/` (run from the Actions tab, or enable the push
   trigger in `.github/workflows/deploy.yml`).
-- itch.io: upload `sigilbound-itch.zip` (from `npm run zip`) as an
+- itch.io: upload `sigilbound2-itch.zip` (from `npm run zip`) as an
   HTML game with `index.html` as the entry.

@@ -4,9 +4,41 @@ Claude Code: read this first every session. Update it before you stop. Keep entr
 
 ## Status
 
-Current phase: **v1.1 COMPLETE (Phases 0-15). Phase 16 (Capacitor Android) is stretch and needs Grae's hardware.**
-Last session: 2026-06-11 (Phases 14 + 15: Act 4 and NG+, v1.1 ships)
-Deployed URL: https://graeme-deckmate.github.io/Sigilnbound/ (Pages, deploys on every push to main)
+Current phase: **SIGILBOUND II (v2) fork. Phase 0 (fork bring-up) in progress.** v1.1 was COMPLETE (Phases 0-15) in the original Sigilbound repo; this is the standalone v2 fork.
+Last session: 2026-06-28 (v2 Phase 0: forked repo, renamed identifiers, fixed deploy URL typo)
+Deployed URL: https://graeme-deckmate.github.io/Sigilbound2/ (Pages, deploys on every push to main)
+
+## Sigilbound II (v2) plan
+
+The full v2 implementation plan (fork, re-fight bug fix, less-linear world,
+dungeons, more enemies/bosses, gold + gear, character identity, deeper
+spellcraft, difficulty) is tracked phase by phase below under "v2 phases".
+Design rationale: see `docs/06-V2-SYSTEMS.md` (added in the final v2 phase).
+
+Deferred within Phase 0 (done deliberately when the relevant feature lands, to
+keep each version bump tied to a real shape change with a migration test):
+- `GameState.version` 2 -> 3: bumped in v2 Phase 2 when `world.dungeon` (the first
+  new field) lands.
+- Spell-code prefix `sb1:` -> `sb2:`: bumped in v2 Phase 10 when `CodePayload`
+  gains new element/form/rune ids (the format is identical until then).
+
+### v2 phases
+- [x] Phase 0: Fork bring-up (new save key `sigilbound2.save.v1`, PWA name
+  `Sigilbound II`, workbox cache `sb2-audio`, package `sigilbound2`, zip
+  `sigilbound2-itch.zip`, wordmark/title, dev launch name, deploy URL typo fixed).
+- [ ] Phase 1: Re-fight bug fix (waystone rematch repeatable).
+- [ ] Phase 2: Map-type plumbing and theming (`@theme`, inert dungeon fields, `world.dungeon`, version 3).
+- [ ] Phase 3: Dungeon core (portal/levers/doors/plates, Sunken Crypt, eject-on-fail).
+- [ ] Phase 4: Currency + inventory + Shop primitive (gold, gear data, shopdom).
+- [ ] Phase 5: Less-linear overworld + towns + fast travel (lateral exits, waystone network).
+- [ ] Phase 6: Gear stats into combat (deriveLoadout, CastMods, defense seam).
+- [ ] Phase 7: Encounter archetypes + new enemies (ambush, miniboss, +species).
+- [ ] Phase 8: Dungeon bosses + second dungeon (DungeonBossId, Dead Circuit Vault).
+- [ ] Phase 9: Character identity (classes, backgrounds, talents, appearance).
+- [ ] Phase 10: Deeper spellcraft + builds (new runes/forms, slots 7-8, presets, sb2: codes).
+- [ ] Phase 11: Difficulty + run modifiers + accessibility.
+- [ ] Phase 12: Roaming enemies (optional).
+- [ ] Phase 13: Balance, polish, ship (docs rewrite, 06-V2-SYSTEMS.md).
 
 ## Phase checklist
 
