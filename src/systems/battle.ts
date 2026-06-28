@@ -72,6 +72,7 @@ import { applyXp } from './leveling.ts';
 import { weightedPick } from './encounters.ts';
 import { deriveLoadout } from './loadout.ts';
 import type { StatMods } from '../core/items.ts';
+import { difficultyOf, type DifficultyDef } from '../data/difficulty.ts';
 
 /* ---------- state ---------- */
 
@@ -231,6 +232,8 @@ export interface BattleState {
   seen: Record<string, { weak: ElementId[]; statuses: string[]; reactions: string[] }>;
   /** NG+ cycle active: enemies x1.5 hp/atk, essence x2 (03 s25). */
   ng: boolean;
+  /** Difficulty profile, snapshotted at start (v2 V5; STANDARD = identity). */
+  diff: DifficultyDef;
   /** Summoned familiar (Call form, 03 section 22). Battle-scoped. */
   familiar: { spell: Spell; hp: number; maxhp: number } | null;
   player: BattlePlayer;
@@ -377,6 +380,7 @@ export function initBattle(
   const counts = new Map<EnemySpeciesId, number>();
   for (const m of members) counts.set(m, (counts.get(m) ?? 0) + 1);
   const seen = new Map<EnemySpeciesId, number>();
+  const diff = difficultyOf(gs.world.run.difficulty);
   const enemies = members.map((species, index) => {
     const def = ENEMIES[species];
     const dupes = (counts.get(species) ?? 0) > 1;
@@ -387,7 +391,9 @@ export function initBattle(
     const isGlimmer = variance?.glimmer === true && species === 'glimmerkin';
     const ngHp = gs.player.ngPlus > 0 ? NG_PLUS.hpMult : 1;
     const maxhp = Math.round(
-      (isGlimmer ? GLIMMERKIN.h0 + GLIMMERKIN.hpl * enemyLv : def.h0 + def.hpl * enemyLv) * ngHp,
+      (isGlimmer ? GLIMMERKIN.h0 + GLIMMERKIN.hpl * enemyLv : def.h0 + def.hpl * enemyLv) *
+        ngHp *
+        diff.hpMult,
     );
     const enemy: BattleEnemy = {
       index,
@@ -429,6 +435,7 @@ export function initBattle(
     severeSurges: 0,
     seen: {},
     ng: gs.player.ngPlus > 0,
+    diff,
     familiar: null,
     player: {
       lv: gs.player.lv,
@@ -479,6 +486,7 @@ export function initBossBattle(
   const def = BOSSES[bossId];
   const ng = gs.player.ngPlus > 0;
   const ngHp = ng ? NG_PLUS.hpMult : 1;
+  const diff = difficultyOf(gs.world.run.difficulty);
   // The Hollow Warden fights two levels up in NG+ (03 section 25).
   const lvBonus =
     (rematch?.lvBonus ?? 0) + (ng && bossId === 'hollowwarden' ? NG_PLUS.wardenLvBonus : 0);
@@ -488,8 +496,8 @@ export function initBossBattle(
     species: bossId,
     displayName: def.name,
     lv: def.lv + lvBonus,
-    hp: Math.round(def.hp * ngHp),
-    maxhp: Math.round(def.hp * ngHp),
+    hp: Math.round(def.hp * ngHp * diff.hpMult),
+    maxhp: Math.round(def.hp * ngHp * diff.hpMult),
     shield: 0,
     statuses: {},
     stunImmunity: 0,
@@ -535,6 +543,7 @@ export function initBossBattle(
     severeSurges: 0,
     seen: {},
     ng,
+    diff,
     familiar: null,
     player: {
       lv: gs.player.lv,
@@ -1794,6 +1803,7 @@ function dealDamageToPlayer(
   const player = state.player;
   let dmg = (def.a0 + def.al * enemy.lv) * move.mult * variance(rng);
   if (state.ng) dmg *= NG_PLUS.atkMult;
+  dmg *= state.diff.atkMult;
   if (chilled) dmg *= ENEMY_STATUSES.chilled.dealtMult ?? 1;
   if (player.statuses.includes('withered')) dmg *= PLAYER_STATUSES.withered.takenMult ?? 1;
   if (enemy.kind === 'boss' && state.bossState?.kind === 'enrage' && state.bossState.enraged) {
@@ -1948,7 +1958,7 @@ export function battleEssence(state: BattleState): number {
     if (e.affix === 'sealed') total += ESSENCE.sealedBonus;
     if (e.glimmer) total += ESSENCE.glimmerCaught;
   }
-  return total * (state.ng ? NG_PLUS.essenceMult : 1);
+  return Math.round(total * (state.ng ? NG_PLUS.essenceMult : 1) * state.diff.econMult);
 }
 
 function checkVictory(state: BattleState, emit: Emit): void {

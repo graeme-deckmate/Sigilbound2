@@ -103,7 +103,13 @@ keep each version bump tied to a real shape change with a migration test):
   (wires the economy into dungeons). data.spec 17->19 enemies, 10->11 zones.
 - [ ] Phase 9: Character identity (classes, backgrounds, talents, appearance).
 - [ ] Phase 10: Deeper spellcraft + builds (new runes/forms, slots 7-8, presets, sb2: codes).
-- [ ] Phase 11: Difficulty + run modifiers + accessibility.
+- [x] Phase 11: Difficulty. src/data/difficulty.ts (story/standard/harsh/nightmare;
+  STANDARD = numerical identity) scales enemy hp/atk/econ in battle.ts, snapshotted
+  on BattleState.diff. world.run {difficulty,modifiers,seed} added (save defaults +
+  migrate). Selectable via a Settings chip row. GATE HELD: balanceSim byte-identical
+  (standard => x1). Tests: difficulty.spec. PARTIAL: run `modifiers` field exists but
+  no modifiers implemented yet; expanded accessibility settings (colorblind/uiScale)
+  deferred to the polish phase.
 - [ ] Phase 12: Roaming enemies (optional).
 - [ ] Phase 13: Balance, polish, ship (docs rewrite, 06-V2-SYSTEMS.md).
 

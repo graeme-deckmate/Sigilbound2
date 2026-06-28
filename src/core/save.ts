@@ -13,6 +13,8 @@ import { FORM_IDS } from '../data/forms.ts';
 import { RUNE_IDS } from '../data/runes.ts';
 import { GEAR_BASES } from '../data/gear.ts';
 import { affixById } from '../data/affixes.ts';
+import { DIFFICULTY_IDS } from '../data/difficulty.ts';
+import type { DifficultyId } from '../data/difficulty.ts';
 import {
   BASE_HP,
   BASE_MP,
@@ -80,6 +82,7 @@ export function newGame(): GameState {
       aspect: null,
       essenceMarker: null,
       dungeon: null,
+      run: { difficulty: 'standard', modifiers: [], seed: 0 },
     },
     notes: [],
     feats: [],
@@ -327,6 +330,16 @@ export function migrate(raw: unknown): GameState {
             y: num(ent['y'], 0),
           },
           flags,
+        };
+      })(),
+      run: ((): GameState['world']['run'] => {
+        const r = isObj(w['run']) ? w['run'] : {};
+        return {
+          difficulty: oneOf<DifficultyId>(DIFFICULTY_IDS, r['difficulty'], 'standard'),
+          modifiers: (Array.isArray(r['modifiers']) ? r['modifiers'] : []).filter(
+            (m): m is string => typeof m === 'string',
+          ),
+          seed: Math.floor(num(r['seed'], 0)),
         };
       })(),
     },

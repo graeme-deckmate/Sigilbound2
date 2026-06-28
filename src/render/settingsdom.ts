@@ -11,6 +11,7 @@ import { playSfx } from '../audio/synth.ts';
 import { applyDpadSettings, toast } from './dom.ts';
 import { importCode } from '../systems/spellcodes.ts';
 import { displayName } from '../systems/spellcraft.ts';
+import { DIFFICULTY_IDS } from '../data/difficulty.ts';
 
 export interface SettingsCtx {
   state: GameState;
@@ -63,6 +64,17 @@ function applyLive(): void {
 function rebuildChips(): void {
   if (!ctx) return;
   const s = ctx.state.settings;
+  const run = ctx.state.world.run;
+
+  const diff = el('chDifficulty');
+  diff.replaceChildren(
+    ...DIFFICULTY_IDS.map((id) =>
+      chip(`${id[0]?.toUpperCase() ?? ''}${id.slice(1)}`, run.difficulty === id, () => {
+        run.difficulty = id;
+        rebuildChips();
+      }),
+    ),
+  );
 
   const comfort = el('chComfort');
   comfort.replaceChildren(

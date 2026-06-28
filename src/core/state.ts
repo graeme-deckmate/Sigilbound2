@@ -4,6 +4,7 @@
  * Identifier unions are transcribed from docs/03-CONTENT-DATA.
  */
 import type { Equipment, Inventory } from './items.ts';
+import type { DifficultyId } from '../data/difficulty.ts';
 
 export type ElementId = 'ember' | 'rime' | 'volt' | 'thorn' | 'gloom';
 export type FormId = 'wisp' | 'bolt' | 'lance' | 'nova' | 'veil' | 'call';
@@ -137,6 +138,8 @@ export interface GameState {
       entrance: { mapId: MapId; x: number; y: number };
       flags: Record<string, boolean>;
     } | null;
+    /** Run-level options (v2 V5): difficulty + modifiers, chosen at new game. */
+    run: { difficulty: DifficultyId; modifiers: string[]; seed: number };
   };
   /** Grimoire Notes page lines, player voice (Phase 13 fills). v1.1. */
   notes: string[];
