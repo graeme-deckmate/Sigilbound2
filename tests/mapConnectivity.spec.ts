@@ -127,9 +127,10 @@ describe('map sources', () => {
     expect(vale?.springs).toHaveLength(1);
   });
 
-  it('hearth is safe: no encounter zones, six villagers', () => {
+  it('hearth is safe: no encounter zones, villagers + the v2 armorer', () => {
     const hearth = compileAll().find((m) => m.id === 'hearth');
     expect(hearth?.zones).toEqual([]);
-    expect(hearth?.npcs).toHaveLength(6);
+    // six original villagers + the v2 armorer (W3 town vendor)
+    expect(hearth?.npcs).toHaveLength(7);
   });
 });

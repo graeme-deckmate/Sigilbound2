@@ -155,7 +155,13 @@ export const ashenreach = {
   "chests": [],
   "objectives": [],
   "minibosses": [],
-  "waystones": [],
+  "waystones": [
+    {
+      "id": "reach_stone",
+      "x": 48,
+      "y": 5
+    }
+  ],
   "plates": [],
   "ambushes": []
 } as const satisfies CompiledMap;

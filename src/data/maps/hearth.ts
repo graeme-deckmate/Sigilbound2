@@ -100,6 +100,12 @@ export const hearth = {
       "x": 12,
       "y": 16,
       "dialogue": "scout_hints"
+    },
+    {
+      "id": "armorer",
+      "x": 8,
+      "y": 5,
+      "dialogue": "armorer_base"
     }
   ],
   "signs": [],
@@ -135,7 +141,13 @@ export const hearth = {
   "chests": [],
   "objectives": [],
   "minibosses": [],
-  "waystones": [],
+  "waystones": [
+    {
+      "id": "hearth_stone",
+      "x": 7,
+      "y": 12
+    }
+  ],
   "plates": [],
   "ambushes": []
 } as const satisfies CompiledMap;

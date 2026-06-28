@@ -66,7 +66,15 @@ keep each version bump tied to a real shape change with a migration test):
   save round-trip. RE-SCOPE: the shop UI + NPC placement moved to Phase 5 (towns),
   where it belongs; gear stat effects flow into combat in Phase 6. Version stays 3
   (tolerant migrate fills new fields), no churny bump.
-- [ ] Phase 5: Less-linear overworld + towns + fast travel (lateral exits, waystone network).
+- [x] Phase 5: Less-linear overworld + town vendor + fast travel. Waystone network
+  (@waystone in hearth/hearthvale/ashenreach): attune on touch, then step between
+  any discovered waystones (applyExit), so the world is no longer hub-routed. A
+  functional armorer in Hearth buys/sells gear for gold (openChoice-driven, uses
+  the Phase 4 pure shop logic). exitLocked generalized into a SOFT_GATES table
+  (worldstate). NOTE: equip UI lands in Phase 9 (Character overlay); lateral
+  map-border exits deferred in favor of the waystone network (lower risk, hand-
+  authored maps untouched). More waystones can be dropped into westwood/northhollow
+  trivially later.
 - [x] Phase 6: Gear stats into combat. New systems/loadout.ts deriveLoadout
   (aggregates equipped gear -> StatMods, gearless => {}, powerMult capped at
   1.35). Extended CastMods with powerMult/costMult/critChance/critMult/procBonus

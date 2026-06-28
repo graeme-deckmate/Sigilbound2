@@ -113,9 +113,32 @@ export const TRIAL_KEYS: readonly TrialKey[] = ['shatter', 'blight', 'kindle'];
  * 23: the Hollow drains). Returns the dialogue id barring the way, or
  * null when the exit is open.
  */
+interface SoftGate {
+  to: MapId;
+  needs: (s: GameState) => boolean;
+  barred: string;
+}
+
+/**
+ * Level/story exit gates (v2 W3 generalizes the single v1 sanctum case into a
+ * table). A locked exit returns the dialogue id barring the way; null = open.
+ */
+const SOFT_GATES: readonly SoftGate[] = [
+  { to: 'sanctum', needs: (s) => s.world.bosses.valewraith, barred: 'sanctum_stair_sealed' },
+];
+
 export function exitLocked(state: GameState, to: MapId): string | null {
-  if (to === 'sanctum' && !state.world.bosses.valewraith) return 'sanctum_stair_sealed';
-  return null;
+  const gate = SOFT_GATES.find((g) => g.to === to && !g.needs(state));
+  return gate ? gate.barred : null;
+}
+
+/** Discovery flag for a waystone (v2 W3 fast-travel network). */
+export function waystoneFlag(id: string): string {
+  return `way_${id}`;
+}
+
+export function waystoneKnown(state: GameState, id: string): boolean {
+  return state.world.flags[waystoneFlag(id)] === true;
 }
 
 /**

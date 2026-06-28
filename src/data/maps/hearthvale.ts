@@ -178,7 +178,13 @@ export const hearthvale = {
   "chests": [],
   "objectives": [],
   "minibosses": [],
-  "waystones": [],
+  "waystones": [
+    {
+      "id": "vale_stone",
+      "x": 10,
+      "y": 16
+    }
+  ],
   "plates": [],
   "ambushes": []
 } as const satisfies CompiledMap;

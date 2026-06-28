@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import type { BossId, GameState } from '../core/state.ts';
+import type { BossId, GameState, MapId } from '../core/state.ts';
 import { save } from '../core/save.ts';
 import { deriveSeed, mulberry32, type Rng } from '../core/rng.ts';
 import {
@@ -71,8 +71,10 @@ import {
   isDungeonCleared,
 } from '../systems/dungeon.ts';
 import { dungeonById, dungeonObjective } from '../data/dungeons.ts';
-import { grantGear } from '../systems/shop.ts';
-import { rollGear, itemLabel } from '../systems/gear.ts';
+import { grantGear, buyGear, sellGear } from '../systems/shop.ts';
+import { rollGear, itemLabel, itemValue } from '../systems/gear.ts';
+import { waystoneFlag } from '../systems/worldstate.ts';
+import type { GearItem } from '../core/items.ts';
 import { spellCost, displayName } from '../systems/spellcraft.ts';
 import { deriveSeed as derive2 } from '../core/rng.ts';
 import type { ElementId } from '../core/state.ts';
@@ -833,6 +835,13 @@ export class WorldScene extends Phaser.Scene {
       const img = this.add.image(px, py, 'ent_boss_marker').setOrigin(0, 0).setDepth(6);
       this.tweens.add({ targets: img, alpha: 0.6, duration: 1300, yoyo: true, repeat: -1 });
     }
+    for (const w of this.map.waystones) {
+      const { px, py } = at(w.x, w.y);
+      const img = this.add.image(px, py, 'ent_teleporter').setOrigin(0, 0).setDepth(5);
+      if (this.state.world.flags[waystoneFlag(w.id)]) {
+        this.tweens.add({ targets: img, alpha: 0.6, duration: 900, yoyo: true, repeat: -1 });
+      }
+    }
   }
 
   /** Wash non-vale themes with a translucent color over the ground (v2 W2). */
@@ -884,6 +893,111 @@ export class WorldScene extends Phaser.Scene {
       return;
     }
     dom.toast('Dust and old bones.');
+  }
+
+  /** Attune to a waystone, then offer travel to any other discovered one (v2 W3). */
+  private useWaystone(id: string): void {
+    const here = this.map.waystones.find((w) => w.id === id);
+    if (!here) return;
+    if (!this.state.world.flags[waystoneFlag(here.id)]) {
+      this.state.world.flags[waystoneFlag(here.id)] = true;
+      this.autoSave();
+      dom.toast('Waystone attuned.', true);
+    }
+    const labels: Partial<Record<string, string>> = {
+      hearth: 'Hearth',
+      hearthvale: 'Hearthvale',
+      westwood: 'Westwood',
+      ashenreach: 'Ashen Reach',
+      northhollow: 'North Hollow',
+    };
+    const dests: { map: MapId; x: number; y: number; label: string }[] = [];
+    for (const key of Object.keys(MAPS) as MapId[]) {
+      const m = MAPS[key];
+      if (!m) continue;
+      for (const w of m.waystones) {
+        if (w.id === here.id) continue;
+        if (this.state.world.flags[waystoneFlag(w.id)]) {
+          dests.push({ map: key, x: w.x, y: w.y, label: labels[key] ?? key });
+        }
+      }
+    }
+    if (dests.length === 0) {
+      dom.openDialog({
+        speaker: 'WAYSTONE',
+        pages: ['The stone hums, alone for now.', 'Attune others to travel between them.'],
+      });
+      return;
+    }
+    const options = dests.map((d) => d.label);
+    options.push('Stay');
+    dom.openChoice('WAYSTONE', 'Step to which waystone?', options, (i) => {
+      const d = dests[i];
+      if (!d) return;
+      this.busy = true;
+      playSfx('cast');
+      this.state = applyExit(this.state, {
+        x: this.state.world.x,
+        y: this.state.world.y,
+        to: d.map,
+        tx: d.x,
+        ty: d.y,
+      });
+      this.autoSave();
+      void dom.irisTransition(() => this.scene.restart({ state: this.state }));
+    });
+  }
+
+  /** A deterministic rotating gear stock for the town armorer (v2 W3). */
+  private shopStock(): GearItem[] {
+    const bases = ['apprentice_robe', 'spark_wand', 'quartz_charm', 'travel_boots'];
+    const seed = deriveSeed(sessionSeed, Math.floor(this.state.stats.battles / 8) + 101);
+    return bases
+      .map((b, i) => rollGear(b, i === 0 ? 'fine' : 'common', deriveSeed(seed, i)))
+      .filter((g): g is GearItem => g !== null);
+  }
+
+  private openShop(): void {
+    dom.openChoice('ARMORER', 'What do you need?', ['Buy gear', 'Sell gear', 'Leave'], (i) => {
+      if (i === 0) this.shopBuy();
+      else if (i === 1) this.shopSell();
+    });
+  }
+
+  private shopBuy(): void {
+    const stock = this.shopStock();
+    const options = stock.map((it) => `${itemLabel(it)} (${String(itemValue(it))}g)`);
+    options.push('Back');
+    dom.openChoice('BUY', `Gold: ${String(this.state.player.gold)}`, options, (i) => {
+      const it = stock[i];
+      if (!it) return;
+      const r = buyGear(this.state, it, itemValue(it));
+      if (!r.ok) {
+        dom.toast(r.reason === 'gold' ? 'Not enough gold.' : 'Your pack is full.');
+        return;
+      }
+      this.state = r.state;
+      this.autoSave();
+      dom.toast(`Bought ${itemLabel(it)}.`);
+    });
+  }
+
+  private shopSell(): void {
+    const gear = this.state.player.inventory.gear;
+    if (gear.length === 0) {
+      dom.toast('Nothing to sell.');
+      return;
+    }
+    const options = gear.map((it) => `${itemLabel(it)} (+${String(itemValue(it))}g)`);
+    options.push('Back');
+    dom.openChoice('SELL', `Gold: ${String(this.state.player.gold)}`, options, (i) => {
+      const it = gear[i];
+      if (!it) return;
+      const r = sellGear(this.state, it.uid);
+      this.state = r.state;
+      this.autoSave();
+      dom.toast(`Sold for ${String(r.gold)}g.`);
+    });
   }
 
   private snapPlayer(): void {
@@ -1365,6 +1479,11 @@ export class WorldScene extends Phaser.Scene {
     if (!action) return;
     switch (action.kind) {
       case 'dialogue': {
+        // Town vendors intercept their gossip (v2 W3).
+        if (action.npcId === 'armorer') {
+          this.openShop();
+          break;
+        }
         // Commission NPCs intercept their base gossip (03 section 21).
         if (action.npcId && this.tryCommission(action.npcId)) break;
         const id = action.npcId ? npcDialogueId(action.npcId, action.id, this.state) : action.id;
@@ -1479,6 +1598,9 @@ export class WorldScene extends Phaser.Scene {
         );
         break;
       }
+      case 'waystone':
+        this.useWaystone(action.id);
+        break;
       case 'spring': {
         playSfx('heal');
         this.state = applySpringRestore(this.state);

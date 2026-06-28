@@ -1,4 +1,8 @@
 {
+  "armorer_base": {
+    "speaker": "ARMORER",
+    "pages": ["Gear won't cast for you, but it will keep you standing.", "Have a look."]
+  },
   "elder_intro": {
     "speaker": "ELDER",
     "pages": [
