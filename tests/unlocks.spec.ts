@@ -33,9 +33,11 @@ describe('unlock gating', () => {
     expect(unlockedIds('element', 7, noShrines)).not.toContain('gloom');
   });
 
-  it('hex is the only level-gated rune (Lv 9)', () => {
-    expect(unlockedIds('rune', 8, noShrines)).toEqual(['none']);
-    expect(unlockedIds('rune', 9, noShrines)).toEqual(['none', 'hex']);
+  it('level-gated runes: ward 7, hex 9, ruin 10, weight 11', () => {
+    expect(unlockedIds('rune', 6, noShrines)).toEqual(['none']);
+    expect(unlockedIds('rune', 7, noShrines)).toEqual(['none', 'ward']);
+    expect(unlockedIds('rune', 9, noShrines)).toEqual(['none', 'hex', 'ward']);
+    expect(unlockedIds('rune', 11, noShrines)).toEqual(['none', 'hex', 'ward', 'ruin', 'weight']);
   });
 
   it('shrines gate the other runes independently of level', () => {
@@ -43,16 +45,18 @@ describe('unlock gating', () => {
     expect(unlockedIds('rune', 1, allShrines)).toEqual(['none', 'fury', 'thirst', 'echo', 'keen']);
   });
 
-  it('everything is unlocked at Lv 9 with all shrines', () => {
+  it('level + shrine runes all unlocked by Lv 11 with all shrines', () => {
     expect(unlockedIds('element', 9, allShrines)).toHaveLength(5);
     expect(unlockedIds('form', 9, allShrines)).toHaveLength(5);
-    expect(unlockedIds('rune', 9, allShrines)).toHaveLength(6);
+    // none + hex + ward + ruin + weight + 4 shrine runes = 9 (relics/wyrd are flag-gated)
+    expect(unlockedIds('rune', 11, allShrines)).toHaveLength(9);
   });
 
   it('unlocksAtLevel finds toast content', () => {
     expect(unlocksAtLevel(5).map((u) => u.id)).toEqual(['nova']);
     expect(unlocksAtLevel(9).map((u) => u.id)).toEqual(['hex']);
-    expect(unlocksAtLevel(10)).toEqual([]);
+    expect(unlocksAtLevel(10).map((u) => u.id)).toEqual(['ruin']);
+    expect(unlocksAtLevel(11).map((u) => u.id)).toEqual(['weight']);
   });
 
   it('unlocksAtShrine maps shrines to their runes', () => {

@@ -102,7 +102,14 @@ keep each version bump tied to a real shape change with a migration test):
   Bonelord. Dungeon completion now grants essence + GOLD + a rolled GEAR reward
   (wires the economy into dungeons). data.spec 17->19 enemies, 10->11 zones.
 - [ ] Phase 9: Character identity (classes, backgrounds, talents, appearance).
-- [ ] Phase 10: Deeper spellcraft + builds (new runes/forms, slots 7-8, presets, sb2: codes).
+- [x] Phase 10 (partial): Deeper spellcraft - 3 new level-gated runes (weight: raw
+  power at high MP; ruin: rare huge crit; ward: cheap status-setup) that reuse
+  already-honored RuneDef fields (pw/mp/crit/procBonus) => ZERO reducer risk and
+  the sim stays identical. UNLOCKS + data.spec counts (15 runes, 26 unlocks)
+  updated; tests/runes.spec exact values. DEFERRED (each high-touch/high-risk):
+  grimoire slots 6->8 (8-file change incl. Grimoire render), new forms (reducer +
+  balance), build presets, twin rider tier, sb2: code prefix (kept sb1: for
+  back-compat). These are clean follow-ups.
 - [x] Phase 11: Difficulty. src/data/difficulty.ts (story/standard/harsh/nightmare;
   STANDARD = numerical identity) scales enemy hp/atk/econ in battle.ts, snapshotted
   on BattleState.diff. world.run {difficulty,modifiers,seed} added (save defaults +

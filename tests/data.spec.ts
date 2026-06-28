@@ -16,13 +16,13 @@ import { DIALOGUE } from '../src/data/dialogue.ts';
 import { SHRINE_IDS } from '../src/data/constants.ts';
 
 describe('table completeness', () => {
-  it('has 5 elements, 6 forms, 12 runes (6 + wyrd + 5 relics)', () => {
+  it('has 5 elements, 6 forms, 15 runes (12 + v2 weight/ruin/ward)', () => {
     expect(ELEMENT_IDS).toHaveLength(5);
     expect(FORM_IDS).toHaveLength(6);
-    expect(RUNE_IDS).toHaveLength(12);
+    expect(RUNE_IDS).toHaveLength(15);
     expect(Object.keys(ELEMENTS)).toHaveLength(5);
     expect(Object.keys(FORMS)).toHaveLength(6);
-    expect(Object.keys(RUNES)).toHaveLength(12);
+    expect(Object.keys(RUNES)).toHaveLength(15);
   });
 
   it('every rune carries a player-facing blurb (tooltip copy)', () => {
@@ -40,11 +40,11 @@ describe('table completeness', () => {
     expect(Object.keys(BOSSES)).toHaveLength(5);
   });
 
-  it('covers 23 unlock entries: 5 elements + 6 forms + 12 runes', () => {
-    expect(UNLOCKS).toHaveLength(23);
+  it('covers 26 unlock entries: 5 elements + 6 forms + 15 runes', () => {
+    expect(UNLOCKS).toHaveLength(26);
     expect(UNLOCKS.filter((u) => u.kind === 'element')).toHaveLength(5);
     expect(UNLOCKS.filter((u) => u.kind === 'form')).toHaveLength(6);
-    expect(UNLOCKS.filter((u) => u.kind === 'rune')).toHaveLength(12);
+    expect(UNLOCKS.filter((u) => u.kind === 'rune')).toHaveLength(15);
   });
 });
 

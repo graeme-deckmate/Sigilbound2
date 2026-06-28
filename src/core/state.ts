@@ -17,6 +17,10 @@ export type RuneId =
   | 'keen'
   /* v1.1: peddler trade */
   | 'wyrd'
+  /* v2 V4: level-gated runes (one rule-bend each, reusing honored fields) */
+  | 'weight'
+  | 'ruin'
+  | 'ward'
   /* v1.1: hidden relic runes, one rule-bend each (03 section 3) */
   | 'emberglass'
   | 'stillwater'
