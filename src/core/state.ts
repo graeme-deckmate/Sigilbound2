@@ -37,7 +37,13 @@ export type MapId =
   | 'northhollow'
   | 'sanctum'
   | 'sunkencrypt'
-  | 'circuitvault';
+  | 'circuitvault'
+  // The Sundered Reaches (new world): gateway + 4 domains
+  | 'wayhold'
+  | 'cinderwaste'
+  | 'hoarfrost'
+  | 'stormreach'
+  | 'themire';
 
 /** Rune shrines, keyed by the rune they grant. */
 export type ShrineId = 'fury' | 'thirst' | 'echo' | 'keen';

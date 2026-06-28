@@ -8,6 +8,7 @@ import { hearthvale } from './hearthvale.ts';
 import { northhollow } from './northhollow.ts';
 import { sanctum } from './sanctum.ts';
 import { sunkencrypt } from './sunkencrypt.ts';
+import { wayhold } from './wayhold.ts';
 import { westwood } from './westwood.ts';
 
 export const MAPS: Partial<Record<MapId, CompiledMap>> = {
@@ -18,5 +19,6 @@ export const MAPS: Partial<Record<MapId, CompiledMap>> = {
   northhollow,
   sanctum,
   sunkencrypt,
+  wayhold,
   westwood,
 };

@@ -912,6 +912,11 @@ export class WorldScene extends Phaser.Scene {
       westwood: 'Westwood',
       ashenreach: 'Ashen Reach',
       northhollow: 'North Hollow',
+      wayhold: 'Wayhold',
+      cinderwaste: 'Cinderwaste',
+      hoarfrost: 'Hoarfrost Hold',
+      stormreach: 'Stormreach',
+      themire: 'The Mire',
     };
     const dests: { map: MapId; x: number; y: number; label: string }[] = [];
     for (const key of Object.keys(MAPS) as MapId[]) {

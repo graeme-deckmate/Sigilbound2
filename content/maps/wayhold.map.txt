@@ -1,0 +1,25 @@
+@id wayhold
+@music hearth
+@size 20x14
+@spawn 10,11 up
+@exit 10,13 -> hearth 22,18
+@npc armorer 6,5 dialogue:armorer_base
+@npc wayfarer 13,5 dialogue:wayhold_roads
+@waystone wayhold_stone 10,7
+@sign 4,9 dialogue:wayhold_sign
+@lore 15,9 dialogue:lore_wayhold
+---
+oooooooooooooooooooo
+o..................o
+o..................o
+o..................o
+o..................o
+o..................o
+o..................o
+o..................o
+o..................o
+o..................o
+o..................o
+o..................o
+o..................o
+oooooooooo-ooooooooo

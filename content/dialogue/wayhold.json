@@ -1,0 +1,21 @@
+{
+  "wayhold_roads": {
+    "speaker": "WAYFARER",
+    "pages": [
+      "Wayhold sits at the mouth of the Sundered Reaches.",
+      "Four domains lie beyond. The roads will open as you prove yourself.",
+      "When they do, choose where to walk first."
+    ]
+  },
+  "wayhold_sign": {
+    "speaker": "SIGN",
+    "pages": ["WAYHOLD. Last warm hearth before the Reaches."]
+  },
+  "lore_wayhold": {
+    "speaker": "LORE",
+    "pages": [
+      "When the Vale was sundered, four powers scattered to four lands.",
+      "The Reaches remember. They do not forgive."
+    ]
+  }
+}

@@ -125,6 +125,11 @@ export const MAP_IDS = [
   'sanctum',
   'sunkencrypt',
   'circuitvault',
+  'wayhold',
+  'cinderwaste',
+  'hoarfrost',
+  'stormreach',
+  'themire',
 ] as const;
 export const SHRINE_IDS = ['fury', 'thirst', 'echo', 'keen'] as const;
 export const WORLD_BOSS_IDS = [

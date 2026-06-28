@@ -48,6 +48,7 @@ describe('map sources', () => {
       'northhollow',
       'sanctum',
       'sunkencrypt',
+      'wayhold',
       'westwood',
     ]);
   });
