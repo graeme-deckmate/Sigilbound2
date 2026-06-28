@@ -15,7 +15,11 @@ export type ZoneId =
   | 'northhollow.hollow'
   | 'sanctum.halls'
   | 'sunkencrypt.flooded'
-  | 'circuitvault.live';
+  | 'circuitvault.live'
+  | 'cinderwaste.wastes'
+  | 'cinderwaste.deep'
+  | 'hoarfrost.fields'
+  | 'hoarfrost.deep';
 
 export interface Formation {
   members: readonly EnemySpeciesId[];
@@ -43,6 +47,10 @@ export const ZONE_IDS: readonly ZoneId[] = [
   'sanctum.halls',
   'sunkencrypt.flooded',
   'circuitvault.live',
+  'cinderwaste.wastes',
+  'cinderwaste.deep',
+  'hoarfrost.fields',
+  'hoarfrost.deep',
 ];
 
 export const ZONES: Record<ZoneId, ZoneTable> = {
@@ -167,6 +175,48 @@ export const ZONES: Record<ZoneId, ZoneTable> = {
       { members: ['quartzling', 'cryptcrawler'], weight: 3 },
       { members: ['boneshade', 'quartzling'], weight: 2 },
       { members: ['quartzling', 'quartzling', 'galeharrow'], weight: 1 },
+    ],
+  },
+  /* The Sundered Reaches: Cinderwaste (Ember domain). */
+  'cinderwaste.wastes': {
+    zone: 'cinderwaste.wastes',
+    levelMin: 4,
+    levelMax: 7,
+    formations: [
+      { members: ['cindermote', 'ashling'], weight: 3 },
+      { members: ['ashling', 'ashling'], weight: 2 },
+      { members: ['cindermote', 'cindermote', 'burrowkin'], weight: 1 },
+    ],
+  },
+  'cinderwaste.deep': {
+    zone: 'cinderwaste.deep',
+    levelMin: 5,
+    levelMax: 8,
+    eliteChance: 0.1,
+    formations: [
+      { members: ['ashling', 'cryptcrawler'], weight: 2 },
+      { members: ['cindermote', 'ashling', 'ashling'], weight: 1 },
+    ],
+  },
+  /* The Sundered Reaches: Hoarfrost Hold (Rime domain). */
+  'hoarfrost.fields': {
+    zone: 'hoarfrost.fields',
+    levelMin: 5,
+    levelMax: 8,
+    formations: [
+      { members: ['pondscale', 'gloomwing'], weight: 3 },
+      { members: ['gloomwing', 'gloomwing'], weight: 2 },
+      { members: ['mossback', 'pondscale'], weight: 1 },
+    ],
+  },
+  'hoarfrost.deep': {
+    zone: 'hoarfrost.deep',
+    levelMin: 6,
+    levelMax: 9,
+    eliteChance: 0.1,
+    formations: [
+      { members: ['boneshade', 'gloomwing'], weight: 2 },
+      { members: ['mossback', 'boneshade'], weight: 1 },
     ],
   },
 };

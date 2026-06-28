@@ -1,0 +1,33 @@
+@id cinderwaste
+@music ashenreach
+@size 30x20
+@theme ember
+@spawn 3,2 down
+@zone wastes 12,6 25,10 cinderwaste.wastes
+@zone deep 3,13 10,17 cinderwaste.deep
+@exit 3,0 -> wayhold 1,6
+@npc armorer 5,3 dialogue:armorer_base
+@waystone cinder_stone 3,4
+@sign 6,2 dialogue:cinderwaste_sign
+@lore 26,3 dialogue:lore_cinder
+---
+ooo-oooooooooooooooooooooooooo
+o............................o
+o............................o
+o............................o
+o............................o
+o............................o
+o...........,,,,,,,,,,,,,,...o
+o...........,,,,,,,,,,,,,,...o
+o...........,,,,,,,,,,,,,,...o
+o...........,,,,,,,,,,,,,,...o
+o...........,,,,,,,,,,,,,,...o
+o............................o
+o............................o
+o..,,,,,,,,..................o
+o..,,,,,,,,..................o
+o..,,,,,,,,..................o
+o..,,,,,,,,..................o
+o..,,,,,,,,..................o
+o............................o
+oooooooooooooooooooooooooooooo

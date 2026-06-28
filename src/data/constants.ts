@@ -111,6 +111,12 @@ export const ZONE_BACKDROPS: Record<string, ZoneBackdrop> = {
   'sunkencrypt.flooded': { sky: ['#0a1418', '#13313a'], hill: '#08171b', ground: '#16414a' },
   /** The Dead Circuit Vault: rust and dead sparks (v2 W5). */
   'circuitvault.live': { sky: ['#1a1006', '#3a2410'], hill: '#140c04', ground: '#4a3016' },
+  /** Reaches - Cinderwaste (Ember): scorched red rock. */
+  'cinderwaste.wastes': { sky: ['#2a1006', '#5a2410'], hill: '#3a1408', ground: '#6e3018' },
+  'cinderwaste.deep': { sky: ['#1a0a04', '#451a0a'], hill: '#2a0e06', ground: '#552410' },
+  /** Reaches - Hoarfrost Hold (Rime): pale blue ice. */
+  'hoarfrost.fields': { sky: ['#0c2440', '#2a5a8a'], hill: '#0a1c33', ground: '#3a6e9b' },
+  'hoarfrost.deep': { sky: ['#08182e', '#1d4068'], hill: '#06121f', ground: '#2a5078' },
   /** Fallback for scripted or boss battles without a zone. */
   default: { sky: ['#181436', '#2a2358'], hill: '#13102b', ground: '#34306b' },
 };

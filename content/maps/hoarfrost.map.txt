@@ -1,0 +1,33 @@
+@id hoarfrost
+@music northhollow
+@size 30x20
+@theme frost
+@spawn 3,2 down
+@zone fields 12,6 25,10 hoarfrost.fields
+@zone deep 3,13 10,17 hoarfrost.deep
+@exit 3,0 -> wayhold 18,6
+@npc armorer 5,3 dialogue:armorer_base
+@waystone hoar_stone 3,4
+@sign 6,2 dialogue:hoarfrost_sign
+@lore 26,3 dialogue:lore_hoarfrost
+---
+ooo-oooooooooooooooooooooooooo
+o............................o
+o............................o
+o............................o
+o............................o
+o............................o
+o...........,,,,,,,,,,,,,,...o
+o...........,,,,,,,,,,,,,,...o
+o...........,,,,,,,,,,,,,,...o
+o...........,,,,,,,,,,,,,,...o
+o...........,,,,,,,,,,,,,,...o
+o............................o
+o............................o
+o..,,,,,,,,..................o
+o..,,,,,,,,..................o
+o..,,,,,,,,..................o
+o..,,,,,,,,..................o
+o..,,,,,,,,..................o
+o............................o
+oooooooooooooooooooooooooooooo

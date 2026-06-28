@@ -11,8 +11,17 @@ import type { EnemySpeciesId } from '../data/enemies.ts';
 export type TerrainChar = '#' | 'o' | '^' | '~' | '=' | '.' | ',' | '*' | '-' | 'x';
 
 /** Visual theme for a map's tiles and battle backdrop (v2 W1). */
-export type MapTheme = 'vale' | 'cave' | 'ash' | 'hollow';
-export const MAP_THEMES: readonly MapTheme[] = ['vale', 'cave', 'ash', 'hollow'];
+export type MapTheme = 'vale' | 'cave' | 'ash' | 'hollow' | 'ember' | 'frost' | 'storm' | 'mire';
+export const MAP_THEMES: readonly MapTheme[] = [
+  'vale',
+  'cave',
+  'ash',
+  'hollow',
+  'ember',
+  'frost',
+  'storm',
+  'mire',
+];
 
 export const SOLID_TERRAIN: ReadonlySet<string> = new Set(['#', 'o', '^', '~', 'x']);
 

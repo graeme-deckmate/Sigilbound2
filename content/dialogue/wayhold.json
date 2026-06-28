@@ -17,5 +17,21 @@
       "When the Vale was sundered, four powers scattered to four lands.",
       "The Reaches remember. They do not forgive."
     ]
+  },
+  "cinderwaste_sign": {
+    "speaker": "SIGN",
+    "pages": ["CINDERWASTE. The fire never went out here. Bring cold."]
+  },
+  "lore_cinder": {
+    "speaker": "LORE",
+    "pages": ["The first power was flame. It learned to walk, and it did not stop burning."]
+  },
+  "hoarfrost_sign": {
+    "speaker": "SIGN",
+    "pages": ["HOARFROST HOLD. The cold keeps what it takes. Bring warmth."]
+  },
+  "lore_hoarfrost": {
+    "speaker": "LORE",
+    "pages": ["The second power was frost. It froze the question, and the answer, and the asker."]
   }
 }

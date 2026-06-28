@@ -852,6 +852,10 @@ export class WorldScene extends Phaser.Scene {
       cave: 0x0c2a33,
       ash: 0x331f10,
       hollow: 0x1a1038,
+      ember: 0x3a1408,
+      frost: 0x0c2440,
+      storm: 0x2a1840,
+      mire: 0x0e2414,
     };
     const tint = tints[this.map.theme];
     if (tint === undefined) return;

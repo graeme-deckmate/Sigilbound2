@@ -2,9 +2,11 @@
 import type { CompiledMap } from '../../core/mapdefs.ts';
 import type { MapId } from '../../core/state.ts';
 import { ashenreach } from './ashenreach.ts';
+import { cinderwaste } from './cinderwaste.ts';
 import { circuitvault } from './circuitvault.ts';
 import { hearth } from './hearth.ts';
 import { hearthvale } from './hearthvale.ts';
+import { hoarfrost } from './hoarfrost.ts';
 import { northhollow } from './northhollow.ts';
 import { sanctum } from './sanctum.ts';
 import { sunkencrypt } from './sunkencrypt.ts';
@@ -13,9 +15,11 @@ import { westwood } from './westwood.ts';
 
 export const MAPS: Partial<Record<MapId, CompiledMap>> = {
   ashenreach,
+  cinderwaste,
   circuitvault,
   hearth,
   hearthvale,
+  hoarfrost,
   northhollow,
   sanctum,
   sunkencrypt,
