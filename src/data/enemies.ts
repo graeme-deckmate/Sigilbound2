@@ -20,7 +20,10 @@ export type EnemySpeciesId =
   | 'galeharrow'
   | 'hollowshade'
   | 'glimmerkin'
-  | 'trialguardian';
+  | 'trialguardian'
+  | 'cryptcrawler'
+  | 'boneshade'
+  | 'marshlurk';
 
 export type MoveRider =
   | { type: 'playerStatus'; status: PlayerStatusId; chance: number }
@@ -69,6 +72,9 @@ export const ENEMY_IDS: readonly EnemySpeciesId[] = [
   'hollowshade',
   'glimmerkin',
   'trialguardian',
+  'cryptcrawler',
+  'boneshade',
+  'marshlurk',
 ];
 
 export const ENEMIES: Record<EnemySpeciesId, EnemyDef> = {
@@ -349,6 +355,67 @@ export const ENEMIES: Record<EnemySpeciesId, EnemyDef> = {
         mult: 1.15,
         rider: { type: 'playerStatus', status: 'withered', chance: 0.15 },
       },
+    ],
+  },
+
+  /* v2 W4: dungeon and overworld additions (off the balance-sim critical path) */
+  cryptcrawler: {
+    id: 'cryptcrawler',
+    name: 'Cryptcrawler',
+    h0: 30,
+    hpl: 9,
+    a0: 7,
+    al: 1.6,
+    xpBase: 16,
+    xpPerLv: 3,
+    weak: ['ember'],
+    resist: ['gloom'],
+    moves: [
+      { name: 'skitters close', mult: 1.0 },
+      {
+        name: 'venom nip',
+        mult: 0.85,
+        rider: { type: 'playerStatus', status: 'envenomed', chance: 0.2 },
+      },
+      { name: 'shell slam', mult: 1.2 },
+    ],
+  },
+  boneshade: {
+    id: 'boneshade',
+    name: 'Boneshade',
+    h0: 28,
+    hpl: 8,
+    a0: 7,
+    al: 1.5,
+    xpBase: 17,
+    xpPerLv: 3,
+    weak: ['ember', 'volt'],
+    resist: ['rime'],
+    moves: [
+      { name: 'rattling claw', mult: 1.0 },
+      {
+        name: 'grave chill',
+        mult: 0.85,
+        rider: { type: 'playerStatus', status: 'chilled', chance: 0.2 },
+      },
+      { name: 'marrow shriek', mult: 1.15 },
+    ],
+  },
+  marshlurk: {
+    id: 'marshlurk',
+    name: 'Marshlurk',
+    h0: 26,
+    hpl: 8,
+    a0: 6,
+    al: 1.6,
+    xpBase: 14,
+    xpPerLv: 3,
+    weak: ['volt'],
+    resist: ['ember'],
+    moves: [
+      { name: 'lunges from the reeds', mult: 1.0 },
+      { name: 'silt spray', mult: 0.85 },
+      { name: 'drag under', mult: 1.2, rider: { type: 'mpDrain', amount: 3 } },
     ],
   },
 };

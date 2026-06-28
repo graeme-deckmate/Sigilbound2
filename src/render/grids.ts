@@ -527,6 +527,36 @@ const HOLLOWWARDEN: BattleSprite = {
   pal: { h: '#4a3f8a', w: '#e8e0ff', m: '#241d42', p: '#ffd84a' },
 };
 
+// v2 W4: new enemies reuse existing grids with recolored palettes (same keys).
+const CRYPTCRAWLER: BattleSprite = {
+  grid: PONDSCALE.grid,
+  pal: {
+    g: '#6b5a8f',
+    s: '#4a3c6b',
+    m: '#2a2042',
+    e: '#d9ccff',
+    p: '#16112b',
+    t: '#5a4a7a',
+    f: '#3a2f5a',
+  },
+};
+const BONESHADE: BattleSprite = {
+  grid: GLOOMWING.grid,
+  pal: { a: '#cfc7b0', b: '#8a8270', e: '#ffffff', p: '#6f4fd8', m: '#3a3630' },
+};
+const MARSHLURK: BattleSprite = {
+  grid: PONDSCALE.grid,
+  pal: {
+    g: '#6e7a3f',
+    s: '#55602f',
+    m: '#3a4020',
+    e: '#e8ffd9',
+    p: '#16112b',
+    t: '#4a5528',
+    f: '#3a4020',
+  },
+};
+
 export const BATTLE_SPRITES: Readonly<Record<string, BattleSprite>> = {
   gloop: GLOOP,
   pondscale: PONDSCALE,
@@ -547,6 +577,9 @@ export const BATTLE_SPRITES: Readonly<Record<string, BattleSprite>> = {
   glimmerkin: GLIMMERKIN_SPRITE,
   trialguardian: TRIALGUARDIAN,
   hollowwarden: HOLLOWWARDEN,
+  cryptcrawler: CRYPTCRAWLER,
+  boneshade: BONESHADE,
+  marshlurk: MARSHLURK,
 };
 
 /** Every grid registered here gets row-uniformity asserted in tests. */

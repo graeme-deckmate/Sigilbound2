@@ -77,7 +77,14 @@ keep each version bump tied to a real shape change with a migration test):
   passes byte-identical (gearless => no-ops). Tests: loadout.spec (identity, cap,
   initBattle integration). NOTE: Grimoire preview showing gear deferred to Phase 9
   (Character overlay); resist mitigation reserved (enemy moves are untyped).
-- [ ] Phase 7: Encounter archetypes + new enemies (ambush, miniboss, +species).
+- [x] Phase 7: Encounter archetypes + new enemies. +3 enemies (cryptcrawler,
+  boneshade, marshlurk) placed ONLY in the dungeon zone (off the balance-sim
+  critical path, so the sim is untouched); recolored sprites reuse existing grids
+  (sprites.spec checks palette coverage only). @ambush (repeatable step-on fixed
+  fight, draws from a zone table) and @miniboss (visible, shows suggested level,
+  felled-flag removes it) wired in World.ts finishStep/interact/afterBattle/
+  create/placeEntities. Sunken Crypt gains a doorway ambush + a hall miniboss.
+  data.spec counts bumped 14->17. NOTE: @waystone still lands in Phase 5.
 - [ ] Phase 8: Dungeon bosses + second dungeon (DungeonBossId, Dead Circuit Vault).
 - [ ] Phase 9: Character identity (classes, backgrounds, talents, appearance).
 - [ ] Phase 10: Deeper spellcraft + builds (new runes/forms, slots 7-8, presets, sb2: codes).

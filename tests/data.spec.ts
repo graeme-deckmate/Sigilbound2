@@ -33,9 +33,9 @@ describe('table completeness', () => {
     }
   });
 
-  it('has 14 enemy species (12 + glimmerkin + trial guardian) and 5 bosses', () => {
-    expect(ENEMY_IDS).toHaveLength(14);
-    expect(Object.keys(ENEMIES)).toHaveLength(14);
+  it('has 17 enemy species (14 + v2 crypt/marsh trio) and 5 bosses', () => {
+    expect(ENEMY_IDS).toHaveLength(17);
+    expect(Object.keys(ENEMIES)).toHaveLength(17);
     expect(BOSS_IDS).toHaveLength(5);
     expect(Object.keys(BOSSES)).toHaveLength(5);
   });

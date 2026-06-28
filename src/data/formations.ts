@@ -150,9 +150,9 @@ export const ZONES: Record<ZoneId, ZoneTable> = {
     levelMax: 7,
     eliteChance: 0.12,
     formations: [
-      { members: ['pondscale', 'hollowshade'], weight: 3 },
-      { members: ['hollowshade', 'hollowshade'], weight: 2 },
-      { members: ['pondscale', 'pondscale', 'gloomwing'], weight: 1 },
+      { members: ['cryptcrawler', 'marshlurk'], weight: 3 },
+      { members: ['boneshade', 'cryptcrawler'], weight: 2 },
+      { members: ['marshlurk', 'marshlurk', 'boneshade'], weight: 1 },
     ],
   },
 };

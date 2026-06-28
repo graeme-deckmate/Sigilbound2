@@ -106,8 +106,25 @@ export const sunkencrypt = {
       "battle": "crypt_guardians"
     }
   ],
-  "minibosses": [],
+  "minibosses": [
+    {
+      "id": "crypt_sentry",
+      "x": 3,
+      "y": 9,
+      "species": "boneshade",
+      "lv": 7
+    }
+  ],
   "waystones": [],
   "plates": [],
-  "ambushes": []
+  "ambushes": [
+    {
+      "id": "nave_guard",
+      "x": 8,
+      "y": 6,
+      "table": "sunkencrypt.flooded",
+      "lv": 6,
+      "repeat": false
+    }
+  ]
 } as const satisfies CompiledMap;

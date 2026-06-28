@@ -136,6 +136,7 @@ export class WorldScene extends Phaser.Scene {
   private doorSprites = new Map<string, Phaser.GameObjects.Image>();
   private leverSprites = new Map<string, Phaser.GameObjects.Image>();
   private pendingObjective: string | null = null;
+  private pendingMiniboss: string | null = null;
 
   constructor() {
     super({ key: 'World' });
@@ -179,6 +180,12 @@ export class WorldScene extends Phaser.Scene {
     if (dungeon && isDungeonCleared(this.state, dungeon.id)) {
       for (const o of map.objectives) index.delete(`${String(o.x)},${String(o.y)}`);
     }
+    // Felled minibosses stay down (v2 W4).
+    for (const m of map.minibosses) {
+      if (this.state.world.flags[`miniboss_${m.id}`]) {
+        index.delete(`${String(m.x)},${String(m.y)}`);
+      }
+    }
     // Murk sets up shop by progress (03 section 20).
     const murkSpot = murkLocation(
       this.state.world.bosses.bogmaw,
@@ -204,6 +211,7 @@ export class WorldScene extends Phaser.Scene {
     this.rematchBoss = null;
     this.pendingRebuild = false;
     this.pendingObjective = null;
+    this.pendingMiniboss = null;
     // Dungeon puzzle state is per-entry and ephemeral: reset every build.
     this.puzzle = { levers: new Set(), keys: new Set(), plates: new Set(), seq: [] };
     this.opened = new Set();
@@ -817,6 +825,12 @@ export class WorldScene extends Phaser.Scene {
       const img = this.add.image(px, py, 'ent_objective').setOrigin(0, 0).setDepth(6);
       this.tweens.add({ targets: img, alpha: 0.6, duration: 1100, yoyo: true, repeat: -1 });
     }
+    for (const m of this.map.minibosses) {
+      if (this.state.world.flags[`miniboss_${m.id}`]) continue;
+      const { px, py } = at(m.x, m.y);
+      const img = this.add.image(px, py, 'ent_boss_marker').setOrigin(0, 0).setDepth(6);
+      this.tweens.add({ targets: img, alpha: 0.6, duration: 1300, yoyo: true, repeat: -1 });
+    }
   }
 
   /** Wash non-vale themes with a translucent color over the ground (v2 W2). */
@@ -943,6 +957,28 @@ export class WorldScene extends Phaser.Scene {
       playSfx('cast');
       dom.toast('Something clicks beneath your feet.');
       this.refreshDoors();
+    }
+
+    // Fixed ambush tiles (v2 W4): a guaranteed fight, repeatable when flagged.
+    const ambush = this.map.ambushes.find((a) => a.x === this.targetX && a.y === this.targetY);
+    if (ambush) {
+      const flag = `ambush_${ambush.id}`;
+      if (ambush.repeat || !this.state.world.flags[flag]) {
+        if (!ambush.repeat) this.state.world.flags[flag] = true;
+        const table = ZONES[ambush.table];
+        const formation =
+          table.formations[Math.floor(this.worldRng() * table.formations.length)] ??
+          table.formations[0];
+        if (formation) {
+          this.startEncounter({
+            zone: ambush.table,
+            formation: { members: formation.members, weight: 1 },
+            enemyLv: ambush.lv,
+            ambush: true,
+          });
+          return;
+        }
+      }
     }
 
     const exit = exitAt(this.map, this.targetX, this.targetY);
@@ -1075,6 +1111,8 @@ export class WorldScene extends Phaser.Scene {
     this.pendingTrial = null;
     const objective = this.pendingObjective;
     this.pendingObjective = null;
+    const miniboss = this.pendingMiniboss;
+    this.pendingMiniboss = null;
     if (trial && result.outcome === 'victory') this.completeTrial(trial);
     if (result.outcome === 'defeat') {
       // A wipe inside a dungeon ejects to the entrance, keeping all gains.
@@ -1119,6 +1157,16 @@ export class WorldScene extends Phaser.Scene {
       this.autoSave();
       this.refreshHud();
       if (result.xpGained > 0) dom.toast(`+${String(result.xpGained)} XP`);
+      this.pendingRebuild = true;
+      return;
+    }
+    // Miniboss felled: mark it down and rebuild so the marker is gone.
+    if (miniboss && result.outcome === 'victory') {
+      this.state.world.flags[`miniboss_${miniboss}`] = true;
+      this.autoSave();
+      this.refreshHud();
+      if (result.xpGained > 0) dom.toast(`+${String(result.xpGained)} XP`);
+      if (result.essenceGained > 0) dom.toast(`+${String(result.essenceGained)} essence`);
       this.pendingRebuild = true;
       return;
     }
@@ -1394,6 +1442,25 @@ export class WorldScene extends Phaser.Scene {
             enemyLv: battle.lv,
           });
         });
+        break;
+      }
+      case 'miniboss': {
+        const mb = this.map.minibosses.find((m) => m.id === action.id);
+        if (!mb || this.state.world.flags[`miniboss_${mb.id}`]) break;
+        dom.openChoice(
+          '!',
+          `It looks about Lv ${String(mb.lv)}. Take it on?`,
+          ['Fight', 'Back'],
+          (i) => {
+            if (i !== 0) return;
+            this.pendingMiniboss = mb.id;
+            this.startEncounter({
+              zone: this.map.zones[0]?.table ?? 'sunkencrypt.flooded',
+              formation: { members: [mb.species], weight: 1 },
+              enemyLv: mb.lv,
+            });
+          },
+        );
         break;
       }
       case 'spring': {
