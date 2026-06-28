@@ -625,6 +625,22 @@ const TEMPEST: BattleSprite = {
     w: '#3a2a6a',
   },
 };
+const BRAMBLEMAW: BattleSprite = {
+  grid: THORNLING.grid,
+  pal: { g: '#4a7a3a', s: '#355a2a', e: '#9bff6a', p: '#16112b', m: '#244e2e', t: '#3a2f1a' },
+};
+const GLOAMWARDEN: BattleSprite = {
+  grid: BOGMAW.grid,
+  pal: {
+    g: '#2a2042',
+    s: '#4a3f6b',
+    m: '#0a0614',
+    t: '#9d7bff',
+    e: '#ff5d5d',
+    p: '#16112b',
+    w: '#1a1030',
+  },
+};
 
 export const BATTLE_SPRITES: Readonly<Record<string, BattleSprite>> = {
   gloop: GLOOP,
@@ -652,6 +668,8 @@ export const BATTLE_SPRITES: Readonly<Record<string, BattleSprite>> = {
   hoarwarden: HOARWARDEN,
   galecaller: GALECALLER,
   tempest: TEMPEST,
+  bramblemaw: BRAMBLEMAW,
+  gloamwarden: GLOAMWARDEN,
   cryptcrawler: CRYPTCRAWLER,
   boneshade: BONESHADE,
   marshlurk: MARSHLURK,

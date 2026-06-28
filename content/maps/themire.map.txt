@@ -1,18 +1,17 @@
-@id stormreach
-@music northhollow
+@id themire
+@music sanctum
 @size 30x20
-@theme storm
+@theme mire
 @spawn 3,2 down
-@zone heights 12,6 25,10 stormreach.heights
-@zone deep 3,13 10,17 stormreach.deep
-@exit 3,0 -> wayhold 10,1
-@exit 26,19 -> themire 3,1
+@zone bog 12,6 25,10 themire.bog
+@zone deep 3,13 10,17 themire.deep
+@exit 3,0 -> stormreach 26,18
 @npc armorer 5,3 dialogue:armorer_base
-@waystone storm_stone 3,4
-@sign 6,2 dialogue:stormreach_sign
-@lore 26,3 dialogue:lore_storm
-@boss galecaller 24,11
-@boss tempest 24,18
+@waystone mire_stone 3,4
+@sign 6,2 dialogue:themire_sign
+@lore 26,3 dialogue:lore_mire
+@boss bramblemaw 24,11
+@boss gloamwarden 24,18
 ---
 ooo-oooooooooooooooooooooooooo
 o............................o
@@ -33,4 +32,4 @@ o..,,,,,,,,..................o
 o..,,,,,,,,..................o
 o..,,,,,,,,..................o
 o............................o
-oooooooooooooooooooooooooo-ooo
+oooooooooooooooooooooooooooooo

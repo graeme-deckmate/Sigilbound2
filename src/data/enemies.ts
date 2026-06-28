@@ -558,6 +558,8 @@ export const BOSS_IDS: readonly BossId[] = [
   'hoarwarden',
   'galecaller',
   'tempest',
+  'bramblemaw',
+  'gloamwarden',
 ];
 
 export const BOSSES: Record<BossId, BossDef> = {
@@ -897,6 +899,73 @@ export const BOSSES: Record<BossId, BossDef> = {
       summonLv: 9,
       doomName: 'Eye of the Storm',
       doomMult: 2.6,
+    },
+  },
+
+  /* The Sundered Reaches - The Mire (Thorn/Gloom finale domain) */
+  bramblemaw: {
+    id: 'bramblemaw',
+    name: 'Bramblemaw',
+    lv: 10,
+    hp: 210,
+    a0: 8,
+    al: 1.4,
+    xp: 90,
+    weak: ['ember'],
+    resist: ['thorn'],
+    moves: [
+      { name: 'thorn rake', mult: 1.0 },
+      {
+        name: 'venom spit',
+        mult: 0.9,
+        rider: { type: 'playerStatus', status: 'envenomed', chance: 0.4 },
+      },
+      { name: 'constrict', mult: 1.25 },
+    ],
+    intro: 'Bramblemaw uncoils from the bog, dripping and patient.',
+    sigilToast: 'Mire lieutenant felled.',
+    special: {
+      kind: 'summonAndVeil',
+      summonAtHpFrac: 0.6,
+      summonSpecies: 'thornling',
+      summonCount: 2,
+      summonLv: 8,
+      veilName: 'Bramble Veil',
+      veilEvery: 4,
+      veilShield: 32,
+    },
+  },
+  gloamwarden: {
+    id: 'gloamwarden',
+    name: 'The Gloamwarden',
+    lv: 12,
+    hp: 390,
+    a0: 11,
+    al: 1.4,
+    xp: 0,
+    weak: [],
+    resist: [],
+    moves: [
+      { name: 'gloom rend', mult: 1.1 },
+      {
+        name: 'drink the light',
+        mult: 0.85,
+        rider: { type: 'playerStatus', status: 'withered', chance: 0.4 },
+      },
+      { name: 'the four go quiet', mult: 1.3 },
+    ],
+    intro: 'The Gloamwarden rises, four powers churning in its hollow.',
+    sigilToast: '',
+    special: {
+      kind: 'bars',
+      barHp: 130,
+      barKeys: ['choir', 'wheel', 'author'],
+      offKeyMult: 0.25,
+      summonSpecies: 'hollowshade',
+      summonLv: 10,
+      unwriteEvery: 4,
+      unwriteMult: 2.0,
+      unwriteName: 'Unmaking',
     },
   },
 };

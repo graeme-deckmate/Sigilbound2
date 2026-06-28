@@ -51,6 +51,7 @@ describe('map sources', () => {
       'sanctum',
       'stormreach',
       'sunkencrypt',
+      'themire',
       'wayhold',
       'westwood',
     ]);

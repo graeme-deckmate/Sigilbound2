@@ -50,5 +50,27 @@
       "The storm road will not open yet.",
       "Cinderwaste and Hoarfrost must both fall before the sky lets you pass."
     ]
+  },
+  "themire_sign": {
+    "speaker": "SIGN",
+    "pages": ["THE MIRE. Where the four powers drained, and something drank them."]
+  },
+  "lore_mire": {
+    "speaker": "LORE",
+    "pages": [
+      "The fourth power was rot, and under it, the gloom that waited for all four.",
+      "It has a name now. It is the Gloamwarden."
+    ]
+  },
+  "themire_sealed": {
+    "speaker": "MIRE GATE",
+    "pages": ["The mire will not take you yet. Bring down the Tempest first."]
+  },
+  "reaches_done": {
+    "speaker": "THE REACHES",
+    "pages": [
+      "The Gloamwarden falls. The four powers are quiet at last.",
+      "The Sundered Reaches are yours to wander."
+    ]
   }
 }

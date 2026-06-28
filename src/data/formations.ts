@@ -21,7 +21,9 @@ export type ZoneId =
   | 'hoarfrost.fields'
   | 'hoarfrost.deep'
   | 'stormreach.heights'
-  | 'stormreach.deep';
+  | 'stormreach.deep'
+  | 'themire.bog'
+  | 'themire.deep';
 
 export interface Formation {
   members: readonly EnemySpeciesId[];
@@ -55,6 +57,8 @@ export const ZONE_IDS: readonly ZoneId[] = [
   'hoarfrost.deep',
   'stormreach.heights',
   'stormreach.deep',
+  'themire.bog',
+  'themire.deep',
 ];
 
 export const ZONES: Record<ZoneId, ZoneTable> = {
@@ -242,6 +246,28 @@ export const ZONES: Record<ZoneId, ZoneTable> = {
     formations: [
       { members: ['galeharrow', 'hollowshade'], weight: 2 },
       { members: ['quartzling', 'quartzling', 'galeharrow'], weight: 1 },
+    ],
+  },
+  /* The Sundered Reaches: The Mire (Thorn/Gloom finale domain). */
+  'themire.bog': {
+    zone: 'themire.bog',
+    levelMin: 9,
+    levelMax: 12,
+    eliteChance: 0.12,
+    formations: [
+      { members: ['thornling', 'hollowshade'], weight: 3 },
+      { members: ['hollowshade', 'hollowshade'], weight: 2 },
+      { members: ['thornling', 'thornling', 'hexbinder'], weight: 1 },
+    ],
+  },
+  'themire.deep': {
+    zone: 'themire.deep',
+    levelMin: 10,
+    levelMax: 12,
+    eliteChance: 0.15,
+    formations: [
+      { members: ['hollowshade', 'hexbinder'], weight: 2 },
+      { members: ['thornling', 'hollowshade', 'hollowshade'], weight: 1 },
     ],
   },
 };

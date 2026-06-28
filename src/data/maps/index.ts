@@ -11,6 +11,7 @@ import { northhollow } from './northhollow.ts';
 import { sanctum } from './sanctum.ts';
 import { stormreach } from './stormreach.ts';
 import { sunkencrypt } from './sunkencrypt.ts';
+import { themire } from './themire.ts';
 import { wayhold } from './wayhold.ts';
 import { westwood } from './westwood.ts';
 
@@ -25,6 +26,7 @@ export const MAPS: Partial<Record<MapId, CompiledMap>> = {
   sanctum,
   stormreach,
   sunkencrypt,
+  themire,
   wayhold,
   westwood,
 };

@@ -1389,6 +1389,22 @@ export class WorldScene extends Phaser.Scene {
       this.pendingRebuild = true;
       return;
     }
+    if (result.bossId === 'gloamwarden' && result.outcome === 'victory') {
+      // The Sundered Reaches finale: the four powers fall quiet. Big reward,
+      // a feat, and a closing line, but no Ending takeover (free roam continues).
+      this.grantFeat('reaches_done', 'The Reaches Quieted');
+      this.state.player.gold += 200;
+      const seed = deriveSeed(sessionSeed, this.state.stats.battles + 23);
+      const item = rollGear('focus_rod', 'relic', seed);
+      if (item) this.state = grantGear(this.state, item);
+      playSfx('unlock');
+      this.autoSave();
+      this.refreshHud();
+      const entry = DIALOGUE['reaches_done'];
+      if (entry) dom.openDialog(entry);
+      this.pendingRebuild = true;
+      return;
+    }
     if (result.bossId && result.outcome === 'victory') {
       const toastText = BOSSES[result.bossId].sigilToast;
       playSfx('unlock');

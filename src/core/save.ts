@@ -85,6 +85,8 @@ export function newGame(): GameState {
         hoarwarden: false,
         galecaller: false,
         tempest: false,
+        bramblemaw: false,
+        gloamwarden: false,
       },
       graceSteps: 0,
       respawn: { mapId: START.mapId, x: START.x, y: START.y },

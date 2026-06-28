@@ -60,7 +60,9 @@ export type BossId =
   | 'rimehound'
   | 'hoarwarden'
   | 'galecaller'
-  | 'tempest';
+  | 'tempest'
+  | 'bramblemaw'
+  | 'gloamwarden';
 
 export type Dir = 'up' | 'down' | 'left' | 'right';
 

@@ -120,6 +120,9 @@ export const ZONE_BACKDROPS: Record<string, ZoneBackdrop> = {
   /** Reaches - Stormreach (Volt): bruised violet sky. */
   'stormreach.heights': { sky: ['#1a1038', '#3a2a6a'], hill: '#140c28', ground: '#4a3a7a' },
   'stormreach.deep': { sky: ['#0e0820', '#2a1e52'], hill: '#0a0618', ground: '#352a5e' },
+  /** Reaches - The Mire (Thorn/Gloom): sickly green dusk. */
+  'themire.bog': { sky: ['#0e2414', '#1d4a2a'], hill: '#0a1a0e', ground: '#244e2e' },
+  'themire.deep': { sky: ['#080f0a', '#142e1a'], hill: '#060b08', ground: '#163a20' },
   /** Fallback for scripted or boss battles without a zone. */
   default: { sky: ['#181436', '#2a2358'], hill: '#13102b', ground: '#34306b' },
 };
@@ -153,5 +156,7 @@ export const WORLD_BOSS_IDS = [
   'hoarwarden',
   'galecaller',
   'tempest',
+  'bramblemaw',
+  'gloamwarden',
 ] as const;
 export const DIRS = ['up', 'down', 'left', 'right'] as const;
