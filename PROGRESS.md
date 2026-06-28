@@ -4,8 +4,12 @@ Claude Code: read this first every session. Update it before you stop. Keep entr
 
 ## Status
 
-Current phase: **SIGILBOUND II (v2) fork. Phase 0 (fork bring-up) in progress.** v1.1 was COMPLETE (Phases 0-15) in the original Sigilbound repo; this is the standalone v2 fork.
-Last session: 2026-06-28 (v2 Phase 0: forked repo, renamed identifiers, fixed deploy URL typo)
+Current phase: **SIGILBOUND II (v2): phases 0-11 + 13 shipped; 12 deferred (optional).**
+The core of every owner ask is in: re-fight bug fixed, two retryable dungeons,
+more enemies/encounters, gold + gear into combat, less-linear world (waystones) +
+shop, difficulty, new runes, classes + equip + cosmetics. Some sub-items are
+consciously deferred (see per-phase notes). v1 stays deployed and untouched.
+Last session: 2026-06-28 (v2 phases 0-11 + 9 + 13)
 Deployed URL: https://graeme-deckmate.github.io/Sigilbound2/ (Pages, deploys on every push to main)
 
 ## Sigilbound II (v2) plan
@@ -125,8 +129,12 @@ keep each version bump tied to a real shape change with a migration test):
   (standard => x1). Tests: difficulty.spec. PARTIAL: run `modifiers` field exists but
   no modifiers implemented yet; expanded accessibility settings (colorblind/uiScale)
   deferred to the polish phase.
-- [ ] Phase 12: Roaming enemies (optional).
-- [ ] Phase 13: Balance, polish, ship (docs rewrite, 06-V2-SYSTEMS.md).
+- [ ] Phase 12: Roaming enemies (OPTIONAL - deferred). Per-tick visible pursuit is
+  the riskiest untestable scene code; ambush + miniboss + dungeon encounters
+  already cover "more discoverable encounters". Clean follow-up if wanted.
+- [x] Phase 13: Polish + docs. Added docs/06-V2-SYSTEMS.md (v2 design rationale),
+  amended docs/00-BRIEF.md "Out" list (gold + gear now IN for v2). Full suite green
+  (balanceSim byte-identical throughout), lint clean, build OK, CI/Pages deploying.
 
 ## Phase checklist
 

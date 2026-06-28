@@ -43,10 +43,18 @@ Unchanged: Web, TypeScript + Vite + Phaser 3, installable PWA, GitHub Pages + it
 - Grimoire growth: Notes page, Bestiary, Feats, optional spell renaming, spell codes (sb1: export/import, recipe only)
 - New Game+ (carry grimoire, mastery, charms, slots; enemies +50%, elites common)
 
-### Still out (identity, not scope)
+### v2 (Sigilbound II) amendment
 
-- Gold or any second currency. Essence is the only one. The peddler barters, he does not run an economy.
-- Equipment and gear tiers. Your identity is your grimoire. Charms are the bounded exception and stay at 2 slots.
+> Sigilbound II (the standalone fork) deliberately LIFTS the first two rules
+> below: it adds **gold** (a town/gear currency, with sinks kept disjoint from
+> essence) and **wearable gear** (which augments, never replaces, the grimoire).
+> See `docs/06-V2-SYSTEMS.md`. The rest of this list still holds in v2.
+
+### Still out (identity, not scope) - v1.1 rules
+
+- ~~Gold or any second currency.~~ (Lifted in v2: gold is the town/gear currency.)
+- ~~Equipment and gear tiers.~~ (Lifted in v2: gear augments the grimoire and is
+  capped so composition still leads.) Charms remain the essence-bought exception.
 - Party members as a system. The Summon familiar is the bounded exception: one temporary battlefield actor, no party UI.
 - Generic consumables (potions). Scrolls are spellcraft, not items; Focus stays the designed recovery verb.
 - Cast-failure chance. Overreach makes casts wild (surge), never cancelled. A lost turn to a die roll is the feel v1.1 exists to kill.
