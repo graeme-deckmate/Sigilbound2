@@ -9,6 +9,7 @@ import type { Spell } from '../core/state.ts';
 import { ELEMENT_IDS } from '../data/elements.ts';
 import { spellTargeting } from './spellcraft.ts';
 import { GATES, gateFlag, type GateDef } from '../data/discovery.ts';
+import { ESSENCE } from '../data/essence.ts';
 
 export function facingPos(x: number, y: number, facing: Dir): { x: number; y: number } {
   switch (facing) {
@@ -183,6 +184,57 @@ export function applySlotPurchase(
     },
     slot,
     price,
+  };
+}
+
+/**
+ * Waystone rematch economy (docs/03 section 16), kept pure so repeated
+ * rematches are testable. The data layer NEVER gates rematch availability:
+ * a defeated boss's waystone persists (world.bosses stays true) and the
+ * rematch is offered whenever the player can pay. The `rematch_<boss>` flag
+ * records ONLY the one-time first-clear bonus, so rematches are infinitely
+ * repeatable (the v1 "can't re-fight after the first re-fight" bug was a
+ * Phaser scene-restart-from-WAKE re-entrancy in World.ts, fixed separately).
+ */
+export const REMATCH_PRICE = ESSENCE.rematchEntry;
+
+export function rematchClearFlag(bossId: BossId): string {
+  return `rematch_${bossId}`;
+}
+
+export function canAffordRematch(state: GameState): boolean {
+  return state.player.essence >= REMATCH_PRICE;
+}
+
+/** Pay the rematch entry fee. Caller has already checked canAffordRematch. */
+export function applyRematchEntry(state: GameState): GameState {
+  return {
+    ...state,
+    player: { ...state.player, essence: state.player.essence - REMATCH_PRICE },
+  };
+}
+
+/**
+ * Grant the first-clear bonus the first time a given boss's rematch is won.
+ * Idempotent: later clears grant nothing (firstClear false). Crucially this
+ * never touches world.bosses, so the waystone and the rematch offer remain
+ * available forever.
+ */
+export function applyRematchReward(
+  state: GameState,
+  bossId: BossId,
+): { state: GameState; firstClear: boolean; reward: number } {
+  const flag = rematchClearFlag(bossId);
+  if (state.world.flags[flag]) return { state, firstClear: false, reward: 0 };
+  const reward = ESSENCE.rematchFirstClear;
+  return {
+    state: {
+      ...state,
+      player: { ...state.player, essence: state.player.essence + reward },
+      world: { ...state.world, flags: { ...state.world.flags, [flag]: true } },
+    },
+    firstClear: true,
+    reward,
   };
 }
 

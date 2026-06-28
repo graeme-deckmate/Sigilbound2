@@ -23,9 +23,12 @@ import type { BattleResult } from './Battle.ts';
 import { resolveStep, type EncounterRoll } from '../systems/encounters.ts';
 import {
   applyExit,
+  applyRematchEntry,
+  applyRematchReward,
   applyShrineGrant,
   applySlotPurchase,
   applySpringRestore,
+  canAffordRematch,
   exitLocked,
   facingPos,
   interactionFor,
@@ -107,6 +110,12 @@ export class WorldScene extends Phaser.Scene {
   private murkSpot: { x: number; y: number } | null = null;
   private rematchBoss: BossId | null = null;
   private pendingTrial: TrialKey | null = null;
+  // Post-battle world rebuilds are deferred to the next update() tick rather
+  // than calling scene.restart() from inside the WAKE handler. Restarting a
+  // scene from within its own wake event is re-entrant and, on a repeated
+  // flow like boss rematches, can drop the next WAKE and leave the scene
+  // asleep (the v1 "can't re-fight after the first re-fight" bug).
+  private pendingRebuild = false;
 
   constructor() {
     super({ key: 'World' });
@@ -165,6 +174,10 @@ export class WorldScene extends Phaser.Scene {
     this.index = index;
     this.moving = false;
     this.busy = false;
+    // Phaser reuses the scene instance across restart() without re-running
+    // field initializers, so clear transient battle handoff state here.
+    this.rematchBoss = null;
+    this.pendingRebuild = false;
 
     createTilesetTexture(this);
     createEntityTextures(this);
@@ -757,6 +770,13 @@ export class WorldScene extends Phaser.Scene {
   }
 
   override update(_time: number, delta: number): void {
+    // A battle asked the world to rebuild. Do it here, on a clean tick,
+    // outside the WAKE event dispatch that requested it (see pendingRebuild).
+    if (this.pendingRebuild) {
+      this.pendingRebuild = false;
+      this.scene.restart({ state: this.state });
+      return;
+    }
     if (
       this.busy ||
       dom.isDialogOpen() ||
@@ -932,7 +952,7 @@ export class WorldScene extends Phaser.Scene {
     this.pendingTrial = null;
     if (trial && result.outcome === 'victory') this.completeTrial(trial);
     if (result.outcome === 'defeat') {
-      this.scene.restart({ state: this.state });
+      this.pendingRebuild = true;
       const entry = DIALOGUE['defeat_wake'];
       if (entry) dom.openDialog(entry);
       if (result.essenceLost > 0) {
@@ -941,17 +961,18 @@ export class WorldScene extends Phaser.Scene {
       return;
     }
     if (this.rematchBoss && result.bossId === this.rematchBoss) {
-      const flag = `rematch_${this.rematchBoss}`;
-      if (result.outcome === 'victory' && !this.state.world.flags[flag]) {
-        this.state.world.flags[flag] = true;
-        this.state.player.essence += ESSENCE.rematchFirstClear;
-        dom.toast(`✦ First rematch clear: +${String(ESSENCE.rematchFirstClear)} essence`, true);
+      if (result.outcome === 'victory') {
+        const r = applyRematchReward(this.state, this.rematchBoss);
+        this.state = r.state;
+        if (r.firstClear) {
+          dom.toast(`✦ First rematch clear: +${String(r.reward)} essence`, true);
+        }
       }
       this.rematchBoss = null;
       this.autoSave();
       this.refreshHud();
       if (result.xpGained > 0) dom.toast(`+${String(result.xpGained)} XP`);
-      this.scene.restart({ state: this.state });
+      this.pendingRebuild = true;
       return;
     }
     if (result.bossId === 'valewraith' && result.outcome === 'victory') {
@@ -972,7 +993,7 @@ export class WorldScene extends Phaser.Scene {
       this.autoSave();
       const entry = DIALOGUE['warden_gone'];
       if (entry) dom.openDialog(entry);
-      this.scene.restart({ state: this.state });
+      this.pendingRebuild = true;
       return;
     }
     if (result.bossId && result.outcome === 'victory') {
@@ -980,7 +1001,7 @@ export class WorldScene extends Phaser.Scene {
       playSfx('unlock');
       if (toastText) dom.toast(`✦ ${toastText}`, true);
       // Rebuild the map so the fallen Warden's marker disappears.
-      this.scene.restart({ state: this.state });
+      this.pendingRebuild = true;
     }
     if (result.xpGained > 0) dom.toast(`+${String(result.xpGained)} XP`);
     if (result.essenceGained > 0) dom.toast(`+${String(result.essenceGained)} essence`);
@@ -1201,7 +1222,7 @@ export class WorldScene extends Phaser.Scene {
       case 'teleport': {
         const bossId = action.bossId as BossId;
         const bossName = BOSSES[bossId].name;
-        const canPay = this.state.player.essence >= ESSENCE.rematchEntry;
+        const canPay = canAffordRematch(this.state);
         const options = ['Travel to Hearth'];
         if (canPay) options.push(`Rematch ${bossName} (${String(ESSENCE.rematchEntry)} essence)`);
         options.push('Not now');
@@ -1225,7 +1246,7 @@ export class WorldScene extends Phaser.Scene {
             return;
           }
           if (canPay && i === 1) {
-            this.state.player.essence -= ESSENCE.rematchEntry;
+            this.state = applyRematchEntry(this.state);
             this.rematchBoss = bossId;
             this.refreshHud();
             this.startBossBattle(bossId, true);

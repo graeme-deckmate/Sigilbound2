@@ -26,7 +26,13 @@ keep each version bump tied to a real shape change with a migration test):
 - [x] Phase 0: Fork bring-up (new save key `sigilbound2.save.v1`, PWA name
   `Sigilbound II`, workbox cache `sb2-audio`, package `sigilbound2`, zip
   `sigilbound2-itch.zip`, wordmark/title, dev launch name, deploy URL typo fixed).
-- [ ] Phase 1: Re-fight bug fix (waystone rematch repeatable).
+- [x] Phase 1: Re-fight bug fix. Root cause was Phaser re-entrancy: afterBattle
+  called scene.restart() from inside the once(WAKE) handler, and on the second
+  rematch the restart->sleep->wake cycle could drop the next WAKE (scene left
+  asleep). Fix: defer all post-battle rebuilds to a `pendingRebuild` flag handled
+  at the top of update(); lifted rematch entry/reward into pure tested functions
+  in worldstate.ts (canAffordRematch/applyRematchEntry/applyRematchReward); reset
+  transient handoff fields in create(). Regression: tests/rematch.spec.ts.
 - [ ] Phase 2: Map-type plumbing and theming (`@theme`, inert dungeon fields, `world.dungeon`, version 3).
 - [ ] Phase 3: Dungeon core (portal/levers/doors/plates, Sunken Crypt, eject-on-fail).
 - [ ] Phase 4: Currency + inventory + Shop primitive (gold, gear data, shopdom).
