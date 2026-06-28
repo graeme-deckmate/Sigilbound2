@@ -42,6 +42,7 @@ describe('map sources', () => {
     const maps = compileAll();
     expect(maps.map((m) => m.id).sort()).toEqual([
       'ashenreach',
+      'circuitvault',
       'hearth',
       'hearthvale',
       'northhollow',

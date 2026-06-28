@@ -109,6 +109,8 @@ export const ZONE_BACKDROPS: Record<string, ZoneBackdrop> = {
   'sanctum.halls': { sky: ['#120e2e', '#2c2363'], hill: '#0e0b24', ground: '#3b3375' },
   /** The Sunken Crypt: black water under cold stone (v2 W2). */
   'sunkencrypt.flooded': { sky: ['#0a1418', '#13313a'], hill: '#08171b', ground: '#16414a' },
+  /** The Dead Circuit Vault: rust and dead sparks (v2 W5). */
+  'circuitvault.live': { sky: ['#1a1006', '#3a2410'], hill: '#140c04', ground: '#4a3016' },
   /** Fallback for scripted or boss battles without a zone. */
   default: { sky: ['#181436', '#2a2358'], hill: '#13102b', ground: '#34306b' },
 };
@@ -122,6 +124,7 @@ export const MAP_IDS = [
   'northhollow',
   'sanctum',
   'sunkencrypt',
+  'circuitvault',
 ] as const;
 export const SHRINE_IDS = ['fury', 'thirst', 'echo', 'keen'] as const;
 export const WORLD_BOSS_IDS = [

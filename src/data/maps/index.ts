@@ -2,6 +2,7 @@
 import type { CompiledMap } from '../../core/mapdefs.ts';
 import type { MapId } from '../../core/state.ts';
 import { ashenreach } from './ashenreach.ts';
+import { circuitvault } from './circuitvault.ts';
 import { hearth } from './hearth.ts';
 import { hearthvale } from './hearthvale.ts';
 import { northhollow } from './northhollow.ts';
@@ -11,6 +12,7 @@ import { westwood } from './westwood.ts';
 
 export const MAPS: Partial<Record<MapId, CompiledMap>> = {
   ashenreach,
+  circuitvault,
   hearth,
   hearthvale,
   northhollow,

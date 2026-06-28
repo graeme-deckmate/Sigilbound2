@@ -23,7 +23,9 @@ export type EnemySpeciesId =
   | 'trialguardian'
   | 'cryptcrawler'
   | 'boneshade'
-  | 'marshlurk';
+  | 'marshlurk'
+  | 'bonelord'
+  | 'circuitwarden';
 
 export type MoveRider =
   | { type: 'playerStatus'; status: PlayerStatusId; chance: number }
@@ -75,6 +77,8 @@ export const ENEMY_IDS: readonly EnemySpeciesId[] = [
   'cryptcrawler',
   'boneshade',
   'marshlurk',
+  'bonelord',
+  'circuitwarden',
 ];
 
 export const ENEMIES: Record<EnemySpeciesId, EnemyDef> = {
@@ -416,6 +420,46 @@ export const ENEMIES: Record<EnemySpeciesId, EnemyDef> = {
       { name: 'lunges from the reeds', mult: 1.0 },
       { name: 'silt spray', mult: 0.85 },
       { name: 'drag under', mult: 1.2, rider: { type: 'mpDrain', amount: 3 } },
+    ],
+  },
+
+  /* v2 W5: boss-like dungeon objectives (single tough foe, regular battle path) */
+  bonelord: {
+    id: 'bonelord',
+    name: 'The Bonelord',
+    h0: 90,
+    hpl: 6,
+    a0: 9,
+    al: 1.4,
+    xpBase: 40,
+    xpPerLv: 5,
+    weak: ['ember'],
+    resist: ['gloom', 'rime'],
+    moves: [
+      { name: 'grave cleaver', mult: 1.0 },
+      {
+        name: 'wave of rot',
+        mult: 0.9,
+        rider: { type: 'playerStatus', status: 'envenomed', chance: 0.35 },
+      },
+      { name: 'crushing toll', mult: 1.3 },
+    ],
+  },
+  circuitwarden: {
+    id: 'circuitwarden',
+    name: 'The Circuit Warden',
+    h0: 110,
+    hpl: 6,
+    a0: 10,
+    al: 1.3,
+    xpBase: 50,
+    xpPerLv: 5,
+    weak: ['rime'],
+    resist: ['volt', 'ember'],
+    moves: [
+      { name: 'arc lash', mult: 1.0 },
+      { name: 'overload', mult: 0.9, rider: { type: 'mpDrain', amount: 6 } },
+      { name: 'thunderfall', mult: 1.35 },
     ],
   },
 };

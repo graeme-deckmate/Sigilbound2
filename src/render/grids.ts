@@ -556,6 +556,15 @@ const MARSHLURK: BattleSprite = {
     f: '#3a4020',
   },
 };
+// v2 W5: boss-like dungeon foes (recolored existing grids).
+const BONELORD: BattleSprite = {
+  grid: THORNLING.grid,
+  pal: { g: '#cfc7b0', s: '#a89e80', e: '#ff5d5d', p: '#16112b', m: '#8a8270', t: '#6b6450' },
+};
+const CIRCUITWARDEN: BattleSprite = {
+  grid: GLOOMWING.grid,
+  pal: { a: '#5ad1ff', b: '#2a6f9b', e: '#ffffff', p: '#ffd84a', m: '#16112b' },
+};
 
 export const BATTLE_SPRITES: Readonly<Record<string, BattleSprite>> = {
   gloop: GLOOP,
@@ -580,6 +589,8 @@ export const BATTLE_SPRITES: Readonly<Record<string, BattleSprite>> = {
   cryptcrawler: CRYPTCRAWLER,
   boneshade: BONESHADE,
   marshlurk: MARSHLURK,
+  bonelord: BONELORD,
+  circuitwarden: CIRCUITWARDEN,
 };
 
 /** Every grid registered here gets row-uniformity asserted in tests. */

@@ -13,6 +13,7 @@
 @lore 20,25 dialogue:lore_ash
 @egate circuit 52,7
 @egate scalded 18,26
+@portal circuitvault 5,21 -> circuitvault 12,11
 ---
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

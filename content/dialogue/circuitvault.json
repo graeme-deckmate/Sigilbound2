@@ -1,0 +1,16 @@
+{
+  "vault_note": {
+    "speaker": "ETCHED PLATE",
+    "pages": [
+      "The vault answers to weight, not to keys.",
+      "Stand on the seal, and the circuit wakes."
+    ]
+  },
+  "lore_vault": {
+    "speaker": "LORE",
+    "pages": [
+      "They wound the storm into wire and left it to dream.",
+      "The Warden below has not forgotten its charge."
+    ]
+  }
+}

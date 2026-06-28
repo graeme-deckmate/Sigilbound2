@@ -14,7 +14,8 @@ export type ZoneId =
   | 'northhollow.cliffs'
   | 'northhollow.hollow'
   | 'sanctum.halls'
-  | 'sunkencrypt.flooded';
+  | 'sunkencrypt.flooded'
+  | 'circuitvault.live';
 
 export interface Formation {
   members: readonly EnemySpeciesId[];
@@ -41,6 +42,7 @@ export const ZONE_IDS: readonly ZoneId[] = [
   'northhollow.hollow',
   'sanctum.halls',
   'sunkencrypt.flooded',
+  'circuitvault.live',
 ];
 
 export const ZONES: Record<ZoneId, ZoneTable> = {
@@ -153,6 +155,18 @@ export const ZONES: Record<ZoneId, ZoneTable> = {
       { members: ['cryptcrawler', 'marshlurk'], weight: 3 },
       { members: ['boneshade', 'cryptcrawler'], weight: 2 },
       { members: ['marshlurk', 'marshlurk', 'boneshade'], weight: 1 },
+    ],
+  },
+  /* Dungeon: The Dead Circuit Vault (v2 W5), suggested Lv 8. */
+  'circuitvault.live': {
+    zone: 'circuitvault.live',
+    levelMin: 7,
+    levelMax: 9,
+    eliteChance: 0.12,
+    formations: [
+      { members: ['quartzling', 'cryptcrawler'], weight: 3 },
+      { members: ['boneshade', 'quartzling'], weight: 2 },
+      { members: ['quartzling', 'quartzling', 'galeharrow'], weight: 1 },
     ],
   },
 };

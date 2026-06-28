@@ -85,7 +85,14 @@ keep each version bump tied to a real shape change with a migration test):
   felled-flag removes it) wired in World.ts finishStep/interact/afterBattle/
   create/placeEntities. Sunken Crypt gains a doorway ambush + a hall miniboss.
   data.spec counts bumped 14->17. NOTE: @waystone still lands in Phase 5.
-- [ ] Phase 8: Dungeon bosses + second dungeon (DungeonBossId, Dead Circuit Vault).
+- [x] Phase 8: Dungeon bosses + second dungeon. Shipped dungeon bosses as beefy
+  boss-like enemies (bonelord, circuitwarden) used as objectives via the regular
+  battle path (avoids a risky merge of the BossId/world.bosses commit path; the
+  unique-BossSpecial DungeonBossId route is deferred). Built the Dead Circuit
+  Vault (ash theme, Lv 8, plate-gated door + chest) off Ashen Reach, with
+  circuitvault.live zone + backdrop. Sunken Crypt objective upgraded to the
+  Bonelord. Dungeon completion now grants essence + GOLD + a rolled GEAR reward
+  (wires the economy into dungeons). data.spec 17->19 enemies, 10->11 zones.
 - [ ] Phase 9: Character identity (classes, backgrounds, talents, appearance).
 - [ ] Phase 10: Deeper spellcraft + builds (new runes/forms, slots 7-8, presets, sb2: codes).
 - [ ] Phase 11: Difficulty + run modifiers + accessibility.

@@ -30,7 +30,8 @@ export type MapId =
   | 'ashenreach'
   | 'northhollow'
   | 'sanctum'
-  | 'sunkencrypt';
+  | 'sunkencrypt'
+  | 'circuitvault';
 
 /** Rune shrines, keyed by the rune they grant. */
 export type ShrineId = 'fury' | 'thirst' | 'echo' | 'keen';

@@ -9,7 +9,7 @@
 @lever sluice_b 12,9
 @lever sluice_c 7,10
 @door sluice_gate 8,5 needs:seq:sluice_a,sluice_b,sluice_c
-@objective crypt_boss 8,2 battle:crypt_guardians
+@objective crypt_boss 8,2 battle:crypt_lord
 @miniboss crypt_sentry 3,9 species:boneshade lv:7
 @ambush nave_guard 8,6 table:sunkencrypt.flooded lv:6
 @sign 2,7 dialogue:crypt_order

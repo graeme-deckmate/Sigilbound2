@@ -71,6 +71,8 @@ import {
   isDungeonCleared,
 } from '../systems/dungeon.ts';
 import { dungeonById, dungeonObjective } from '../data/dungeons.ts';
+import { grantGear } from '../systems/shop.ts';
+import { rollGear, itemLabel } from '../systems/gear.ts';
 import { spellCost, displayName } from '../systems/spellcraft.ts';
 import { deriveSeed as derive2 } from '../core/rng.ts';
 import type { ElementId } from '../core/state.ts';
@@ -1135,7 +1137,21 @@ export class WorldScene extends Phaser.Scene {
     // Dungeon objective cleared: grant the reward once and end the run.
     if (objective && result.outcome === 'victory' && this.state.world.dungeon) {
       const def = dungeonById(objective);
-      if (def && !isDungeonCleared(this.state, def.id)) this.grantCache(def.reward);
+      if (def && !isDungeonCleared(this.state, def.id)) {
+        this.grantCache(def.reward);
+        if (def.gold > 0) {
+          this.state.player.gold += def.gold;
+          dom.toast(`+${String(def.gold)} gold`, true);
+        }
+        if (def.gearReward) {
+          const seed = deriveSeed(sessionSeed, this.state.stats.battles + 7);
+          const item = rollGear(def.gearReward.base, def.gearReward.rarity, seed);
+          if (item) {
+            this.state = grantGear(this.state, item);
+            dom.toast(`Found: ${itemLabel(item)}`, true);
+          }
+        }
+      }
       this.state = dungeonComplete(this.state, objective);
       playSfx('unlock');
       dom.toast('The crypt falls silent. The way is yours.', true);

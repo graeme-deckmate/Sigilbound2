@@ -1,0 +1,28 @@
+@id circuitvault
+@size 17x13
+@music ashenreach
+@spawn 12,11 up
+@theme ash
+@zone live 1,7 15,9 circuitvault.live
+@portal circuitvault 3,11 -> ashenreach 5,20
+@plate pressure_1 7,9
+@door vault_gate 8,5 needs:plate:pressure_1
+@chest vault_cache 12,9 reward:essence:25
+@objective vault_core 8,2 battle:circuit_core
+@ambush vault_guard 8,6 table:circuitvault.live lv:8
+@sign 2,7 dialogue:vault_note
+@lore 14,8 dialogue:lore_vault
+---
+ooooooooooooooooo
+ooooooo---ooooooo
+ooooooo---ooooooo
+ooooooo---ooooooo
+oooooooo-oooooooo
+oooooooo-oooooooo
+oooooooo-oooooooo
+o---------------o
+o----,,,,,,-----o
+o---------------o
+o---------------o
+o---------------o
+ooooooooooooooooo

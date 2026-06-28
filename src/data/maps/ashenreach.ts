@@ -140,7 +140,16 @@ export const ashenreach = {
   "triggers": [],
   "trials": [],
   "theme": "vale",
-  "portals": [],
+  "portals": [
+    {
+      "dungeon": "circuitvault",
+      "x": 5,
+      "y": 21,
+      "to": "circuitvault",
+      "tx": 12,
+      "ty": 11
+    }
+  ],
   "levers": [],
   "doors": [],
   "chests": [],

@@ -7,6 +7,7 @@ import hearth from '../../content/dialogue/hearth.json';
 import hearthvale from '../../content/dialogue/hearthvale.json';
 import common from '../../content/dialogue/common.json';
 import sunkencrypt from '../../content/dialogue/sunkencrypt.json';
+import circuitvault from '../../content/dialogue/circuitvault.json';
 
 export interface DialogueEntry {
   speaker: string;
@@ -18,4 +19,5 @@ export const DIALOGUE: Record<string, DialogueEntry> = {
   ...hearth,
   ...hearthvale,
   ...sunkencrypt,
+  ...circuitvault,
 };

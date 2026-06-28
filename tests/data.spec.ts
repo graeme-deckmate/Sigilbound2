@@ -33,9 +33,9 @@ describe('table completeness', () => {
     }
   });
 
-  it('has 17 enemy species (14 + v2 crypt/marsh trio) and 5 bosses', () => {
-    expect(ENEMY_IDS).toHaveLength(17);
-    expect(Object.keys(ENEMIES)).toHaveLength(17);
+  it('has 19 enemy species (14 + v2 dungeon foes) and 5 bosses', () => {
+    expect(ENEMY_IDS).toHaveLength(19);
+    expect(Object.keys(ENEMIES)).toHaveLength(19);
     expect(BOSS_IDS).toHaveLength(5);
     expect(Object.keys(BOSSES)).toHaveLength(5);
   });
@@ -124,8 +124,8 @@ describe('enemy roster integrity', () => {
 });
 
 describe('formation integrity', () => {
-  it('all 10 zones exist with sane bands and members', () => {
-    expect(ZONE_IDS).toHaveLength(10);
+  it('all 11 zones exist with sane bands and members', () => {
+    expect(ZONE_IDS).toHaveLength(11);
     for (const z of ZONE_IDS) {
       const t = ZONES[z];
       expect(t.levelMin).toBeGreaterThanOrEqual(1);

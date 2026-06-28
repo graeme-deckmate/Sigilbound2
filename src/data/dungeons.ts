@@ -6,6 +6,7 @@
  */
 import type { EnemySpeciesId } from './enemies.ts';
 import type { CacheReward } from './discovery.ts';
+import type { ItemRarity } from '../core/items.ts';
 
 export interface DungeonDef {
   id: string;
@@ -14,6 +15,10 @@ export interface DungeonDef {
   suggestedLv: number;
   /** Granted once, on first completion. */
   reward: CacheReward;
+  /** Gold granted on first completion (v2 W5). */
+  gold: number;
+  /** A gear base granted (rolled to this rarity) on first completion (v2 W5). */
+  gearReward?: { base: string; rarity: ItemRarity };
 }
 
 export const DUNGEONS: Record<string, DungeonDef> = {
@@ -22,6 +27,16 @@ export const DUNGEONS: Record<string, DungeonDef> = {
     name: 'The Sunken Crypt',
     suggestedLv: 6,
     reward: { kind: 'essence', amount: 40 },
+    gold: 35,
+    gearReward: { base: 'warded_robe', rarity: 'fine' },
+  },
+  circuitvault: {
+    id: 'circuitvault',
+    name: 'The Dead Circuit Vault',
+    suggestedLv: 8,
+    reward: { kind: 'essence', amount: 60 },
+    gold: 60,
+    gearReward: { base: 'focus_rod', rarity: 'rare' },
   },
 };
 
@@ -36,10 +51,15 @@ export interface DungeonObjective {
 }
 
 export const DUNGEON_OBJECTIVES: Record<string, DungeonObjective> = {
-  crypt_guardians: {
-    id: 'crypt_guardians',
-    members: ['hollowshade', 'pondscale', 'hollowshade'],
+  crypt_lord: {
+    id: 'crypt_lord',
+    members: ['bonelord'],
     lv: 6,
+  },
+  circuit_core: {
+    id: 'circuit_core',
+    members: ['circuitwarden'],
+    lv: 8,
   },
 };
 
