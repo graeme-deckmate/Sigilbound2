@@ -28,6 +28,14 @@ export interface CastMods {
   mastery?: number;
   /** The battle's snapshotted Vale Aspect element. */
   aspect?: ElementId | null;
+  // v2 loadout modifiers (gear, class, talents), aggregated by
+  // systems/loadout. All optional and applied as a final factor so a
+  // gearless player and the balance sim see byte-identical numbers.
+  powerMult?: number;
+  costMult?: number;
+  critChance?: number;
+  critMult?: number;
+  procBonus?: number;
 }
 
 /**
@@ -83,7 +91,9 @@ export function spellCost(spell: Spell, mods: CastMods = {}): number {
   const form = FORMS[spell.form];
   const rune = RUNES[spell.rune];
   const twinMp = spell.e2 ? TWIN.mpMult : 1;
-  let cost = Math.round(COMBAT.costBase * form.mp * rune.mp * potCost(spell.p) * twinMp);
+  let cost = Math.round(
+    COMBAT.costBase * form.mp * rune.mp * potCost(spell.p) * twinMp * (mods.costMult ?? 1),
+  );
   if (masteryTier(mods.mastery ?? 0) >= 3) cost += MASTERY.tier3CostDelta;
   return Math.max(COMBAT.costMin, cost);
 }
@@ -120,6 +130,7 @@ export function spellPower(spell: Spell, lv: number, mods: CastMods = {}): numbe
   // v1.1 modifiers: mastery tier 1 and the Vale Aspect favor the element.
   if (masteryTier(mods.mastery ?? 0) >= 1) power *= MASTERY.tier1PowerMult;
   if (mods.aspect && mods.aspect === spell.element) power *= ASPECT.powerMult;
+  if (mods.powerMult !== undefined) power *= mods.powerMult;
   return Math.round(power);
 }
 
@@ -133,6 +144,7 @@ export function spellProc(spell: Spell, mods: CastMods = {}): number {
   let raw = ELEMENTS[spell.element].proc + (RUNES[spell.rune].procBonus ?? 0);
   if (masteryTier(mods.mastery ?? 0) >= 2) raw += MASTERY.tier2ProcBonus;
   if (mods.aspect && mods.aspect === spell.element) raw += ASPECT.procBonus;
+  raw += mods.procBonus ?? 0;
   return Math.min(COMBAT.procCap, Math.max(0, raw));
 }
 
@@ -151,15 +163,21 @@ export function castSurges(spell: Spell, masteryPoints: number, mastery2?: numbe
 }
 
 /** Crit profile; keen overrides the base. Ignored for Veil casts. */
-export function critProfile(spell: Spell): { chance: number; mult: number } {
-  return RUNES[spell.rune].crit ?? { chance: COMBAT.critChance, mult: COMBAT.critMult };
+export function critProfile(spell: Spell, mods: CastMods = {}): { chance: number; mult: number } {
+  const base = RUNES[spell.rune].crit ?? { chance: COMBAT.critChance, mult: COMBAT.critMult };
+  return {
+    chance: base.chance + (mods.critChance ?? 0),
+    mult: base.mult + (mods.critMult ?? 0),
+  };
 }
 
 /** Shield: round(14 * (rune.pw ?? 1) * p * lvScale * form.pw). */
-export function veilShield(spell: Spell, lv: number): number {
+export function veilShield(spell: Spell, lv: number, mods: CastMods = {}): number {
   const form = FORMS[spell.form];
   const rune = RUNES[spell.rune];
-  return Math.round(COMBAT.veilBase * (rune.pw ?? 1) * spell.p * levelScale(lv) * form.pw);
+  return Math.round(
+    COMBAT.veilBase * (rune.pw ?? 1) * spell.p * levelScale(lv) * form.pw * (mods.powerMult ?? 1),
+  );
 }
 
 /** Veil rider proc chance when an enemy strikes the shield. */

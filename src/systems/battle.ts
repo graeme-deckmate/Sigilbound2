@@ -70,6 +70,8 @@ import {
 } from './spellcraft.ts';
 import { applyXp } from './leveling.ts';
 import { weightedPick } from './encounters.ts';
+import { deriveLoadout } from './loadout.ts';
+import type { StatMods } from '../core/items.ts';
 
 /* ---------- state ---------- */
 
@@ -98,6 +100,8 @@ export interface BattlePlayer {
   /** Ordered: Focus cleanses the oldest first. No durations (PROGRESS). */
   statuses: PlayerStatusId[];
   veil: VeilState | null;
+  /** Aggregated loadout mods (gear/class/talents), snapshotted at start (v2). */
+  mods: StatMods;
 }
 
 export interface BattleEnemy {
@@ -411,6 +415,7 @@ export function initBattle(
     }
     return enemy;
   });
+  const loadout = deriveLoadout(gs.player);
   const state: BattleState = {
     phase: 'player',
     round: 1,
@@ -429,14 +434,15 @@ export function initBattle(
       lv: gs.player.lv,
       hp: gs.player.hp,
       mp: gs.player.mp,
-      maxhp: gs.player.maxhp,
-      maxmp: gs.player.maxmp,
+      maxhp: gs.player.maxhp + (loadout.maxhp ?? 0),
+      maxmp: gs.player.maxmp + (loadout.maxmp ?? 0),
       spells: gs.player.spells.map((s) => (s ? { ...s } : null)),
       mastery: { ...gs.player.mastery },
       charms: gs.player.charms.equipped.filter((c): c is string => c !== null),
       scrolls: gs.player.scrolls.map((sc) => ({ ...sc })),
       statuses: [],
       veil: emberknotVeil(gs),
+      mods: loadout,
     },
     enemies,
   };
@@ -513,6 +519,7 @@ export function initBossBattle(
       };
       break;
   }
+  const loadout = deriveLoadout(gs.player);
   const state: BattleState = {
     phase: 'player',
     round: 1,
@@ -533,14 +540,15 @@ export function initBossBattle(
       lv: gs.player.lv,
       hp: gs.player.hp,
       mp: gs.player.mp,
-      maxhp: gs.player.maxhp,
-      maxmp: gs.player.maxmp,
+      maxhp: gs.player.maxhp + (loadout.maxhp ?? 0),
+      maxmp: gs.player.maxmp + (loadout.maxmp ?? 0),
       spells: gs.player.spells.map((s) => (s ? { ...s } : null)),
       mastery: { ...gs.player.mastery },
       charms: gs.player.charms.equipped.filter((c): c is string => c !== null),
       scrolls: gs.player.scrolls.map((sc) => ({ ...sc })),
       statuses: [],
       veil: emberknotVeil(gs),
+      mods: loadout,
     },
     enemies: [enemy],
   };
@@ -700,6 +708,20 @@ function castScroll(
   return performCast(state, overcharged, 0, action.target, emit, rng);
 }
 
+/** Assemble CastMods from snapshotted mastery, the aspect, and loadout gear. */
+function castModsFor(player: BattlePlayer, spell: Spell, aspect: ElementId | null): CastMods {
+  const m = player.mods;
+  return {
+    mastery: player.mastery[spell.element] ?? 0,
+    aspect,
+    powerMult: m.powerMult,
+    costMult: m.costMult,
+    critChance: m.critChance,
+    critMult: m.critMult,
+    procBonus: m.procBonus,
+  };
+}
+
 function castSpell(
   state: BattleState,
   action: { slot: number; target?: number },
@@ -709,10 +731,7 @@ function castSpell(
   const player = state.player;
   const spell = player.spells[action.slot];
   if (!spell) throw new Error(`cast: empty slot ${String(action.slot)}`);
-  const mods: CastMods = {
-    mastery: player.mastery[spell.element] ?? 0,
-    aspect: state.aspect,
-  };
+  const mods = castModsFor(player, spell, state.aspect);
   const cost = spellCost(spell, mods);
   if (player.mp < cost) throw new Error('cast: not enough MP');
   return performCast(state, spell, cost, action.target, emit, rng);
@@ -727,10 +746,7 @@ function performCast(
   rng: Rng,
 ): boolean {
   const player = state.player;
-  const mods: CastMods = {
-    mastery: player.mastery[spell.element] ?? 0,
-    aspect: state.aspect,
-  };
+  const mods = castModsFor(player, spell, state.aspect);
   player.mp -= cost;
   if (!state.formsCast.includes(spell.form)) state.formsCast.push(spell.form);
 
@@ -754,7 +770,7 @@ function performCast(
     return true;
   }
   if (targeting === 'self') {
-    const shield = veilShield(spell, player.lv);
+    const shield = veilShield(spell, player.lv, mods);
     player.veil = { spell: { ...spell }, shield, absorbed: 0, reapplied: false };
     emit({
       kind: 'playerCast',
@@ -784,7 +800,7 @@ function performCast(
   });
 
   const hits = spellHits(spell);
-  const crit = critProfile(spell);
+  const crit = critProfile(spell, mods);
   let refunded = false;
   const chilledMult = player.statuses.includes('chilled')
     ? (PLAYER_STATUSES.chilled.spellPowerMult ?? 1)
@@ -1808,6 +1824,8 @@ function dealDamageToPlayer(
     dmg *= ELITE.frenziedMult;
   }
   dmg = Math.max(1, Math.round(dmg));
+  // v2 gear: flat defense reduces incoming damage (floor 1). Gearless => 0.
+  if (player.mods.defense) dmg = Math.max(1, dmg - player.mods.defense);
 
   let absorbed = 0;
   const veil = player.veil;
@@ -1838,7 +1856,7 @@ function dealDamageToPlayer(
         emit({ kind: 'playerHeal', amount: heal, hpAfter: player.hp });
       }
       if (veil.spell.rune === 'echo' && !veil.reapplied) {
-        veil.shield = veilShield(veil.spell, player.lv);
+        veil.shield = veilShield(veil.spell, player.lv, { powerMult: player.mods.powerMult });
         veil.absorbed = 0;
         veil.reapplied = true;
         emit({ kind: 'veilReapply', amount: veil.shield });
@@ -2103,10 +2121,7 @@ function evaluateBattleFeats(gs: GameState, battle: BattleState): string[] {
 export function canCast(state: BattleState, slot: number): boolean {
   const spell = state.player.spells[slot];
   if (!spell) return false;
-  const mods: CastMods = {
-    mastery: state.player.mastery[spell.element] ?? 0,
-    aspect: state.aspect,
-  };
+  const mods = castModsFor(state.player, spell, state.aspect);
   return state.player.mp >= spellCost(spell, mods);
 }
 

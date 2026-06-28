@@ -67,7 +67,16 @@ keep each version bump tied to a real shape change with a migration test):
   where it belongs; gear stat effects flow into combat in Phase 6. Version stays 3
   (tolerant migrate fills new fields), no churny bump.
 - [ ] Phase 5: Less-linear overworld + towns + fast travel (lateral exits, waystone network).
-- [ ] Phase 6: Gear stats into combat (deriveLoadout, CastMods, defense seam).
+- [x] Phase 6: Gear stats into combat. New systems/loadout.ts deriveLoadout
+  (aggregates equipped gear -> StatMods, gearless => {}, powerMult capped at
+  1.35). Extended CastMods with powerMult/costMult/critChance/critMult/procBonus
+  (all default-off) honored in spellPower/spellCost/spellProc/critProfile/
+  veilShield. battle.ts snapshots the loadout on BattlePlayer.mods, adds gear
+  maxhp/maxmp at init, threads mods via castModsFor through the cast/crit/veil
+  path, and applies flat defense to incoming hits. GATE HELD: balanceSim.spec
+  passes byte-identical (gearless => no-ops). Tests: loadout.spec (identity, cap,
+  initBattle integration). NOTE: Grimoire preview showing gear deferred to Phase 9
+  (Character overlay); resist mitigation reserved (enemy moves are untyped).
 - [ ] Phase 7: Encounter archetypes + new enemies (ambush, miniboss, +species).
 - [ ] Phase 8: Dungeon bosses + second dungeon (DungeonBossId, Dead Circuit Vault).
 - [ ] Phase 9: Character identity (classes, backgrounds, talents, appearance).
