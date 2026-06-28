@@ -229,6 +229,22 @@ describe('migrate', () => {
     expect(g.player.equipment.vestment).toBeNull();
   });
 
+  it('round-trips class, appearance, and difficulty; defaults them for old saves', () => {
+    const fresh = newGame();
+    fresh.player.klass = 'reaver';
+    fresh.player.appearance.palette = 'crimson';
+    fresh.world.run.difficulty = 'harsh';
+    const g = migrate(JSON.parse(JSON.stringify(fresh)));
+    expect(g.player.klass).toBe('reaver');
+    expect(g.player.appearance.palette).toBe('crimson');
+    expect(g.world.run.difficulty).toBe('harsh');
+
+    const old = migrate({ version: 3, player: {}, world: {} });
+    expect(old.player.klass).toBeNull();
+    expect(old.player.appearance.palette).toBe('default');
+    expect(old.world.run.difficulty).toBe('standard');
+  });
+
   it('clamps out-of-range potency back into the slider range', () => {
     const g = migrate({
       version: 2,

@@ -15,6 +15,8 @@ import { GEAR_BASES } from '../data/gear.ts';
 import { affixById } from '../data/affixes.ts';
 import { DIFFICULTY_IDS } from '../data/difficulty.ts';
 import type { DifficultyId } from '../data/difficulty.ts';
+import { CLASS_IDS } from '../data/classes.ts';
+import type { ClassId } from '../data/classes.ts';
 import {
   BASE_HP,
   BASE_MP,
@@ -61,6 +63,8 @@ export function newGame(): GameState {
       gold: 0,
       equipment: emptyEquipment(),
       inventory: { gear: [], capacity: INVENTORY_CAPACITY },
+      klass: null,
+      appearance: { palette: 'default' },
       statuses: {},
     },
     world: {
@@ -270,6 +274,16 @@ export function migrate(raw: unknown): GameState {
         const owned = new Set(gearArr.map((g) => g.uid));
         return asEquipment(p['equipment'], owned);
       })(),
+      klass:
+        typeof p['klass'] === 'string' && (CLASS_IDS as readonly string[]).includes(p['klass'])
+          ? (p['klass'] as ClassId)
+          : null,
+      appearance: {
+        palette:
+          isObj(p['appearance']) && typeof p['appearance']['palette'] === 'string'
+            ? p['appearance']['palette']
+            : 'default',
+      },
       statuses: {}, // battle-only, never restored from disk
     },
     world: {

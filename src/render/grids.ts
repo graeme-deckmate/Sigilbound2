@@ -68,6 +68,17 @@ export const VILLAGER_PALS: Readonly<Record<string, Palette>> = {
   murk: { ...PLAYER_PAL, h: '#43405c', H: '#2e2554', r: '#52452f', R: '#3b3322', b: '#9d7bff' },
 };
 
+/** Cosmetic player palettes (v2 V3): hood/robe recolors of PLAYER_PAL. */
+export const PLAYER_PALETTES: Readonly<Record<string, Palette>> = {
+  default: PLAYER_PAL,
+  crimson: { ...PLAYER_PAL, h: '#ff6b6b', H: '#d04040', r: '#a83636', R: '#832626' },
+  jade: { ...PLAYER_PAL, h: '#5fd6a0', H: '#3da472', r: '#2c6e52', R: '#1f5d3b' },
+  gold: { ...PLAYER_PAL, h: '#ffd84a', H: '#d9ad2a', r: '#8e7430', R: '#6e5a22' },
+  slate: { ...PLAYER_PAL, h: '#8a9bb5', H: '#5a6b85', r: '#3a4658', R: '#2a3242' },
+};
+
+export const PALETTE_IDS: readonly string[] = ['default', 'crimson', 'jade', 'gold', 'slate'];
+
 /* ---------- battle sprites (docs/03 section 12) ---------- */
 
 export interface BattleSprite {

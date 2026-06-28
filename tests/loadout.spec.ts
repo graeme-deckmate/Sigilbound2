@@ -29,6 +29,15 @@ describe('deriveLoadout', () => {
     expect(deriveLoadout(g.player)).toEqual({});
   });
 
+  it('folds in the class passive (and classless stays empty)', () => {
+    const g = newGame();
+    expect(deriveLoadout(g.player)).toEqual({}); // classless
+    g.player.klass = 'warden'; // maxhp +10, defense +1
+    const mods = deriveLoadout(g.player);
+    expect(mods.maxhp).toBe(10);
+    expect(mods.defense).toBe(1);
+  });
+
   it('clamps aggregate powerMult to the cap', () => {
     const g = newGame();
     // focus_rod (1.1) + fierce (1.06) + of_power (1.08) => ~1.26; add another

@@ -8,12 +8,13 @@ import type { GameState } from '../core/state.ts';
 import type { StatMods } from '../core/items.ts';
 import { EQUIP_SLOT_IDS } from '../core/items.ts';
 import { gearMods, sumMods } from './gear.ts';
+import { classPassive } from '../data/classes.ts';
 
 /** Cap on aggregate spell-power multiplier so gear cannot blow the ceiling. */
 export const LOADOUT_POWER_CAP = 1.35;
 
 export function deriveLoadout(player: GameState['player']): StatMods {
-  const mods: StatMods[] = [];
+  const mods: StatMods[] = [classPassive(player.klass)];
   for (const slot of EQUIP_SLOT_IDS) {
     const uid = player.equipment[slot];
     if (!uid) continue;

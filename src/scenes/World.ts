@@ -71,10 +71,12 @@ import {
   isDungeonCleared,
 } from '../systems/dungeon.ts';
 import { dungeonById, dungeonObjective } from '../data/dungeons.ts';
-import { grantGear, buyGear, sellGear } from '../systems/shop.ts';
+import { grantGear, buyGear, sellGear, equipGear } from '../systems/shop.ts';
 import { rollGear, itemLabel, itemValue } from '../systems/gear.ts';
 import { waystoneFlag } from '../systems/worldstate.ts';
 import type { GearItem } from '../core/items.ts';
+import { CLASS_IDS, CLASSES } from '../data/classes.ts';
+import { PALETTE_IDS } from '../render/grids.ts';
 import { spellCost, displayName } from '../systems/spellcraft.ts';
 import { deriveSeed as derive2 } from '../core/rng.ts';
 import type { ElementId } from '../core/state.ts';
@@ -224,7 +226,7 @@ export class WorldScene extends Phaser.Scene {
 
     createTilesetTexture(this);
     createEntityTextures(this);
-    createActorTextures(this);
+    createActorTextures(this, this.state.player.appearance.palette);
 
     this.buildTileLayers();
     this.placeEntities();
@@ -958,9 +960,66 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private openShop(): void {
-    dom.openChoice('ARMORER', 'What do you need?', ['Buy gear', 'Sell gear', 'Leave'], (i) => {
-      if (i === 0) this.shopBuy();
-      else if (i === 1) this.shopSell();
+    dom.openChoice(
+      'ARMORER',
+      'What do you need?',
+      ['Buy gear', 'Sell gear', 'Equip', 'Class', 'Appearance', 'Leave'],
+      (i) => {
+        if (i === 0) this.shopBuy();
+        else if (i === 1) this.shopSell();
+        else if (i === 2) this.shopEquip();
+        else if (i === 3) this.shopClass();
+        else if (i === 4) this.shopAppearance();
+      },
+    );
+  }
+
+  private shopEquip(): void {
+    const gear = this.state.player.inventory.gear;
+    if (gear.length === 0) {
+      dom.toast('No gear to equip.');
+      return;
+    }
+    const options = gear.map((it) => {
+      const worn = this.state.player.equipment[it.slot] === it.uid ? ' [worn]' : '';
+      return `${itemLabel(it)}${worn}`;
+    });
+    options.push('Back');
+    dom.openChoice('EQUIP', 'Wear which?', options, (i) => {
+      const it = gear[i];
+      if (!it) return;
+      this.state = equipGear(this.state, it.uid);
+      this.autoSave();
+      dom.toast(`Equipped ${itemLabel(it)}.`);
+    });
+  }
+
+  private shopClass(): void {
+    const cur = this.state.player.klass;
+    const options = CLASS_IDS.map((id) => {
+      const c = CLASSES[id];
+      return `${c.label}${cur === id ? ' [yours]' : ''}: ${c.blurb}`;
+    });
+    options.push('Back');
+    dom.openChoice('CALLING', 'Choose your calling.', options, (i) => {
+      const id = CLASS_IDS[i];
+      if (!id) return;
+      this.state.player.klass = id;
+      this.autoSave();
+      dom.toast(`You are now a ${CLASSES[id].label}.`, true);
+    });
+  }
+
+  private shopAppearance(): void {
+    const options = [...PALETTE_IDS];
+    options.push('Back');
+    dom.openChoice('DYES', 'Pick a colour.', options, (i) => {
+      const pal = PALETTE_IDS[i];
+      if (!pal) return;
+      this.state.player.appearance.palette = pal;
+      this.autoSave();
+      this.busy = true;
+      void dom.irisTransition(() => this.scene.restart({ state: this.state }));
     });
   }
 

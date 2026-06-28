@@ -101,7 +101,15 @@ keep each version bump tied to a real shape change with a migration test):
   circuitvault.live zone + backdrop. Sunken Crypt objective upgraded to the
   Bonelord. Dungeon completion now grants essence + GOLD + a rolled GEAR reward
   (wires the economy into dungeons). data.spec 17->19 enemies, 10->11 zones.
-- [ ] Phase 9: Character identity (classes, backgrounds, talents, appearance).
+- [x] Phase 9 (lean): Character identity. The armorer is now the character hub:
+  Equip (wear owned gear - the missing link that makes Phase 4/6/8 gear actually
+  function), Class (4 callings whose passive flows through the sim-safe
+  deriveLoadout), Appearance (cosmetic player palette swaps via PLAYER_PALETTES,
+  rebuilt in createActorTextures). State: player.klass + player.appearance (+save
+  defaults/migrate). GATE HELD: classless deriveLoadout = {} so the sim is
+  unchanged. Tests: loadout class passive, save round-trip. DEFERRED: backgrounds
+  and the talent tree (UI-heavy) - the deriveLoadout seam already supports talent
+  mods when added.
 - [x] Phase 10 (partial): Deeper spellcraft - 3 new level-gated runes (weight: raw
   power at high MP; ruin: rare huge crit; ward: cheap status-setup) that reuse
   already-honored RuneDef fields (pw/mp/crit/procBonus) => ZERO reducer risk and

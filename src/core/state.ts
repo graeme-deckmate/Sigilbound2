@@ -5,6 +5,7 @@
  */
 import type { Equipment, Inventory } from './items.ts';
 import type { DifficultyId } from '../data/difficulty.ts';
+import type { ClassId } from '../data/classes.ts';
 
 export type ElementId = 'ember' | 'rime' | 'volt' | 'thorn' | 'gloom';
 export type FormId = 'wisp' | 'bolt' | 'lance' | 'nova' | 'veil' | 'call';
@@ -100,6 +101,10 @@ export interface GameState {
     equipment: Equipment;
     /** Owned gear (equipped or not) plus its capacity. */
     inventory: Inventory;
+    /** Chosen class (v2 V3); null until picked. Passive flows via deriveLoadout. */
+    klass: ClassId | null;
+    /** Cosmetic player palette id (v2 V3). */
+    appearance: { palette: string };
     /** Battle-only, cleared on save. */
     statuses: StatusMap;
   };

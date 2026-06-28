@@ -7,6 +7,7 @@ import {
   PLAYER_BACK,
   PLAYER_FRONT,
   PLAYER_PAL,
+  PLAYER_PALETTES,
   VILLAGER_PALS,
   type Palette,
   type PixelGrid,
@@ -38,11 +39,16 @@ export function textureFromGrid(
 }
 
 /** Create the player and villager textures once, at preload. */
-export function createActorTextures(scene: Phaser.Scene): void {
-  textureFromGrid(scene, 'player_front', PLAYER_FRONT, PLAYER_PAL);
-  textureFromGrid(scene, 'player_back', PLAYER_BACK, PLAYER_PAL);
-  for (const [npcId, pal] of Object.entries(VILLAGER_PALS)) {
-    textureFromGrid(scene, `npc_${npcId}`, PLAYER_FRONT, pal);
+export function createActorTextures(scene: Phaser.Scene, palette = 'default'): void {
+  const pal = PLAYER_PALETTES[palette] ?? PLAYER_PAL;
+  // Rebuild the player textures so a chosen cosmetic palette takes effect (v2 V3).
+  for (const key of ['player_front', 'player_back']) {
+    if (scene.textures.exists(key)) scene.textures.remove(key);
+  }
+  textureFromGrid(scene, 'player_front', PLAYER_FRONT, pal);
+  textureFromGrid(scene, 'player_back', PLAYER_BACK, pal);
+  for (const [npcId, npcPal] of Object.entries(VILLAGER_PALS)) {
+    textureFromGrid(scene, `npc_${npcId}`, PLAYER_FRONT, npcPal);
   }
 }
 
