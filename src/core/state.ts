@@ -22,7 +22,14 @@ export type RuneId =
   | 'hollowlight'
   | 'wraithmark';
 
-export type MapId = 'hearth' | 'hearthvale' | 'westwood' | 'ashenreach' | 'northhollow' | 'sanctum';
+export type MapId =
+  | 'hearth'
+  | 'hearthvale'
+  | 'westwood'
+  | 'ashenreach'
+  | 'northhollow'
+  | 'sanctum'
+  | 'sunkencrypt';
 
 /** Rune shrines, keyed by the rune they grant. */
 export type ShrineId = 'fury' | 'thirst' | 'echo' | 'keen';

@@ -1,0 +1,16 @@
+{
+  "crypt_order": {
+    "speaker": "DROWNED STONE",
+    "pages": [
+      "Three sluices hold back the flood.",
+      "Wake them west, then east, then center, and the nave will drain."
+    ]
+  },
+  "lore_crypt": {
+    "speaker": "LORE",
+    "pages": [
+      "The crypt keepers slept here, warded by water.",
+      "Something below still keeps their watch."
+    ]
+  }
+}

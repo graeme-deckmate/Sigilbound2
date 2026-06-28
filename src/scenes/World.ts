@@ -63,6 +63,14 @@ import {
   gateById,
   gateOpeners,
 } from '../systems/worldstate.ts';
+import {
+  doorOpen,
+  dungeonComplete,
+  dungeonEject,
+  dungeonEnter,
+  isDungeonCleared,
+} from '../systems/dungeon.ts';
+import { dungeonById, dungeonObjective } from '../data/dungeons.ts';
 import { spellCost, displayName } from '../systems/spellcraft.ts';
 import { deriveSeed as derive2 } from '../core/rng.ts';
 import type { ElementId } from '../core/state.ts';
@@ -116,6 +124,18 @@ export class WorldScene extends Phaser.Scene {
   // flow like boss rematches, can drop the next WAKE and leave the scene
   // asleep (the v1 "can't re-fight after the first re-fight" bug).
   private pendingRebuild = false;
+  // Scene-local dungeon puzzle state (v2 W2). Single-map and ephemeral: it
+  // resets on every create(), so leaving or wiping resets the puzzle for free.
+  private puzzle = {
+    levers: new Set<string>(),
+    keys: new Set<string>(),
+    plates: new Set<string>(),
+    seq: [] as string[],
+  };
+  private opened = new Set<string>();
+  private doorSprites = new Map<string, Phaser.GameObjects.Image>();
+  private leverSprites = new Map<string, Phaser.GameObjects.Image>();
+  private pendingObjective: string | null = null;
 
   constructor() {
     super({ key: 'World' });
@@ -154,6 +174,11 @@ export class WorldScene extends Phaser.Scene {
         index.delete(`${String(g.x)},${String(g.y)}`);
       }
     }
+    // A cleared dungeon keeps its objective down: drop it so re-runs are free roam.
+    const dungeon = this.state.world.dungeon;
+    if (dungeon && isDungeonCleared(this.state, dungeon.id)) {
+      for (const o of map.objectives) index.delete(`${String(o.x)},${String(o.y)}`);
+    }
     // Murk sets up shop by progress (03 section 20).
     const murkSpot = murkLocation(
       this.state.world.bosses.bogmaw,
@@ -178,6 +203,12 @@ export class WorldScene extends Phaser.Scene {
     // field initializers, so clear transient battle handoff state here.
     this.rematchBoss = null;
     this.pendingRebuild = false;
+    this.pendingObjective = null;
+    // Dungeon puzzle state is per-entry and ephemeral: reset every build.
+    this.puzzle = { levers: new Set(), keys: new Set(), plates: new Set(), seq: [] };
+    this.opened = new Set();
+    this.doorSprites = new Map();
+    this.leverSprites = new Map();
 
     createTilesetTexture(this);
     createEntityTextures(this);
@@ -185,6 +216,7 @@ export class WorldScene extends Phaser.Scene {
 
     this.buildTileLayers();
     this.placeEntities();
+    this.applyThemeTint();
 
     this.player = this.add.image(0, 0, 'player_front').setOrigin(0, 0).setDepth(10);
     this.shadow = this.add.rectangle(0, 0, 10, 2, 0x000000, 0.25).setOrigin(0, 0).setDepth(9);
@@ -754,6 +786,88 @@ export class WorldScene extends Phaser.Scene {
         .setOrigin(0, 0)
         .setDepth(8);
     }
+    // Dungeon entities (v2 W2).
+    for (const p of this.map.portals) {
+      const { px, py } = at(p.x, p.y);
+      this.add.image(px, py, 'ent_portal').setOrigin(0, 0).setDepth(5);
+    }
+    for (const l of this.map.levers) {
+      const { px, py } = at(l.x, l.y);
+      const img = this.add.image(px, py, 'ent_lever').setOrigin(0, 0).setDepth(5);
+      if (this.puzzle.levers.has(l.id)) img.setTint(0xffc857);
+      this.leverSprites.set(l.id, img);
+    }
+    for (const d of this.map.doors) {
+      if (doorOpen(d.needs, this.puzzle)) continue;
+      const { px, py } = at(d.x, d.y);
+      const img = this.add.image(px, py, 'ent_door').setOrigin(0, 0).setDepth(5);
+      this.doorSprites.set(d.id, img);
+    }
+    for (const c of this.map.chests) {
+      if (this.opened.has(c.id)) continue;
+      const { px, py } = at(c.x, c.y);
+      this.add.image(px, py, 'ent_chest').setOrigin(0, 0).setDepth(5);
+    }
+    const dungeonCleared = this.state.world.dungeon
+      ? isDungeonCleared(this.state, this.state.world.dungeon.id)
+      : false;
+    for (const o of this.map.objectives) {
+      if (dungeonCleared) continue;
+      const { px, py } = at(o.x, o.y);
+      const img = this.add.image(px, py, 'ent_objective').setOrigin(0, 0).setDepth(6);
+      this.tweens.add({ targets: img, alpha: 0.6, duration: 1100, yoyo: true, repeat: -1 });
+    }
+  }
+
+  /** Wash non-vale themes with a translucent color over the ground (v2 W2). */
+  private applyThemeTint(): void {
+    const tints: Partial<Record<string, number>> = {
+      cave: 0x0c2a33,
+      ash: 0x331f10,
+      hollow: 0x1a1038,
+    };
+    const tint = tints[this.map.theme];
+    if (tint === undefined) return;
+    const w = this.map.width * TILE;
+    const h = this.map.height * TILE;
+    this.add.rectangle(0, 0, w, h, tint, 0.3).setOrigin(0, 0).setDepth(1);
+  }
+
+  /** Re-evaluate doors after a lever/plate change; open any now satisfied. */
+  private refreshDoors(): void {
+    const idx = this.index as Map<string, EntityAt>;
+    let openedOne = false;
+    for (const d of this.map.doors) {
+      const key = `${String(d.x)},${String(d.y)}`;
+      if (!idx.has(key)) continue; // already open
+      if (!doorOpen(d.needs, this.puzzle)) continue;
+      idx.delete(key);
+      this.doorSprites.get(d.id)?.destroy();
+      this.doorSprites.delete(d.id);
+      openedOne = true;
+    }
+    if (openedOne) {
+      playSfx('unlock');
+      dom.toast('Stone grinds. A way opens.');
+    }
+  }
+
+  /** Grant a dungeon chest's reward (v2 W2): a key, essence, or flavor. */
+  private openChest(reward: string): void {
+    if (reward.startsWith('key:')) {
+      this.puzzle.keys.add(reward.slice(4));
+      playSfx('unlock');
+      dom.toast('A key. It may fit a lock nearby.');
+      return;
+    }
+    if (reward.startsWith('essence:')) {
+      const n = Number(reward.slice('essence:'.length)) || 0;
+      this.state.player.essence += n;
+      playSfx('unlock');
+      dom.toast(`+${String(n)} essence`);
+      return;
+    }
+    dom.toast('Dust and old bones.');
   }
 
   private snapPlayer(): void {
@@ -821,6 +935,15 @@ export class WorldScene extends Phaser.Scene {
     this.state.stats.steps += 1;
     this.snapPlayer();
     this.tryRecoverEssence();
+
+    // Pressure plates latch when stepped on (v2 W2), re-evaluating doors.
+    const plate = this.map.plates.find((p) => p.x === this.targetX && p.y === this.targetY);
+    if (plate && !this.puzzle.plates.has(plate.id)) {
+      this.puzzle.plates.add(plate.id);
+      playSfx('cast');
+      dom.toast('Something clicks beneath your feet.');
+      this.refreshDoors();
+    }
 
     const exit = exitAt(this.map, this.targetX, this.targetY);
     if (exit) {
@@ -950,14 +1073,38 @@ export class WorldScene extends Phaser.Scene {
     this.autoSave();
     const trial = this.pendingTrial;
     this.pendingTrial = null;
+    const objective = this.pendingObjective;
+    this.pendingObjective = null;
     if (trial && result.outcome === 'victory') this.completeTrial(trial);
     if (result.outcome === 'defeat') {
+      // A wipe inside a dungeon ejects to the entrance, keeping all gains.
+      if (this.state.world.dungeon) {
+        this.state = dungeonEject(this.state);
+        this.autoSave();
+        this.refreshHud();
+        this.pendingRebuild = true;
+        dom.toast('You wake at the dungeon mouth. Nothing was lost.', true);
+        return;
+      }
       this.pendingRebuild = true;
       const entry = DIALOGUE['defeat_wake'];
       if (entry) dom.openDialog(entry);
       if (result.essenceLost > 0) {
         dom.toast(`${String(result.essenceLost)} essence fell where you did`, true);
       }
+      return;
+    }
+    // Dungeon objective cleared: grant the reward once and end the run.
+    if (objective && result.outcome === 'victory' && this.state.world.dungeon) {
+      const def = dungeonById(objective);
+      if (def && !isDungeonCleared(this.state, def.id)) this.grantCache(def.reward);
+      this.state = dungeonComplete(this.state, objective);
+      playSfx('unlock');
+      dom.toast('The crypt falls silent. The way is yours.', true);
+      this.autoSave();
+      this.refreshHud();
+      if (result.xpGained > 0) dom.toast(`+${String(result.xpGained)} XP`);
+      this.pendingRebuild = true;
       return;
     }
     if (this.rematchBoss && result.bossId === this.rematchBoss) {
@@ -1170,6 +1317,85 @@ export class WorldScene extends Phaser.Scene {
       case 'trial':
         this.openTrial(action.key);
         break;
+      case 'portal': {
+        if (this.state.world.dungeon) {
+          dom.openChoice(
+            'WAY OUT',
+            'Leave the dungeon? The way will reset behind you.',
+            ['Leave', 'Stay'],
+            (i) => {
+              if (i !== 0) return;
+              this.state = dungeonEject(this.state);
+              this.autoSave();
+              this.busy = true;
+              playSfx('cast');
+              void dom.irisTransition(() => this.scene.restart({ state: this.state }));
+            },
+          );
+          break;
+        }
+        const def = dungeonById(action.dungeon);
+        const portal = this.map.portals.find((p) => p.dungeon === action.dungeon);
+        if (!def || !portal) break;
+        dom.openChoice(
+          def.name.toUpperCase(),
+          `${def.name}. Suggested skill: about Lv ${String(def.suggestedLv)}. The Vale will not weep if you turn back.`,
+          ['Enter', 'Not yet'],
+          (i) => {
+            if (i !== 0) return;
+            this.state = dungeonEnter(this.state, def.id, portal.to, portal.tx, portal.ty);
+            this.autoSave();
+            this.busy = true;
+            playSfx('cast');
+            void dom.irisTransition(() => this.scene.restart({ state: this.state }));
+          },
+        );
+        break;
+      }
+      case 'lever': {
+        if (this.puzzle.levers.has(action.id)) {
+          dom.toast('The lever is already thrown.');
+          break;
+        }
+        this.puzzle.levers.add(action.id);
+        this.puzzle.seq.push(action.id);
+        this.leverSprites.get(action.id)?.setTint(0xffc857);
+        playSfx('cast');
+        dom.toast('The lever grinds home.');
+        this.refreshDoors();
+        break;
+      }
+      case 'door':
+        dom.toast('The door holds fast.');
+        break;
+      case 'chest': {
+        const chest = this.map.chests.find((c) => c.id === action.id);
+        if (!chest || this.opened.has(chest.id)) {
+          dom.toast('Empty.');
+          break;
+        }
+        this.opened.add(chest.id);
+        this.openChest(chest.reward);
+        this.refreshHud();
+        this.autoSave();
+        break;
+      }
+      case 'objective': {
+        const objEntity = this.map.objectives.find((o) => o.id === action.id);
+        if (!objEntity) break;
+        const battle = dungeonObjective(objEntity.battle);
+        if (!battle) break;
+        dom.openChoice('!', 'Something stirs in the dark. Face it?', ['Fight', 'Back'], (i) => {
+          if (i !== 0) return;
+          this.pendingObjective = this.state.world.dungeon?.id ?? null;
+          this.startEncounter({
+            zone: this.map.zones[0]?.table ?? 'sunkencrypt.flooded',
+            formation: { members: battle.members, weight: 1 },
+            enemyLv: battle.lv,
+          });
+        });
+        break;
+      }
       case 'spring': {
         playSfx('heal');
         this.state = applySpringRestore(this.state);

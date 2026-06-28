@@ -1,0 +1,28 @@
+@id sunkencrypt
+@size 17x13
+@music sanctum
+@spawn 12,11 up
+@theme cave
+@zone flooded 1,7 15,9 sunkencrypt.flooded
+@portal sunkencrypt 3,11 -> hearthvale 6,20
+@lever sluice_a 4,9
+@lever sluice_b 12,9
+@lever sluice_c 7,10
+@door sluice_gate 8,5 needs:seq:sluice_a,sluice_b,sluice_c
+@objective crypt_boss 8,2 battle:crypt_guardians
+@sign 2,7 dialogue:crypt_order
+@lore 14,8 dialogue:lore_crypt
+---
+ooooooooooooooooo
+ooooooo---ooooooo
+ooooooo---ooooooo
+ooooooo---ooooooo
+oooooooo-oooooooo
+oooooooo-oooooooo
+oooooooo-oooooooo
+o---------------o
+o----,,,,,,-----o
+o---------------o
+o---------------o
+o---------------o
+ooooooooooooooooo

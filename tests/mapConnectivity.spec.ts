@@ -46,6 +46,7 @@ describe('map sources', () => {
       'hearthvale',
       'northhollow',
       'sanctum',
+      'sunkencrypt',
       'westwood',
     ]);
   });

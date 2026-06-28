@@ -33,7 +33,14 @@ export type Interaction =
   | { kind: 'teleport'; bossId: string }
   | { kind: 'egate'; id: string }
   | { kind: 'murk' }
-  | { kind: 'trial'; key: TrialKey };
+  | { kind: 'trial'; key: TrialKey }
+  | { kind: 'portal'; dungeon: string }
+  | { kind: 'lever'; id: string }
+  | { kind: 'door'; id: string }
+  | { kind: 'chest'; id: string }
+  | { kind: 'objective'; id: string }
+  | { kind: 'miniboss'; id: string }
+  | { kind: 'waystone'; id: string };
 
 /** What interacting with the faced tile means, if anything. */
 export function interactionFor(map: CompiledMap, entity: EntityAt | null): Interaction | null {
@@ -61,6 +68,20 @@ export function interactionFor(map: CompiledMap, entity: EntityAt | null): Inter
       return { kind: 'egate', id: entity.ref };
     case 'trial':
       return { kind: 'trial', key: entity.ref as TrialKey };
+    case 'portal':
+      return { kind: 'portal', dungeon: entity.ref };
+    case 'lever':
+      return { kind: 'lever', id: entity.ref };
+    case 'door':
+      return { kind: 'door', id: entity.ref };
+    case 'chest':
+      return { kind: 'chest', id: entity.ref };
+    case 'objective':
+      return { kind: 'objective', id: entity.ref };
+    case 'miniboss':
+      return { kind: 'miniboss', id: entity.ref };
+    case 'waystone':
+      return { kind: 'waystone', id: entity.ref };
   }
 }
 

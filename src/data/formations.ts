@@ -13,7 +13,8 @@ export type ZoneId =
   | 'ashenreach.inner'
   | 'northhollow.cliffs'
   | 'northhollow.hollow'
-  | 'sanctum.halls';
+  | 'sanctum.halls'
+  | 'sunkencrypt.flooded';
 
 export interface Formation {
   members: readonly EnemySpeciesId[];
@@ -39,6 +40,7 @@ export const ZONE_IDS: readonly ZoneId[] = [
   'northhollow.cliffs',
   'northhollow.hollow',
   'sanctum.halls',
+  'sunkencrypt.flooded',
 ];
 
 export const ZONES: Record<ZoneId, ZoneTable> = {
@@ -139,6 +141,18 @@ export const ZONES: Record<ZoneId, ZoneTable> = {
       { members: ['galeharrow', 'hollowshade'], weight: 2 },
       { members: ['quartzling', 'quartzling', 'hollowshade'], weight: 1 },
       { members: ['hollowshade', 'hollowshade'], weight: 1 },
+    ],
+  },
+  /* Dungeon: The Sunken Crypt (v2 W2), suggested Lv 6, elite-leaning. */
+  'sunkencrypt.flooded': {
+    zone: 'sunkencrypt.flooded',
+    levelMin: 5,
+    levelMax: 7,
+    eliteChance: 0.12,
+    formations: [
+      { members: ['pondscale', 'hollowshade'], weight: 3 },
+      { members: ['hollowshade', 'hollowshade'], weight: 2 },
+      { members: ['pondscale', 'pondscale', 'gloomwing'], weight: 1 },
     ],
   },
 };

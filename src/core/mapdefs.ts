@@ -218,7 +218,14 @@ export interface EntityAt {
     | 'gate'
     | 'teleporter'
     | 'egate'
-    | 'trial';
+    | 'trial'
+    | 'portal'
+    | 'lever'
+    | 'door'
+    | 'chest'
+    | 'objective'
+    | 'miniboss'
+    | 'waystone';
   x: number;
   y: number;
   /** dialogue id, npc id, shrine rune, or boss id depending on kind. */
@@ -242,6 +249,15 @@ export function entities(map: CompiledMap): EntityAt[] {
     ...map.gates.map<EntityAt>((g) => ({ kind: 'gate', x: g.x, y: g.y, ref: g.id })),
     ...map.egates.map<EntityAt>((g) => ({ kind: 'egate', x: g.x, y: g.y, ref: g.id })),
     ...map.trials.map<EntityAt>((t) => ({ kind: 'trial', x: t.x, y: t.y, ref: t.key })),
+    // Dungeon entities (v2 W2). Doors are solid here (closed); the scene
+    // opens them in place when their puzzle predicate holds.
+    ...map.portals.map<EntityAt>((p) => ({ kind: 'portal', x: p.x, y: p.y, ref: p.dungeon })),
+    ...map.levers.map<EntityAt>((l) => ({ kind: 'lever', x: l.x, y: l.y, ref: l.id })),
+    ...map.doors.map<EntityAt>((d) => ({ kind: 'door', x: d.x, y: d.y, ref: d.id })),
+    ...map.chests.map<EntityAt>((c) => ({ kind: 'chest', x: c.x, y: c.y, ref: c.id })),
+    ...map.objectives.map<EntityAt>((o) => ({ kind: 'objective', x: o.x, y: o.y, ref: o.id })),
+    ...map.minibosses.map<EntityAt>((m) => ({ kind: 'miniboss', x: m.x, y: m.y, ref: m.id })),
+    ...map.waystones.map<EntityAt>((w) => ({ kind: 'waystone', x: w.x, y: w.y, ref: w.id })),
   ];
 }
 

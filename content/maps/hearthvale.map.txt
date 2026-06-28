@@ -17,6 +17,7 @@
 @egate briarfall 50,32
 @egate mirepool 3,30
 @npc fisher 2,20 dialogue:fisher_base
+@portal sunkencrypt 5,20 -> sunkencrypt 12,11
 ---
 ##############################-#############################
 #.............................-............................#

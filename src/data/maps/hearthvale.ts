@@ -163,7 +163,16 @@ export const hearthvale = {
   ],
   "trials": [],
   "theme": "vale",
-  "portals": [],
+  "portals": [
+    {
+      "dungeon": "sunkencrypt",
+      "x": 5,
+      "y": 20,
+      "to": "sunkencrypt",
+      "tx": 12,
+      "ty": 11
+    }
+  ],
   "levers": [],
   "doors": [],
   "chests": [],

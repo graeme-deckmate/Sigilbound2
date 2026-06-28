@@ -403,8 +403,11 @@ export function parseMapSource(text: string, sourceName: string): ParseResult {
 export function reachableTiles(map: CompiledMap): Set<string> {
   // Element gates open in play (any matching spell), so the validator
   // treats them as passable, like boss gates on exits (docs/04 P13).
+  // Dungeon doors likewise open via their puzzle, so treat them as passable
+  // for reachability (otherwise content behind a locked door reads as cut off).
   const index = new Map(entityIndex(map));
   for (const g of map.egates) index.delete(`${String(g.x)},${String(g.y)}`);
+  for (const d of map.doors) index.delete(`${String(d.x)},${String(d.y)}`);
   const seen = new Set<string>();
   const queue: [number, number][] = [[map.spawn.x, map.spawn.y]];
   while (queue.length > 0) {

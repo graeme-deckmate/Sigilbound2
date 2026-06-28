@@ -124,8 +124,8 @@ describe('enemy roster integrity', () => {
 });
 
 describe('formation integrity', () => {
-  it('all 9 zones exist with sane bands and members', () => {
-    expect(ZONE_IDS).toHaveLength(9);
+  it('all 10 zones exist with sane bands and members', () => {
+    expect(ZONE_IDS).toHaveLength(10);
     for (const z of ZONE_IDS) {
       const t = ZONES[z];
       expect(t.levelMin).toBeGreaterThanOrEqual(1);

@@ -43,7 +43,20 @@ keep each version bump tied to a real shape change with a migration test):
   + save dungeon migration. NOTE: theme is carried as data now; the visual tile/
   backdrop variation is applied in Phase 3 where the first themed (dungeon) map
   appears.
-- [ ] Phase 3: Dungeon core (portal/levers/doors/plates, Sunken Crypt, eject-on-fail).
+- [x] Phase 3: Dungeon core. Dungeons are ordinary maps entered via @portal
+  (shows suggested level). New src/data/dungeons.ts (registry + objectives) and
+  src/systems/dungeon.ts (pure: doorOpen predicate lever/key/plate/seq, plus
+  dungeonEnter/Eject/Complete). EntityAt/entities()/interactionFor extended for
+  portal/lever/door/chest/objective/miniboss/waystone; doors treated as passable
+  in reachability validation. World.ts wires scene-local puzzle state (resets per
+  build => fail resets free), in-place door opening, plate step-on, objective
+  battle -> dungeonComplete + reward, defeat -> dungeonEject keeping gains, and a
+  translucent theme wash for cave/ash/hollow. Built the Sunken Crypt (Lv 6, seq
+  sluice puzzle) reachable from Hearthvale marsh; added sunkencrypt.flooded zone +
+  backdrop; dialogue.ts now bundles sunkencrypt.json. Tests: tests/dungeons.spec.ts.
+  NOTE: miniboss/waystone entity kinds parse + route but their interactions land
+  in Phase 7 (miniboss) and Phase 5 (waystone). In-browser dungeon smoke deferred
+  to the Phase 13 consolidated pass; build+tests+lint are the per-phase gate.
 - [ ] Phase 4: Currency + inventory + Shop primitive (gold, gear data, shopdom).
 - [ ] Phase 5: Less-linear overworld + towns + fast travel (lateral exits, waystone network).
 - [ ] Phase 6: Gear stats into combat (deriveLoadout, CastMods, defense seam).

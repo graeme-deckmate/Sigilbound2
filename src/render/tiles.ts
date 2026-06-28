@@ -330,6 +330,55 @@ export function createEntityTextures(scene: Phaser.Scene): void {
     ctx.fillRect(4, 9, 1, 1);
     ctx.fillRect(11, 9, 1, 1);
   });
+  // Dungeon entities (v2 W2).
+  makeEntityTexture(scene, 'ent_portal', (ctx) => {
+    ctx.fillStyle = '#2a2340';
+    ctx.fillRect(2, 1, 12, 14);
+    ctx.fillStyle = '#0a0814';
+    ctx.beginPath();
+    ctx.ellipse(8, 9, 4, 6, 0, 0, 7);
+    ctx.fill();
+    ctx.fillStyle = '#6f4fd8';
+    ctx.fillRect(7, 5, 2, 2);
+    ctx.fillStyle = '#9d7bff';
+    ctx.fillRect(7, 11, 2, 1);
+  });
+  makeEntityTexture(scene, 'ent_lever', (ctx) => {
+    ctx.fillStyle = '#3b2a18';
+    ctx.fillRect(5, 11, 6, 3);
+    ctx.fillStyle = '#8a6a3f';
+    ctx.fillRect(7, 4, 2, 8);
+    ctx.fillStyle = '#c0c0c8';
+    ctx.fillRect(6, 3, 4, 2);
+  });
+  makeEntityTexture(scene, 'ent_door', (ctx) => {
+    ctx.fillStyle = '#43342a';
+    ctx.fillRect(2, 2, 12, 13);
+    ctx.fillStyle = '#5a4636';
+    ctx.fillRect(3, 3, 10, 2);
+    ctx.fillStyle = '#2a2018';
+    ctx.fillRect(7, 3, 2, 12);
+    ctx.fillStyle = '#ffc857';
+    ctx.fillRect(10, 8, 2, 2);
+  });
+  makeEntityTexture(scene, 'ent_chest', (ctx) => {
+    ctx.fillStyle = '#6e5330';
+    ctx.fillRect(3, 7, 10, 7);
+    ctx.fillStyle = '#8a6a3f';
+    ctx.fillRect(3, 5, 10, 3);
+    ctx.fillStyle = '#ffc857';
+    ctx.fillRect(7, 8, 2, 3);
+  });
+  makeEntityTexture(scene, 'ent_objective', (ctx) => {
+    ctx.fillStyle = '#1a1433';
+    ctx.fillRect(3, 4, 10, 11);
+    ctx.fillStyle = '#3a2f6b';
+    ctx.fillRect(3, 4, 10, 2);
+    ctx.fillStyle = '#ff6b4a';
+    ctx.fillRect(6, 7, 4, 4);
+    ctx.fillStyle = '#ffd84a';
+    ctx.fillRect(7, 8, 2, 2);
+  });
   for (const [rune, glow] of Object.entries(SHRINE_GLOW)) {
     makeEntityTexture(scene, `ent_shrine_${rune}`, (ctx) => {
       ctx.fillStyle = '#5d5a78';
