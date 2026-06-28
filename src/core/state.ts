@@ -43,7 +43,8 @@ export type MapId =
   | 'cinderwaste'
   | 'hoarfrost'
   | 'stormreach'
-  | 'themire';
+  | 'themire'
+  | 'emberforge';
 
 /** Rune shrines, keyed by the rune they grant. */
 export type ShrineId = 'fury' | 'thirst' | 'echo' | 'keen';

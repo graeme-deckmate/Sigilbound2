@@ -4,6 +4,7 @@ import type { MapId } from '../../core/state.ts';
 import { ashenreach } from './ashenreach.ts';
 import { cinderwaste } from './cinderwaste.ts';
 import { circuitvault } from './circuitvault.ts';
+import { emberforge } from './emberforge.ts';
 import { hearth } from './hearth.ts';
 import { hearthvale } from './hearthvale.ts';
 import { hoarfrost } from './hoarfrost.ts';
@@ -19,6 +20,7 @@ export const MAPS: Partial<Record<MapId, CompiledMap>> = {
   ashenreach,
   cinderwaste,
   circuitvault,
+  emberforge,
   hearth,
   hearthvale,
   hoarfrost,

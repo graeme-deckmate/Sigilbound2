@@ -123,6 +123,8 @@ export const ZONE_BACKDROPS: Record<string, ZoneBackdrop> = {
   /** Reaches - The Mire (Thorn/Gloom): sickly green dusk. */
   'themire.bog': { sky: ['#0e2414', '#1d4a2a'], hill: '#0a1a0e', ground: '#244e2e' },
   'themire.deep': { sky: ['#080f0a', '#142e1a'], hill: '#060b08', ground: '#163a20' },
+  /** Reaches side dungeon - the Emberforge: molten orange. */
+  'emberforge.forge': { sky: ['#2a0e04', '#6e2810'], hill: '#1a0802', ground: '#7e3414' },
   /** Fallback for scripted or boss battles without a zone. */
   default: { sky: ['#181436', '#2a2358'], hill: '#13102b', ground: '#34306b' },
 };
@@ -142,6 +144,7 @@ export const MAP_IDS = [
   'hoarfrost',
   'stormreach',
   'themire',
+  'emberforge',
 ] as const;
 export const SHRINE_IDS = ['fury', 'thirst', 'echo', 'keen'] as const;
 export const WORLD_BOSS_IDS = [

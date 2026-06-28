@@ -38,6 +38,14 @@ export const DUNGEONS: Record<string, DungeonDef> = {
     gold: 60,
     gearReward: { base: 'focus_rod', rarity: 'rare' },
   },
+  emberforge: {
+    id: 'emberforge',
+    name: 'The Emberforge',
+    suggestedLv: 7,
+    reward: { kind: 'essence', amount: 50 },
+    gold: 55,
+    gearReward: { base: 'keen_eye', rarity: 'rare' },
+  },
 };
 
 /**
@@ -60,6 +68,11 @@ export const DUNGEON_OBJECTIVES: Record<string, DungeonObjective> = {
     id: 'circuit_core',
     members: ['circuitwarden'],
     lv: 8,
+  },
+  forge_heart: {
+    id: 'forge_heart',
+    members: ['cindermote', 'ashling', 'cindermote'],
+    lv: 7,
   },
 };
 

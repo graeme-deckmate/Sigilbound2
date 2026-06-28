@@ -44,6 +44,7 @@ describe('map sources', () => {
       'ashenreach',
       'cinderwaste',
       'circuitvault',
+      'emberforge',
       'hearth',
       'hearthvale',
       'hoarfrost',

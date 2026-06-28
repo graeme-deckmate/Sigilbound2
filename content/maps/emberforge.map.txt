@@ -1,0 +1,27 @@
+@id emberforge
+@music ashenreach
+@size 17x13
+@spawn 12,11 up
+@theme ember
+@zone forge 1,7 15,9 emberforge.forge
+@portal emberforge 3,11 -> cinderwaste 14,12
+@lever bellows 4,9
+@door forge_gate 8,5 needs:lever:bellows
+@chest forge_cache 12,9 reward:essence:20
+@objective forge_boss 8,2 battle:forge_heart
+@sign 2,7 dialogue:emberforge_sign
+@lore 14,8 dialogue:lore_emberforge
+---
+ooooooooooooooooo
+ooooooo---ooooooo
+ooooooo---ooooooo
+ooooooo---ooooooo
+oooooooo-oooooooo
+oooooooo-oooooooo
+oooooooo-oooooooo
+o---------------o
+o----,,,,,,-----o
+o---------------o
+o---------------o
+o---------------o
+ooooooooooooooooo

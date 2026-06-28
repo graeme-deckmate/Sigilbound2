@@ -4,13 +4,24 @@ Claude Code: read this first every session. Update it before you stop. Keep entr
 
 ## Status
 
-Current phase: **SIGILBOUND II (v2): phases 0-11 + 13 shipped; 12 deferred (optional).**
-The core of every owner ask is in: re-fight bug fixed, two retryable dungeons,
-more enemies/encounters, gold + gear into combat, less-linear world (waystones) +
-shop, difficulty, new runes, classes + equip + cosmetics. Some sub-items are
-consciously deferred (see per-phase notes). v1 stays deployed and untouched.
-Last session: 2026-06-28 (v2 phases 0-11 + 9 + 13)
+Current phase: **SIGILBOUND II: v2 (phases 0-11+13) + The Sundered Reaches
+(R0-R5) shipped.** v2 added: re-fight bug fix, two retryable dungeons, more
+enemies/encounters, gold + gear into combat, less-linear world + shop, difficulty,
+new runes, classes + equip + cosmetics. The Reaches add a whole new 4-domain world
+(5 towns, 4 themed domains + a side dungeon, 8 fresh bosses, town/boss gating,
+waystone fast-travel) reachable from Hearth via a Riftgate. Game total: 14 maps,
+13 bosses, 20 zones. v1 stays deployed and untouched.
+Last session: 2026-06-28 (v2 phases + Reaches R0-R5)
 Deployed URL: https://graeme-deckmate.github.io/Sigilbound2/ (Pages, deploys on every push to main)
+
+### The Sundered Reaches (new world) phases - all shipped, green at each boundary
+- R0: Riftgate (Hearth->Wayhold) + Wayhold gateway town.
+- R1: early domains Cinderwaste (Ember) + Hoarfrost Hold (Rime) with themes/zones.
+- R2: bosses 1-4 (Emberjaw/Pyrewarden, Rimehound/Hoarwarden), reusing mechanics.
+- R3: Stormreach (Volt) + Galecaller/Tempest + SOFT_GATES domain gating.
+- R4: The Mire (Thorn/Gloom finale) + Bramblemaw/Gloamwarden + finale branch.
+- R5: the Emberforge side dungeon, docs (06-V2-SYSTEMS Reaches section), final pass.
+- See docs/06-V2-SYSTEMS.md for the full Reaches design + deferred follow-ups.
 
 ## Sigilbound II (v2) plan
 

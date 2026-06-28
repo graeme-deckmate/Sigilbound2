@@ -12,6 +12,7 @@
 @lore 26,3 dialogue:lore_cinder
 @boss emberjaw 24,11
 @boss pyrewarden 24,18
+@portal emberforge 14,12 -> emberforge 12,11
 ---
 ooo-oooooooooooooooooooooooooo
 o............................o

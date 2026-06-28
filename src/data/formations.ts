@@ -23,7 +23,8 @@ export type ZoneId =
   | 'stormreach.heights'
   | 'stormreach.deep'
   | 'themire.bog'
-  | 'themire.deep';
+  | 'themire.deep'
+  | 'emberforge.forge';
 
 export interface Formation {
   members: readonly EnemySpeciesId[];
@@ -59,6 +60,7 @@ export const ZONE_IDS: readonly ZoneId[] = [
   'stormreach.deep',
   'themire.bog',
   'themire.deep',
+  'emberforge.forge',
 ];
 
 export const ZONES: Record<ZoneId, ZoneTable> = {
@@ -268,6 +270,17 @@ export const ZONES: Record<ZoneId, ZoneTable> = {
     formations: [
       { members: ['hollowshade', 'hexbinder'], weight: 2 },
       { members: ['thornling', 'hollowshade', 'hollowshade'], weight: 1 },
+    ],
+  },
+  /* Reaches side dungeon: the Emberforge (off Cinderwaste). */
+  'emberforge.forge': {
+    zone: 'emberforge.forge',
+    levelMin: 6,
+    levelMax: 8,
+    eliteChance: 0.12,
+    formations: [
+      { members: ['cindermote', 'ashling'], weight: 3 },
+      { members: ['ashling', 'cryptcrawler'], weight: 1 },
     ],
   },
 };

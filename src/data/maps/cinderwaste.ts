@@ -105,7 +105,16 @@ export const cinderwaste = {
   "triggers": [],
   "trials": [],
   "theme": "ember",
-  "portals": [],
+  "portals": [
+    {
+      "dungeon": "emberforge",
+      "x": 14,
+      "y": 12,
+      "to": "emberforge",
+      "tx": 12,
+      "ty": 11
+    }
+  ],
   "levers": [],
   "doors": [],
   "chests": [],

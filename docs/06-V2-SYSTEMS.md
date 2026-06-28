@@ -63,3 +63,36 @@ DOM shop/character overlay (the current UI is `openChoice`-driven and functional
 and unique-`BossSpecial` `DungeonBossId` bosses (current dungeon bosses are
 beefy enemies on the regular battle path). The `deriveLoadout` / `CastMods` /
 difficulty seams are built to absorb these without touching the combat core again.
+
+## The Sundered Reaches (the new world, phases R0-R5)
+
+A second landmass added alongside the original (which is untouched), reached from
+Hearth via a Riftgate into the gateway town **Wayhold**. It is a mostly-linear
+journey through four element-themed domains, each a region map with an embedded
+safe town quarter, themed wilderness encounter zones, a waystone, and two bosses:
+
+- **Cinderwaste** (Ember) - Emberjaw + the Pyrewarden; side dungeon the Emberforge.
+- **Hoarfrost Hold** (Rime) - Rimehound + the Hoarwarden.
+- **Stormreach** (Volt) - Galecaller + the Tempest Warden.
+- **The Mire** (Thorn/Gloom finale) - Bramblemaw + the Gloamwarden.
+
+**Pick a path, then journey:** Wayhold opens two early roads (Cinderwaste,
+Hoarfrost) you may take in either order; both Wardens falling opens Stormreach,
+whose Warden opens The Mire. Gating uses the existing `SOFT_GATES` table keyed on
+the new `world.bosses` flags. The Gloamwarden is the Reaches finale (its own
+`afterBattle` branch: feat + gold + relic-tier reward + closing line, no Ending
+takeover, so free roam continues).
+
+**8 fresh bosses, zero combat-core risk:** all eight are full `BossDef`s that
+REUSE the five existing `BossSpecial` mechanics (enrage/summonAndVeil/submerge/
+attune/bars), so only data + the standard add-a-boss touch-list changed - the
+reducer is untouched and the original balance-sim checkpoints stay byte-identical
+(the Reaches use entirely new zone ids/bosses, off the old floors). Game total is
+now 13 bosses (the old 5 + the Reaches 8). New `MapTheme`s ember/frost/storm/mire
+with tints; new music reuses existing tracks; the armorer/shop and waystone
+network are reused per town.
+
+Deferred (clean follow-ups): per-domain side dungeons beyond the Emberforge;
+literal element-grant-on-Warden (elements still unlock by level/starter, and the
+domains give power via gold/gear/essence rewards); dedicated balance-sim windows
+for the eight Reaches bosses (they reuse proven, tuned mechanics).

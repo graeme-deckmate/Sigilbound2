@@ -72,5 +72,13 @@
       "The Gloamwarden falls. The four powers are quiet at last.",
       "The Sundered Reaches are yours to wander."
     ]
+  },
+  "emberforge_sign": {
+    "speaker": "SIGN",
+    "pages": ["THE EMBERFORGE. Wake the bellows. Something is still being made down here."]
+  },
+  "lore_emberforge": {
+    "speaker": "LORE",
+    "pages": ["The forge never cooled. It only waited for hands foolish enough to work it."]
   }
 }
