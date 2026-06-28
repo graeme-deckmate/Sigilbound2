@@ -33,11 +33,11 @@ describe('table completeness', () => {
     }
   });
 
-  it('has 19 enemy species (14 + v2 dungeon foes) and 9 bosses (5 + 4 Reaches)', () => {
+  it('has 19 enemy species (14 + v2 dungeon foes) and 11 bosses (5 + 6 Reaches)', () => {
     expect(ENEMY_IDS).toHaveLength(19);
     expect(Object.keys(ENEMIES)).toHaveLength(19);
-    expect(BOSS_IDS).toHaveLength(9);
-    expect(Object.keys(BOSSES)).toHaveLength(9);
+    expect(BOSS_IDS).toHaveLength(11);
+    expect(Object.keys(BOSSES)).toHaveLength(11);
   });
 
   it('covers 26 unlock entries: 5 elements + 6 forms + 15 runes', () => {
@@ -124,8 +124,8 @@ describe('enemy roster integrity', () => {
 });
 
 describe('formation integrity', () => {
-  it('all 15 zones exist with sane bands and members', () => {
-    expect(ZONE_IDS).toHaveLength(15);
+  it('all 17 zones exist with sane bands and members', () => {
+    expect(ZONE_IDS).toHaveLength(17);
     for (const z of ZONE_IDS) {
       const t = ZONES[z];
       expect(t.levelMin).toBeGreaterThanOrEqual(1);

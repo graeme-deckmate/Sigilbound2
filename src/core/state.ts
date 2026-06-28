@@ -58,7 +58,9 @@ export type BossId =
   | 'emberjaw'
   | 'pyrewarden'
   | 'rimehound'
-  | 'hoarwarden';
+  | 'hoarwarden'
+  | 'galecaller'
+  | 'tempest';
 
 export type Dir = 'up' | 'down' | 'left' | 'right';
 

@@ -49,6 +49,7 @@ describe('map sources', () => {
       'hoarfrost',
       'northhollow',
       'sanctum',
+      'stormreach',
       'sunkencrypt',
       'wayhold',
       'westwood',

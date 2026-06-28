@@ -125,6 +125,14 @@ interface SoftGate {
  */
 const SOFT_GATES: readonly SoftGate[] = [
   { to: 'sanctum', needs: (s) => s.world.bosses.valewraith, barred: 'sanctum_stair_sealed' },
+  // Reaches: Stormreach opens once both early-domain Wardens fall.
+  {
+    to: 'stormreach',
+    needs: (s) => s.world.bosses.pyrewarden && s.world.bosses.hoarwarden,
+    barred: 'stormreach_sealed',
+  },
+  // Reaches: The Mire opens once the Storm Warden (Tempest) falls.
+  { to: 'themire', needs: (s) => s.world.bosses.tempest, barred: 'themire_sealed' },
 ];
 
 export function exitLocked(state: GameState, to: MapId): string | null {

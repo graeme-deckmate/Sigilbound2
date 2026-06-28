@@ -1,0 +1,35 @@
+@id stormreach
+@music northhollow
+@size 30x20
+@theme storm
+@spawn 3,2 down
+@zone heights 12,6 25,10 stormreach.heights
+@zone deep 3,13 10,17 stormreach.deep
+@exit 3,0 -> wayhold 10,1
+@npc armorer 5,3 dialogue:armorer_base
+@waystone storm_stone 3,4
+@sign 6,2 dialogue:stormreach_sign
+@lore 26,3 dialogue:lore_storm
+@boss galecaller 24,11
+@boss tempest 24,18
+---
+ooo-oooooooooooooooooooooooooo
+o............................o
+o............................o
+o............................o
+o............................o
+o............................o
+o...........,,,,,,,,,,,,,,...o
+o...........,,,,,,,,,,,,,,...o
+o...........,,,,,,,,,,,,,,...o
+o...........,,,,,,,,,,,,,,...o
+o...........,,,,,,,,,,,,,,...o
+o............................o
+o............................o
+o..,,,,,,,,..................o
+o..,,,,,,,,..................o
+o..,,,,,,,,..................o
+o..,,,,,,,,..................o
+o..,,,,,,,,..................o
+o............................o
+oooooooooooooooooooooooooooooo

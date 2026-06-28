@@ -609,6 +609,22 @@ const HOARWARDEN: BattleSprite = {
     w: '#2a5078',
   },
 };
+const GALECALLER: BattleSprite = {
+  grid: GLOOMWING.grid,
+  pal: { a: '#b59bff', b: '#5a3fd0', e: '#ffffff', p: '#ffd84a', m: '#e8e0ff' },
+};
+const TEMPEST: BattleSprite = {
+  grid: BOGMAW.grid,
+  pal: {
+    g: '#5a3fd0',
+    s: '#9d7bff',
+    m: '#140c28',
+    t: '#e8e0ff',
+    e: '#ffd84a',
+    p: '#16112b',
+    w: '#3a2a6a',
+  },
+};
 
 export const BATTLE_SPRITES: Readonly<Record<string, BattleSprite>> = {
   gloop: GLOOP,
@@ -634,6 +650,8 @@ export const BATTLE_SPRITES: Readonly<Record<string, BattleSprite>> = {
   pyrewarden: PYREWARDEN,
   rimehound: RIMEHOUND,
   hoarwarden: HOARWARDEN,
+  galecaller: GALECALLER,
+  tempest: TEMPEST,
   cryptcrawler: CRYPTCRAWLER,
   boneshade: BONESHADE,
   marshlurk: MARSHLURK,

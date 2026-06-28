@@ -117,6 +117,9 @@ export const ZONE_BACKDROPS: Record<string, ZoneBackdrop> = {
   /** Reaches - Hoarfrost Hold (Rime): pale blue ice. */
   'hoarfrost.fields': { sky: ['#0c2440', '#2a5a8a'], hill: '#0a1c33', ground: '#3a6e9b' },
   'hoarfrost.deep': { sky: ['#08182e', '#1d4068'], hill: '#06121f', ground: '#2a5078' },
+  /** Reaches - Stormreach (Volt): bruised violet sky. */
+  'stormreach.heights': { sky: ['#1a1038', '#3a2a6a'], hill: '#140c28', ground: '#4a3a7a' },
+  'stormreach.deep': { sky: ['#0e0820', '#2a1e52'], hill: '#0a0618', ground: '#352a5e' },
   /** Fallback for scripted or boss battles without a zone. */
   default: { sky: ['#181436', '#2a2358'], hill: '#13102b', ground: '#34306b' },
 };
@@ -148,5 +151,7 @@ export const WORLD_BOSS_IDS = [
   'pyrewarden',
   'rimehound',
   'hoarwarden',
+  'galecaller',
+  'tempest',
 ] as const;
 export const DIRS = ['up', 'down', 'left', 'right'] as const;

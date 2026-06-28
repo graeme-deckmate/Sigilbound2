@@ -7,7 +7,7 @@ export const wayhold = {
   "height": 14,
   "music": "hearth",
   "tiles": [
-    "oooooooooooooooooooo",
+    "oooooooooo-ooooooooo",
     "o..................o",
     "o..................o",
     "o..................o",
@@ -47,6 +47,13 @@ export const wayhold = {
       "x": 19,
       "y": 6,
       "to": "hoarfrost",
+      "tx": 3,
+      "ty": 1
+    },
+    {
+      "x": 10,
+      "y": 0,
+      "to": "stormreach",
       "tx": 3,
       "ty": 1
     }

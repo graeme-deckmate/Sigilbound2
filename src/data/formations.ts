@@ -19,7 +19,9 @@ export type ZoneId =
   | 'cinderwaste.wastes'
   | 'cinderwaste.deep'
   | 'hoarfrost.fields'
-  | 'hoarfrost.deep';
+  | 'hoarfrost.deep'
+  | 'stormreach.heights'
+  | 'stormreach.deep';
 
 export interface Formation {
   members: readonly EnemySpeciesId[];
@@ -51,6 +53,8 @@ export const ZONE_IDS: readonly ZoneId[] = [
   'cinderwaste.deep',
   'hoarfrost.fields',
   'hoarfrost.deep',
+  'stormreach.heights',
+  'stormreach.deep',
 ];
 
 export const ZONES: Record<ZoneId, ZoneTable> = {
@@ -217,6 +221,27 @@ export const ZONES: Record<ZoneId, ZoneTable> = {
     formations: [
       { members: ['boneshade', 'gloomwing'], weight: 2 },
       { members: ['mossback', 'boneshade'], weight: 1 },
+    ],
+  },
+  /* The Sundered Reaches: Stormreach (Volt domain). */
+  'stormreach.heights': {
+    zone: 'stormreach.heights',
+    levelMin: 7,
+    levelMax: 10,
+    formations: [
+      { members: ['galeharrow', 'quartzling'], weight: 3 },
+      { members: ['galeharrow', 'galeharrow'], weight: 2 },
+      { members: ['quartzling', 'hexbinder'], weight: 1 },
+    ],
+  },
+  'stormreach.deep': {
+    zone: 'stormreach.deep',
+    levelMin: 8,
+    levelMax: 11,
+    eliteChance: 0.12,
+    formations: [
+      { members: ['galeharrow', 'hollowshade'], weight: 2 },
+      { members: ['quartzling', 'quartzling', 'galeharrow'], weight: 1 },
     ],
   },
 };

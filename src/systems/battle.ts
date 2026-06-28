@@ -478,6 +478,8 @@ const REMATCH_ADDS: Record<BossId, { species: EnemySpeciesId; count: number }> =
   pyrewarden: { species: 'ashling', count: 2 },
   rimehound: { species: 'gloomwing', count: 1 },
   hoarwarden: { species: 'gloomwing', count: 2 },
+  galecaller: { species: 'galeharrow', count: 1 },
+  tempest: { species: 'hollowshade', count: 2 },
 };
 
 /** Boss battles: flat hp, fixed level, special state machine (docs/03). */

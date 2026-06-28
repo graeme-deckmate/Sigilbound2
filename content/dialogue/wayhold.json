@@ -33,5 +33,22 @@
   "lore_hoarfrost": {
     "speaker": "LORE",
     "pages": ["The second power was frost. It froze the question, and the answer, and the asker."]
+  },
+  "stormreach_sign": {
+    "speaker": "SIGN",
+    "pages": ["STORMREACH. The sky is a weapon here. Ground yourself."]
+  },
+  "lore_storm": {
+    "speaker": "LORE",
+    "pages": [
+      "The third power was the storm. It never decided what it wanted, and so it took everything."
+    ]
+  },
+  "stormreach_sealed": {
+    "speaker": "STORM GATE",
+    "pages": [
+      "The storm road will not open yet.",
+      "Cinderwaste and Hoarfrost must both fall before the sky lets you pass."
+    ]
   }
 }
