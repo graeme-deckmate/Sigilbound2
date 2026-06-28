@@ -33,11 +33,11 @@ describe('table completeness', () => {
     }
   });
 
-  it('has 19 enemy species (14 + v2 dungeon foes) and 5 bosses', () => {
+  it('has 19 enemy species (14 + v2 dungeon foes) and 9 bosses (5 + 4 Reaches)', () => {
     expect(ENEMY_IDS).toHaveLength(19);
     expect(Object.keys(ENEMIES)).toHaveLength(19);
-    expect(BOSS_IDS).toHaveLength(5);
-    expect(Object.keys(BOSSES)).toHaveLength(5);
+    expect(BOSS_IDS).toHaveLength(9);
+    expect(Object.keys(BOSSES)).toHaveLength(9);
   });
 
   it('covers 26 unlock entries: 5 elements + 6 forms + 15 runes', () => {

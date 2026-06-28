@@ -89,7 +89,18 @@ export const cinderwaste = {
   "springs": [],
   "shrines": [],
   "egates": [],
-  "bosses": [],
+  "bosses": [
+    {
+      "id": "emberjaw",
+      "x": 24,
+      "y": 11
+    },
+    {
+      "id": "pyrewarden",
+      "x": 24,
+      "y": 18
+    }
+  ],
   "gates": [],
   "triggers": [],
   "trials": [],

@@ -10,6 +10,8 @@
 @waystone hoar_stone 3,4
 @sign 6,2 dialogue:hoarfrost_sign
 @lore 26,3 dialogue:lore_hoarfrost
+@boss rimehound 24,11
+@boss hoarwarden 24,18
 ---
 ooo-oooooooooooooooooooooooooo
 o............................o

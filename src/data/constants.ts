@@ -144,5 +144,9 @@ export const WORLD_BOSS_IDS = [
   'ashenwarden',
   'valewraith',
   'hollowwarden',
+  'emberjaw',
+  'pyrewarden',
+  'rimehound',
+  'hoarwarden',
 ] as const;
 export const DIRS = ['up', 'down', 'left', 'right'] as const;

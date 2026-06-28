@@ -48,7 +48,17 @@ export type MapId =
 /** Rune shrines, keyed by the rune they grant. */
 export type ShrineId = 'fury' | 'thirst' | 'echo' | 'keen';
 
-export type BossId = 'bogmaw' | 'thornveil' | 'ashenwarden' | 'valewraith' | 'hollowwarden';
+export type BossId =
+  | 'bogmaw'
+  | 'thornveil'
+  | 'ashenwarden'
+  | 'valewraith'
+  | 'hollowwarden'
+  // The Sundered Reaches (new world) bosses, 2 per domain
+  | 'emberjaw'
+  | 'pyrewarden'
+  | 'rimehound'
+  | 'hoarwarden';
 
 export type Dir = 'up' | 'down' | 'left' | 'right';
 

@@ -10,6 +10,8 @@
 @waystone cinder_stone 3,4
 @sign 6,2 dialogue:cinderwaste_sign
 @lore 26,3 dialogue:lore_cinder
+@boss emberjaw 24,11
+@boss pyrewarden 24,18
 ---
 ooo-oooooooooooooooooooooooooo
 o............................o

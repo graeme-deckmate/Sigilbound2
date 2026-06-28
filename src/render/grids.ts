@@ -576,6 +576,39 @@ const CIRCUITWARDEN: BattleSprite = {
   grid: GLOOMWING.grid,
   pal: { a: '#5ad1ff', b: '#2a6f9b', e: '#ffffff', p: '#ffd84a', m: '#16112b' },
 };
+// Reaches bosses (recolored grids): lieutenants reuse GLOOMWING, wardens BOGMAW.
+const EMBERJAW: BattleSprite = {
+  grid: GLOOMWING.grid,
+  pal: { a: '#e07a3a', b: '#8a3010', e: '#ffe08a', p: '#16112b', m: '#ffd84a' },
+};
+const RIMEHOUND: BattleSprite = {
+  grid: GLOOMWING.grid,
+  pal: { a: '#7ec8ff', b: '#2a6f9b', e: '#ffffff', p: '#16112b', m: '#cfeaff' },
+};
+const PYREWARDEN: BattleSprite = {
+  grid: BOGMAW.grid,
+  pal: {
+    g: '#c0461e',
+    s: '#e07a3a',
+    m: '#3a1408',
+    t: '#ffd84a',
+    e: '#ffe08a',
+    p: '#16112b',
+    w: '#6e2410',
+  },
+};
+const HOARWARDEN: BattleSprite = {
+  grid: BOGMAW.grid,
+  pal: {
+    g: '#4a8ac0',
+    s: '#7ec8ff',
+    m: '#0a1c33',
+    t: '#cfeaff',
+    e: '#ffffff',
+    p: '#16112b',
+    w: '#2a5078',
+  },
+};
 
 export const BATTLE_SPRITES: Readonly<Record<string, BattleSprite>> = {
   gloop: GLOOP,
@@ -597,6 +630,10 @@ export const BATTLE_SPRITES: Readonly<Record<string, BattleSprite>> = {
   glimmerkin: GLIMMERKIN_SPRITE,
   trialguardian: TRIALGUARDIAN,
   hollowwarden: HOLLOWWARDEN,
+  emberjaw: EMBERJAW,
+  pyrewarden: PYREWARDEN,
+  rimehound: RIMEHOUND,
+  hoarwarden: HOARWARDEN,
   cryptcrawler: CRYPTCRAWLER,
   boneshade: BONESHADE,
   marshlurk: MARSHLURK,

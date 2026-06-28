@@ -89,7 +89,18 @@ export const hoarfrost = {
   "springs": [],
   "shrines": [],
   "egates": [],
-  "bosses": [],
+  "bosses": [
+    {
+      "id": "rimehound",
+      "x": 24,
+      "y": 11
+    },
+    {
+      "id": "hoarwarden",
+      "x": 24,
+      "y": 18
+    }
+  ],
   "gates": [],
   "triggers": [],
   "trials": [],
