@@ -3,6 +3,7 @@
  * Types only; numbers and tables land in src/data/ in Phase 1.
  * Identifier unions are transcribed from docs/03-CONTENT-DATA.
  */
+import type { Equipment, Inventory } from './items.ts';
 
 export type ElementId = 'ember' | 'rime' | 'volt' | 'thorn' | 'gloom';
 export type FormId = 'wisp' | 'bolt' | 'lance' | 'nova' | 'veil' | 'call';
@@ -87,6 +88,12 @@ export interface GameState {
     scrolls: Spell[];
     /** NG+ cycles completed (03 section 25). */
     ngPlus: number;
+    /** Gold: the town/gear currency (v2 V1), kept distinct from essence. */
+    gold: number;
+    /** Worn gear per slot (v2 V1); stat effects activate in V2. */
+    equipment: Equipment;
+    /** Owned gear (equipped or not) plus its capacity. */
+    inventory: Inventory;
     /** Battle-only, cleared on save. */
     statuses: StatusMap;
   };

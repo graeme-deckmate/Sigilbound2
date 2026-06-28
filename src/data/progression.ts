@@ -34,6 +34,9 @@ export const FLEE_CHANCE = 0.65;
 export const BASE_SLOTS = 4;
 export const MAX_SLOTS = 6;
 
+/** Gear inventory capacity (v2 V1). */
+export const INVENTORY_CAPACITY = 24;
+
 /**
  * The Elder's gift once the starter is chosen (03 section 5): the
  * starter element's Wisp and Bolt at default potency, slots 1-2.

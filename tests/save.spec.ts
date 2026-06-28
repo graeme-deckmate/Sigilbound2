@@ -192,6 +192,43 @@ describe('migrate', () => {
     });
   });
 
+  it('defaults gold/equipment/inventory for a pre-V1 save', () => {
+    const g = migrate({ version: 3, player: {}, world: {} });
+    expect(g.player.gold).toBe(0);
+    expect(g.player.equipment).toEqual({
+      vestment: null,
+      implement: null,
+      talisman: null,
+      boots: null,
+    });
+    expect(g.player.inventory.gear).toEqual([]);
+    expect(g.player.inventory.capacity).toBeGreaterThan(0);
+  });
+
+  it('round-trips gold, owned gear, and an equipped slot; drops malformed gear', () => {
+    const fresh = newGame();
+    fresh.player.gold = 42;
+    fresh.player.inventory.gear = [
+      { uid: 'g1', base: 'spark_wand', slot: 'implement', rarity: 'fine', affixes: ['keen'] },
+    ];
+    fresh.player.equipment.implement = 'g1';
+    const raw = JSON.parse(JSON.stringify(fresh)) as { player: { inventory: { gear: unknown[] } } };
+    // inject a malformed gear entry that migrate must drop
+    raw.player.inventory.gear.push({ uid: 'bad', base: 'not_a_real_base' });
+    const g = migrate(raw);
+    expect(g.player.gold).toBe(42);
+    expect(g.player.inventory.gear).toHaveLength(1);
+    expect(g.player.inventory.gear[0]?.uid).toBe('g1');
+    expect(g.player.equipment.implement).toBe('g1');
+  });
+
+  it('clears an equipped slot whose uid is no longer owned', () => {
+    const fresh = newGame();
+    fresh.player.equipment.vestment = 'ghost';
+    const g = migrate(JSON.parse(JSON.stringify(fresh)));
+    expect(g.player.equipment.vestment).toBeNull();
+  });
+
   it('clamps out-of-range potency back into the slider range', () => {
     const g = migrate({
       version: 2,

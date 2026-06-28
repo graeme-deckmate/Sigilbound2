@@ -5,11 +5,21 @@
  * battle-only statuses are stripped on save.
  */
 import type { Dir, ElementId, GameState, MapId, Spell } from './state.ts';
+import type { Equipment, GearItem, ItemRarity } from './items.ts';
+import { EQUIP_SLOT_IDS, RARITY_IDS, emptyEquipment } from './items.ts';
 import { COMBAT, DIRS, MAP_IDS, SHRINE_IDS, START, WORLD_BOSS_IDS } from '../data/constants.ts';
 import { ELEMENT_IDS } from '../data/elements.ts';
 import { FORM_IDS } from '../data/forms.ts';
 import { RUNE_IDS } from '../data/runes.ts';
-import { BASE_HP, BASE_MP, BASE_SLOTS, MAX_SLOTS } from '../data/progression.ts';
+import { GEAR_BASES } from '../data/gear.ts';
+import { affixById } from '../data/affixes.ts';
+import {
+  BASE_HP,
+  BASE_MP,
+  BASE_SLOTS,
+  INVENTORY_CAPACITY,
+  MAX_SLOTS,
+} from '../data/progression.ts';
 
 export interface KVStore {
   getItem(key: string): string | null;
@@ -46,6 +56,9 @@ export function newGame(): GameState {
       charms: { owned: [], equipped: [null, null] },
       scrolls: [],
       ngPlus: 0,
+      gold: 0,
+      equipment: emptyEquipment(),
+      inventory: { gear: [], capacity: INVENTORY_CAPACITY },
       statuses: {},
     },
     world: {
@@ -133,6 +146,33 @@ function asSpell(v: unknown): Spell | null {
   return null;
 }
 
+/** Validate a parsed gear item (v2 V1); drops malformed instances. */
+function asGearItem(v: unknown): GearItem | null {
+  if (!isObj(v)) return null;
+  const base = v['base'];
+  const uid = v['uid'];
+  if (typeof base !== 'string' || !(base in GEAR_BASES)) return null;
+  if (typeof uid !== 'string') return null;
+  const def = GEAR_BASES[base];
+  if (!def) return null;
+  const rarity: ItemRarity = oneOf<ItemRarity>(RARITY_IDS, v['rarity'], 'common');
+  const affixes = (Array.isArray(v['affixes']) ? v['affixes'] : []).filter(
+    (a): a is string => typeof a === 'string' && affixById(a) !== null,
+  );
+  return { uid, base, slot: def.slot, rarity, affixes };
+}
+
+/** Normalize equipment, keeping only slots whose uid is actually owned. */
+function asEquipment(v: unknown, ownedUids: ReadonlySet<string>): Equipment {
+  const out = emptyEquipment();
+  if (!isObj(v)) return out;
+  for (const slot of EQUIP_SLOT_IDS) {
+    const uid = v[slot];
+    if (typeof uid === 'string' && ownedUids.has(uid)) out[slot] = uid;
+  }
+  return out;
+}
+
 /**
  * Normalize a parsed save payload into a valid v2 GameState.
  * v1 payloads upgrade in place: spells gain potency 1.0, the starter
@@ -208,6 +248,25 @@ export function migrate(raw: unknown): GameState {
         .map(asSpell)
         .filter((sp): sp is Spell => sp !== null),
       ngPlus: Math.max(0, num(p['ngPlus'], 0)),
+      gold: Math.max(0, Math.floor(num(p['gold'], 0))),
+      inventory: ((): GameState['player']['inventory'] => {
+        const inv = isObj(p['inventory']) ? p['inventory'] : {};
+        const gear = (Array.isArray(inv['gear']) ? inv['gear'] : [])
+          .map(asGearItem)
+          .filter((g): g is GearItem => g !== null);
+        return {
+          gear,
+          capacity: Math.max(gear.length, Math.floor(num(inv['capacity'], INVENTORY_CAPACITY))),
+        };
+      })(),
+      equipment: ((): Equipment => {
+        const inv = isObj(p['inventory']) ? p['inventory'] : {};
+        const gearArr = (Array.isArray(inv['gear']) ? inv['gear'] : [])
+          .map(asGearItem)
+          .filter((g): g is GearItem => g !== null);
+        const owned = new Set(gearArr.map((g) => g.uid));
+        return asEquipment(p['equipment'], owned);
+      })(),
       statuses: {}, // battle-only, never restored from disk
     },
     world: {

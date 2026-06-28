@@ -57,7 +57,15 @@ keep each version bump tied to a real shape change with a migration test):
   NOTE: miniboss/waystone entity kinds parse + route but their interactions land
   in Phase 7 (miniboss) and Phase 5 (waystone). In-browser dungeon smoke deferred
   to the Phase 13 consolidated pass; build+tests+lint are the per-phase gate.
-- [ ] Phase 4: Currency + inventory + Shop primitive (gold, gear data, shopdom).
+- [x] Phase 4: Economy foundation. Added gold (town currency, distinct from
+  essence) + Equipment + Inventory to GameState (defaults + tolerant migrate;
+  malformed gear dropped, equipped-but-unowned slots cleared). New core/items.ts
+  (StatMods/GearItem/Equipment/Inventory), data/gear.ts + data/affixes.ts, pure
+  systems/gear.ts (sumMods, deterministic rollGear, gearMods, itemValue/Label)
+  and systems/shop.ts (buy/sell/equip/unequip/grant). Tests: gear.spec, shop.spec,
+  save round-trip. RE-SCOPE: the shop UI + NPC placement moved to Phase 5 (towns),
+  where it belongs; gear stat effects flow into combat in Phase 6. Version stays 3
+  (tolerant migrate fills new fields), no churny bump.
 - [ ] Phase 5: Less-linear overworld + towns + fast travel (lateral exits, waystone network).
 - [ ] Phase 6: Gear stats into combat (deriveLoadout, CastMods, defense seam).
 - [ ] Phase 7: Encounter archetypes + new enemies (ambush, miniboss, +species).
