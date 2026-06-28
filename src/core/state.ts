@@ -56,7 +56,7 @@ export interface Spell {
 }
 
 export interface GameState {
-  version: 2;
+  version: 3;
   player: {
     lv: number;
     xp: number;
@@ -111,6 +111,17 @@ export interface GameState {
      * One marker only; a second defeat forfeits the older drop.
      */
     essenceMarker: { mapId: MapId; x: number; y: number; amount: number } | null;
+    /**
+     * Active dungeon run (v2 W1/W2). Null on the overworld. `entrance` is
+     * where a fail (wipe or leave) ejects the player; `flags` holds only
+     * cross-floor puzzle state (single-map puzzle state is scene-local and
+     * resets for free). Cleared on eject and on completion.
+     */
+    dungeon: {
+      id: string;
+      entrance: { mapId: MapId; x: number; y: number };
+      flags: Record<string, boolean>;
+    } | null;
   };
   /** Grimoire Notes page lines, player voice (Phase 13 fills). v1.1. */
   notes: string[];

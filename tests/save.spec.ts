@@ -23,7 +23,7 @@ function memStore(): KVStore {
 describe('newGame', () => {
   it('starts per v1.1: Lv1, 46/26, empty slots awaiting the Elder, Hearth', () => {
     const g = newGame();
-    expect(g.version).toBe(2);
+    expect(g.version).toBe(3);
     expect(g.player.lv).toBe(1);
     expect(g.player.hp).toBe(46);
     expect(g.player.maxhp).toBe(46);
@@ -102,13 +102,13 @@ describe('migrate', () => {
   });
 
   it('rejects unknown versions', () => {
-    expect(() => migrate({ version: 3, player: {}, world: {} })).toThrow(SaveError);
+    expect(() => migrate({ version: 4, player: {}, world: {} })).toThrow(SaveError);
     expect(() => migrate({ version: 0, player: {}, world: {} })).toThrow(SaveError);
   });
 
-  it('fills defaults for a minimal v1 payload and upgrades it to v2', () => {
+  it('fills defaults for a minimal v1 payload and upgrades it to v3', () => {
     const g = migrate({ version: 1, player: {}, world: {} });
-    expect(g.version).toBe(2);
+    expect(g.version).toBe(3);
     expect(g.player.lv).toBe(1);
     expect(g.player.hp).toBe(46);
     expect(g.player.spells).toEqual([null, null, null, null, null, null]);
@@ -170,6 +170,26 @@ describe('migrate', () => {
     const fresh = newGame();
     const g = migrate(JSON.parse(JSON.stringify(fresh)));
     expect(g.player.starter).toBeNull();
+  });
+
+  it('fills dungeon=null when a pre-v3 save has no dungeon field', () => {
+    const g = migrate({ version: 2, player: {}, world: {} });
+    expect(g.world.dungeon).toBeNull();
+  });
+
+  it('round-trips an active v3 dungeon run', () => {
+    const fresh = newGame();
+    fresh.world.dungeon = {
+      id: 'sunkencrypt',
+      entrance: { mapId: 'hearthvale', x: 12, y: 7 },
+      flags: { lever_a: true, plate_1: false },
+    };
+    const g = migrate(JSON.parse(JSON.stringify(fresh)));
+    expect(g.world.dungeon).toEqual({
+      id: 'sunkencrypt',
+      entrance: { mapId: 'hearthvale', x: 12, y: 7 },
+      flags: { lever_a: true, plate_1: false },
+    });
   });
 
   it('clamps out-of-range potency back into the slider range', () => {

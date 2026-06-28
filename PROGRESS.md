@@ -33,7 +33,16 @@ keep each version bump tied to a real shape change with a migration test):
   at the top of update(); lifted rematch entry/reward into pure tested functions
   in worldstate.ts (canAffordRematch/applyRematchEntry/applyRematchReward); reset
   transient handoff fields in create(). Regression: tests/rematch.spec.ts.
-- [ ] Phase 2: Map-type plumbing and theming (`@theme`, inert dungeon fields, `world.dungeon`, version 3).
+- [x] Phase 2: Map-type plumbing and theming. Added MapTheme + 9 dungeon entity
+  types to mapdefs.ts; CompiledMap gains `theme` + portals/levers/doors/chests/
+  objectives/minibosses/waystones/plates/ambushes (parsed + emitted, behavior
+  inert until W2). maplib.ts parses @theme/@portal/@lever/@door/@plate/@chest/
+  @objective/@miniboss/@waystone/@ambush (with species/zone validation); maps
+  regenerated. Added `world.dungeon` slab; bumped GameState.version 2->3 with
+  migrate handling (pre-v3 -> dungeon:null; v3 round-trips). Tests: maplib.spec.ts
+  + save dungeon migration. NOTE: theme is carried as data now; the visual tile/
+  backdrop variation is applied in Phase 3 where the first themed (dungeon) map
+  appears.
 - [ ] Phase 3: Dungeon core (portal/levers/doors/plates, Sunken Crypt, eject-on-fail).
 - [ ] Phase 4: Currency + inventory + Shop primitive (gold, gear data, shopdom).
 - [ ] Phase 5: Less-linear overworld + towns + fast travel (lateral exits, waystone network).

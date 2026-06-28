@@ -114,5 +114,15 @@ export const sanctum = {
       "x": 20,
       "y": 14
     }
-  ]
+  ],
+  "theme": "vale",
+  "portals": [],
+  "levers": [],
+  "doors": [],
+  "chests": [],
+  "objectives": [],
+  "minibosses": [],
+  "waystones": [],
+  "plates": [],
+  "ambushes": []
 } as const satisfies CompiledMap;

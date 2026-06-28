@@ -29,7 +29,7 @@ export class SaveError extends Error {}
 
 export function newGame(): GameState {
   return {
-    version: 2,
+    version: 3,
     player: {
       lv: 1,
       xp: 0,
@@ -66,6 +66,7 @@ export function newGame(): GameState {
       flags: {},
       aspect: null,
       essenceMarker: null,
+      dungeon: null,
     },
     notes: [],
     feats: [],
@@ -143,7 +144,9 @@ function asSpell(v: unknown): Spell | null {
 export function migrate(raw: unknown): GameState {
   if (!isObj(raw)) throw new SaveError('save: not an object');
   const version = raw['version'];
-  if (version !== 1 && version !== 2) throw new SaveError('save: unknown version');
+  if (version !== 1 && version !== 2 && version !== 3) {
+    throw new SaveError('save: unknown version');
+  }
   if (!isObj(raw['player']) || !isObj(raw['world'])) {
     throw new SaveError('save: missing player or world');
   }
@@ -182,7 +185,7 @@ export function migrate(raw: unknown): GameState {
   const textSpeed: 0 | 1 | 2 = ts === 0 ? 0 : ts === 2 ? 2 : 1;
 
   return {
-    version: 2,
+    version: 3,
     player: {
       lv: Math.max(1, num(p['lv'], 1)),
       xp: Math.max(0, num(p['xp'], 0)),
@@ -246,6 +249,27 @@ export function migrate(raw: unknown): GameState {
               amount: Math.floor(num(markerRaw['amount'], 0)),
             }
           : null,
+      dungeon: ((): GameState['world']['dungeon'] => {
+        const d = w['dungeon'];
+        if (!isObj(d)) return null;
+        const ent = isObj(d['entrance']) ? d['entrance'] : null;
+        if (typeof d['id'] !== 'string' || !ent) return null;
+        const flags: Record<string, boolean> = {};
+        if (isObj(d['flags'])) {
+          for (const [k, v] of Object.entries(d['flags'])) {
+            if (typeof v === 'boolean') flags[k] = v;
+          }
+        }
+        return {
+          id: d['id'],
+          entrance: {
+            mapId: oneOf<MapId>(MAP_IDS, ent['mapId'], fresh.world.mapId),
+            x: num(ent['x'], 0),
+            y: num(ent['y'], 0),
+          },
+          flags,
+        };
+      })(),
     },
     notes: (Array.isArray(raw['notes']) ? raw['notes'] : []).filter(
       (n): n is string => typeof n === 'string',

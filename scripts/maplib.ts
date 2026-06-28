@@ -21,14 +21,17 @@
  */
 import {
   SOLID_TERRAIN,
+  MAP_THEMES,
   entities,
   entityIndex,
   tileAt,
   walkableAt,
   type CompiledMap,
+  type MapTheme,
 } from '../src/core/mapdefs.ts';
 import { MAP_IDS, SHRINE_IDS, WORLD_BOSS_IDS, DIRS } from '../src/data/constants.ts';
 import { ZONE_IDS } from '../src/data/formations.ts';
+import { ENEMY_IDS } from '../src/data/enemies.ts';
 import { SCRIPTED_BATTLES } from '../src/data/triggers.ts';
 import type { Dir, MapId } from '../src/core/state.ts';
 
@@ -43,6 +46,12 @@ function parseXY(s: string): { x: number; y: number } | null {
   const m = /^(\d+),(\d+)$/.exec(s);
   if (!m) return null;
   return { x: Number(m[1]), y: Number(m[2]) };
+}
+
+/** Pull a `prefix:value` token out of a directive's args (v2 dungeon directives). */
+function kvArg(args: string[], prefix: string): string | null {
+  const hit = args.find((s) => s.startsWith(`${prefix}:`));
+  return hit ? hit.slice(prefix.length + 1) : null;
 }
 
 /** Parse one .map.txt source. Structural errors only; cross-map checks live in validateAll. */
@@ -81,6 +90,16 @@ export function parseMapSource(text: string, sourceName: string): ParseResult {
   const bosses: CompiledMap['bosses'][number][] = [];
   const gates: CompiledMap['gates'][number][] = [];
   const triggers: CompiledMap['triggers'][number][] = [];
+  let theme: MapTheme = 'vale';
+  const portals: CompiledMap['portals'][number][] = [];
+  const levers: CompiledMap['levers'][number][] = [];
+  const doors: CompiledMap['doors'][number][] = [];
+  const chests: CompiledMap['chests'][number][] = [];
+  const objectives: CompiledMap['objectives'][number][] = [];
+  const minibosses: CompiledMap['minibosses'][number][] = [];
+  const waystones: CompiledMap['waystones'][number][] = [];
+  const plates: CompiledMap['plates'][number][] = [];
+  const ambushes: CompiledMap['ambushes'][number][] = [];
 
   for (const raw of headerLines) {
     const line = raw.trim();
@@ -209,6 +228,116 @@ export function parseMapSource(text: string, sourceName: string): ParseResult {
         else triggers.push({ id: triggerId, ...xy });
         break;
       }
+      case '@theme': {
+        const v = args[0] ?? '';
+        if (!(MAP_THEMES as readonly string[]).includes(v))
+          err(`@theme '${v}' is not a known theme`);
+        else theme = v as MapTheme;
+        break;
+      }
+      case '@portal': {
+        // @portal <dungeon> x,y -> <map> tx,ty
+        const dungeon = args[0] ?? '';
+        const from = parseXY(args[1] ?? '');
+        const arrow = args[2];
+        const to = args[3] ?? '';
+        const target = parseXY(args[4] ?? '');
+        if (!dungeon || !from || arrow !== '->' || !target)
+          err(`@portal needs: <dungeon> x,y -> <map> tx,ty`);
+        else if (!(MAP_IDS as readonly string[]).includes(to)) err(`@portal target map '${to}'`);
+        else
+          portals.push({
+            dungeon,
+            x: from.x,
+            y: from.y,
+            to: to as MapId,
+            tx: target.x,
+            ty: target.y,
+          });
+        break;
+      }
+      case '@lever': {
+        const leverId = args[0] ?? '';
+        const xy = parseXY(args[1] ?? '');
+        if (!leverId || !xy) err(`@lever needs: id x,y`);
+        else levers.push({ id: leverId, ...xy });
+        break;
+      }
+      case '@door': {
+        const doorId = args[0] ?? '';
+        const xy = parseXY(args[1] ?? '');
+        const needs = kvArg(args, 'needs');
+        if (!doorId || !xy || !needs) err(`@door needs: id x,y needs:<spec>`);
+        else doors.push({ id: doorId, ...xy, needs });
+        break;
+      }
+      case '@plate': {
+        const plateId = args[0] ?? '';
+        const xy = parseXY(args[1] ?? '');
+        if (!plateId || !xy) err(`@plate needs: id x,y`);
+        else plates.push({ id: plateId, ...xy });
+        break;
+      }
+      case '@chest': {
+        const chestId = args[0] ?? '';
+        const xy = parseXY(args[1] ?? '');
+        const reward = kvArg(args, 'reward');
+        if (!chestId || !xy || !reward) err(`@chest needs: id x,y reward:<id>`);
+        else chests.push({ id: chestId, ...xy, reward });
+        break;
+      }
+      case '@objective': {
+        const objId = args[0] ?? '';
+        const xy = parseXY(args[1] ?? '');
+        const battle = kvArg(args, 'battle');
+        if (!objId || !xy || !battle) err(`@objective needs: id x,y battle:<id>`);
+        else objectives.push({ id: objId, ...xy, battle });
+        break;
+      }
+      case '@miniboss': {
+        const mbId = args[0] ?? '';
+        const xy = parseXY(args[1] ?? '');
+        const species = kvArg(args, 'species');
+        const lvStr = kvArg(args, 'lv');
+        if (!mbId || !xy || !species || !lvStr) err(`@miniboss needs: id x,y species:<id> lv:<n>`);
+        else if (!(ENEMY_IDS as readonly string[]).includes(species))
+          err(`@miniboss species '${species}' is not a known enemy`);
+        else
+          minibosses.push({
+            id: mbId,
+            ...xy,
+            species: species as CompiledMap['minibosses'][number]['species'],
+            lv: Number(lvStr),
+          });
+        break;
+      }
+      case '@waystone': {
+        const wsId = args[0] ?? '';
+        const xy = parseXY(args[1] ?? '');
+        if (!wsId || !xy) err(`@waystone needs: id x,y`);
+        else waystones.push({ id: wsId, ...xy });
+        break;
+      }
+      case '@ambush': {
+        const ambId = args[0] ?? '';
+        const xy = parseXY(args[1] ?? '');
+        const table = kvArg(args, 'table');
+        const lvStr = kvArg(args, 'lv');
+        const repeat = args.includes('repeat');
+        if (!ambId || !xy || !table || !lvStr)
+          err(`@ambush needs: id x,y table:<zoneId> lv:<n> [repeat]`);
+        else if (!(ZONE_IDS as readonly string[]).includes(table))
+          err(`@ambush table '${table}' is not in formations data`);
+        else
+          ambushes.push({
+            id: ambId,
+            ...xy,
+            table: table as CompiledMap['ambushes'][number]['table'],
+            lv: Number(lvStr),
+            repeat,
+          });
+        break;
+      }
       default:
         err(`unknown directive '${directive}'`);
     }
@@ -255,6 +384,16 @@ export function parseMapSource(text: string, sourceName: string): ParseResult {
       gates,
       triggers,
       trials,
+      theme,
+      portals,
+      levers,
+      doors,
+      chests,
+      objectives,
+      minibosses,
+      waystones,
+      plates,
+      ambushes,
     },
     errors,
   };

@@ -145,5 +145,15 @@ export const northhollow = {
   ],
   "gates": [],
   "triggers": [],
-  "trials": []
+  "trials": [],
+  "theme": "vale",
+  "portals": [],
+  "levers": [],
+  "doors": [],
+  "chests": [],
+  "objectives": [],
+  "minibosses": [],
+  "waystones": [],
+  "plates": [],
+  "ambushes": []
 } as const satisfies CompiledMap;
